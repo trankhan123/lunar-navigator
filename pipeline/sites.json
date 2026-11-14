@@ -3,7 +3,8 @@
   "sources": {
     "usgs-square-center": "Centre of the USGS region square for each Artemis III candidate region, as listed by MoonSnag Mission Watch (https://moonsnag.com/coordination, retrieved 2026-11-14). The squares come from McClernan 2024, USGS data release https://doi.org/10.5066/P1MEQ6UK (regions sourced from LROC QuickMap). NASA itself published names and a map, not coordinates (NTRS 20250011660; NASA news release 2024-10-28).",
     "lunar-surface-data-book": "Approximate centres from realestateonthemoon.com/lunar-south-pole (retrieved 2026-11-14), which cites NASA's Lunar Surface Data Book and LROC mosaics. Used only as a cross-check.",
-    "nssdca-apollo": "NASA NSSDCA Apollo Landing Site Coordinates, Lunar Module positions measured in LRO images (Wagner et al. 2017, Icarus 283, 92-103). https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html"
+    "nssdca-apollo": "NASA NSSDCA Apollo Landing Site Coordinates, Lunar Module positions measured in LRO images (Wagner et al. 2017, Icarus 283, 92-103). https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html",
+    "nssdca-artifacts": "NASA NSSDCA Table of Anthropogenic Impacts and Spacecraft on the Moon, coordinates of landed spacecraft and impact sites. https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
   },
   "sites": [
     {"id": "peak-near-cabeus-b", "name": "Peak near Cabeus B", "lat": -83.552, "lon": -68.416, "group": "artemis-region", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-83.6, -68.8], "verified": false, "region": "CAB"},
@@ -18,18 +19,18 @@
     {"id": "apollo-11", "name": "Apollo 11", "lat": 0.67416, "lon": 23.47314, "group": "apollo", "hasTerrain": false, "source": "nssdca-apollo", "verified": true, "region": null},
     {"id": "apollo-15", "name": "Apollo 15", "lat": 26.13239, "lon": 3.6333, "group": "apollo", "hasTerrain": false, "source": "nssdca-apollo", "verified": true, "region": null},
     {"id": "apollo-17", "name": "Apollo 17", "lat": 20.1911, "lon": 30.7723, "group": "apollo", "hasTerrain": false, "source": "nssdca-apollo", "verified": true, "region": null},
-    {"id": "apollo-12", "name": "Apollo 12", "lat": null, "lon": null, "group": "apollo", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "apollo-14", "name": "Apollo 14", "lat": null, "lon": null, "group": "apollo", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "apollo-16", "name": "Apollo 16", "lat": null, "lon": null, "group": "apollo", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "im-1", "name": "IM-1 Odysseus (near Malapert A)", "lat": null, "lon": null, "group": "clps", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "im-2", "name": "IM-2 Athena (Mons Mouton area)", "lat": null, "lon": null, "group": "clps", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "blue-ghost-1", "name": "Blue Ghost Mission 1 (Mare Crisium)", "lat": null, "lon": null, "group": "clps", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "im-3", "name": "IM-3 (Reiner Gamma, planned)", "lat": null, "lon": null, "group": "clps", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "change-3", "name": "Chang'e 3", "lat": null, "lon": null, "group": "international", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "change-4", "name": "Chang'e 4", "lat": null, "lon": null, "group": "international", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "change-5", "name": "Chang'e 5", "lat": null, "lon": null, "group": "international", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "change-6", "name": "Chang'e 6", "lat": null, "lon": null, "group": "international", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "chandrayaan-3", "name": "Chandrayaan-3", "lat": null, "lon": null, "group": "international", "region": null, "hasTerrain": null, "source": "TODO", "verified": false},
-    {"id": "slim", "name": "SLIM", "lat": null, "lon": null, "group": "international", "region": null, "hasTerrain": null, "source": "TODO", "verified": false}
+    {"id": "apollo-12", "name": "Apollo 12", "lat": -3.0128, "lon": -23.4219, "group": "apollo", "region": null, "hasTerrain": false, "source": "nssdca-apollo", "verified": true},
+    {"id": "apollo-14", "name": "Apollo 14", "lat": -3.64589, "lon": -17.47194, "group": "apollo", "region": null, "hasTerrain": false, "source": "nssdca-apollo", "verified": true},
+    {"id": "apollo-16", "name": "Apollo 16", "lat": -8.9734, "lon": 15.5011, "group": "apollo", "region": null, "hasTerrain": false, "source": "nssdca-apollo", "verified": true},
+    {"id": "im-1", "name": "IM-1 Odysseus (near Malapert A)", "lat": -80.13, "lon": 1.44, "group": "clps", "region": null, "hasTerrain": true, "source": "nssdca-artifacts", "verified": true},
+    {"id": "im-2", "name": "IM-2 Athena (Mons Mouton area)", "lat": -84.7906, "lon": 29.1957, "group": "clps", "region": null, "hasTerrain": true, "source": "nssdca-artifacts", "verified": true},
+    {"id": "blue-ghost-1", "name": "Blue Ghost Mission 1 (Mare Crisium)", "lat": 18.562, "lon": 61.810, "group": "clps", "region": null, "hasTerrain": false, "source": "nssdca-artifacts", "verified": true},
+    {"id": "im-3", "name": "IM-3 (Reiner Gamma, planned)", "lat": null, "lon": null, "group": "clps", "region": null, "hasTerrain": null, "source": "TODO", "verified": false, "note": "Planned CLPS mission to Reiner Gamma; no confirmed landing coordinates are available. The application must continue skipping this site. Reference: https://science.nasa.gov/learning-resources/science-activation/nasa-sees-interns-tackle-real-world-challenges-in-lunar-exploration/"},
+    {"id": "change-3", "name": "Chang'e 3", "lat": 44.1214, "lon": -19.5117, "group": "international", "region": null, "hasTerrain": false, "source": "nssdca-artifacts", "verified": true},
+    {"id": "change-4", "name": "Chang'e 4", "lat": -45.4561, "lon": 177.5885, "group": "international", "region": null, "hasTerrain": false, "source": "nssdca-artifacts", "verified": true},
+    {"id": "change-5", "name": "Chang'e 5", "lat": 43.0576, "lon": -51.9161, "group": "international", "region": null, "hasTerrain": false, "source": "nssdca-artifacts", "verified": true},
+    {"id": "change-6", "name": "Chang'e 6", "lat": -41.6385, "lon": -153.9852, "group": "international", "region": null, "hasTerrain": false, "source": "nssdca-artifacts", "verified": true},
+    {"id": "chandrayaan-3", "name": "Chandrayaan-3", "lat": -69.3741, "lon": 32.32, "group": "international", "region": null, "hasTerrain": true, "source": "nssdca-artifacts", "verified": true},
+    {"id": "slim", "name": "SLIM", "lat": -13.3160, "lon": 25.2510, "group": "international", "region": null, "hasTerrain": false, "source": "nssdca-artifacts", "verified": true}
   ]
 }

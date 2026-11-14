@@ -14,6 +14,8 @@
 - NASA Space Apps Challenge 2026 — Lunar Landing Site Navigator challenge. https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/
 - MoonSnag Mission Watch — site registry (approximate Artemis region centres derived from the USGS squares). https://moonsnag.com/coordination
 - NASA NSSDCA — Apollo Landing Site Coordinates (Wagner et al. 2017, Icarus 283, 92–103). https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
+- NASA NSSDCA — Table of Anthropogenic Impacts and Spacecraft on the Moon (landed spacecraft coordinates). https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html
+- NASA Science Activation — NASA Sees Interns Tackle Real-World Challenges in Lunar Exploration (IM-3 planned mission reference). https://science.nasa.gov/learning-resources/science-activation/nasa-sees-interns-tackle-real-world-challenges-in-lunar-exploration/
 
 ## Libraries
 
