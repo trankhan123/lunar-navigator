@@ -13,6 +13,11 @@ import MapLayersPanel from './MapLayersPanel.jsx'
 import MapLegend from './MapLegend.jsx'
 import MapMarks from './MapMarks.jsx'
 import MapMinimap from './MapMinimap.jsx'
+import MapSearch from './MapSearch.jsx'
+
+const SITE_FOCUS_HALF_M = 5000
+const CELL_FOCUS_HALF_M = 3000
+const boundsAround = ({ xM, yM }, halfM) => [xM - halfM, yM - halfM, xM + halfM, yM + halfM]
 
 const MINIMAP_MIN_ZOOM = 1.5
 const ARROW_LENGTH = 0.09 * VIEW_SIZE_M // in viewBox units, drawn outside the zoom group so it keeps its size
@@ -40,7 +45,7 @@ function MapImage({ entry }) {
  */
 function SouthPoleMap({
   regions, activeRegion, maps, cells, sites, ephemeris, hour, hourRange = null, stayDays = null, defaultLayerId, timeBar = null, statusByCellId, currentCellId,
-  selectedCellId, onSelectCell, onOpenRegion,
+  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells,
 }) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
@@ -74,14 +79,22 @@ function SouthPoleMap({
     return () => select(svg).on('.zoom', null)
   }, [])
 
+  // A find-box pick focuses a site or cell; picking the same one again zooms back to it (a new requestId).
+  const fitKey = focus ? `focus:${focus.requestId}` : (regionCode ?? 'pole')
   useEffect(() => {
-    const { k, x, y } = fitTransform(activeRegion?.boundsM ?? WHOLE_MAP_BOUNDS_M, 0.08)
+    const { k, x, y } = fitTransform(focus?.boundsM ?? activeRegion?.boundsM ?? WHOLE_MAP_BOUNDS_M, 0.08)
     const target = zoomIdentity.translate(x, y).scale(k)
     const svg = select(svgRef.current)
     if (isFirstFit.current || prefersReducedMotion()) svg.call(behaviorRef.current.transform, target)
     else svg.transition().duration(600).call(behaviorRef.current.transform, target)
     isFirstFit.current = false
-  }, [regionCode]) // eslint-disable-line react-hooks/exhaustive-deps -- refit only when the region changes, not on every new regions array
+  }, [fitKey]) // eslint-disable-line react-hooks/exhaustive-deps -- refit only when the region or the focus request changes
+
+  function pickSearchMatch(match) {
+    if (match.type === 'region') onOpenRegion(match.regionCode)
+    if (match.type === 'site') onOpenRegion(match.regionCode, { focusBoundsM: boundsAround(toPolarXY(match.site.lat, match.site.lon), SITE_FOCUS_HALF_M) })
+    if (match.type === 'cell') onOpenRegion(match.regionCode, { cellId: match.cell.id, focusBoundsM: boundsAround(match.cell, CELL_FOCUS_HALF_M) })
+  }
 
   function zoomBy(factor) {
     behaviorRef.current.scaleBy(select(svgRef.current).transition().duration(prefersReducedMotion() ? 0 : 250), factor)
@@ -206,6 +219,7 @@ function SouthPoleMap({
             </>
           )}
         </nav>
+        <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} onNeedRegionCells={onNeedRegionCells} onPick={pickSearchMatch} />
         <span className="ml-auto text-xs text-slate-400">Click the map, then scroll to zoom</span>
         <button type="button" aria-label="Zoom in" onClick={() => zoomBy(ZOOM_STEP)} className={toolbarButton}>+</button>
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)} className={toolbarButton}>−</button>

@@ -73,6 +73,8 @@ export default function App() {
   const [selectedCellId, setSelectedCellId] = useState(initialState.selectedCellId)
   const [landingTime, setLandingTime] = useState(initialState.landingTime)
   const [mapHour, setMapHour] = useState(null) // the Map screen's own hour (time bar); null = follow the landing time
+  const [mapFocus, setMapFocus] = useState(null) // {boundsM, requestId} after a find-box pick of a site or cell
+  const focusRequests = useRef(0)
   const [search, setSearch] = useState({ status: 'idle' })
   const [ranking, setRanking] = useState({ sortBy: undefined, direction: undefined })
   const cellRequests = useRef(new Map()) // region code → pending or finished request, so each file is fetched once
@@ -140,7 +142,10 @@ export default function App() {
     try {
       const codes = regionCodesForSearch(searchScenario, data.regions, data.sites)
       // From the overview, open the searched region so the Results map shows its ✓ ! ✕ colours.
-      if (!activeRegion) setRegionCode(regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites)[0] ?? null)
+      if (!activeRegion) {
+        setRegionCode(regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites)[0] ?? null)
+        setMapFocus(null)
+      }
       const neededRegions = data.regions.filter((region) => codes.includes(region.code))
       const loadedLists = await Promise.all(neededRegions.map(async (region) => [region.code, await loadRegionCells(region)]))
       if (!isLatest()) return
@@ -187,10 +192,18 @@ export default function App() {
   const currentPointSummary = useMemo(() => results && summarizeCurrentPoint(results, landingIndex), [results, landingIndex])
 
   const selectCell = useCallback((cell) => setSelectedCellId(cell.id), [])
-  const openRegion = useCallback((code, { cellId = null } = {}) => {
+  const openRegion = useCallback((code, { cellId = null, focusBoundsM = null } = {}) => {
     setRegionCode(code)
     setSelectedCellId(cellId)
+    setMapFocus(focusBoundsM ? { boundsM: focusBoundsM, requestId: ++focusRequests.current } : null)
   }, [])
+  const needRegionCells = useCallback(
+    (code) => {
+      const region = data?.regions.find((candidate) => candidate.code === code)
+      if (region) loadRegionCells(region).catch((error) => setLoadError(error.message))
+    },
+    [data, loadRegionCells],
+  )
   const selectSite = useCallback((site) => setScenario((current) => ({ ...current, currentPoint: { type: 'site', siteId: site.id } })), [])
   const errors = useMemo(() => (data ? validateScenario(scenario, data.ephemeris) : []), [data, scenario])
   const viewHour = useMemo(() => {
@@ -271,6 +284,9 @@ export default function App() {
     selectedCellId,
     onSelectCell: selectCell,
     onOpenRegion: openRegion,
+    focus: mapFocus,
+    cellsByRegion,
+    onNeedRegionCells: needRegionCells,
   }
 
   return (
