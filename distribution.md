@@ -15,7 +15,7 @@ Hợp đồng chính thức (input/output, đơn vị, định dạng file, ch�
 | [WF2](#wf2--sóng-liên-lạc-và-kiểm-chứng) | Sóng liên lạc và kiểm chứng | C2 Communication, D6 Famous sites, D7 Validation | vừa (~7 h) | chubin271-blip |
 | [WF3](#wf3--quãng-đường-và-tối-ưu) | Quãng đường và tối ưu | C5 Optimizer, `core/explain.js` | vừa (~7 h) | vominhuy28 |
 | [WF4](#wf4--năng-lượng-cần-và-thời-gian-sạc) | Năng lượng cần và thời gian sạc | C3 Energy need, C4 Charging, `validateScenario` | nhẹ (~5 h) | hoanggbach |
-| [WF5](#wf5--bản-đồ-và-toạ-độ) | Bản đồ và toạ độ | D2 LGRS grid, D3 Feasibility, D5 Build web data, D8 Map background | vừa (~8 h) | |
+| [WF5](#wf5--bản-đồ-và-toạ-độ) | Bản đồ và toạ độ | D2 LGRS grid, D3 Feasibility, D5 Build web data, D8 Map background | vừa (~8 h) | trankhan123 (Claude Code) |
 | [WEB](#web--tổng-hợp-giao-diện) | Tổng hợp giao diện | W1–W7, S1 | nặng | trankhan123 |
 
 **Đã xong:** C0 (hình học, chuỗi giờ) và D1 (ephemeris thật trong `web/public/data/ephemeris.json`, khớp JPL Horizons trong phạm vi 0,015°). Mọi workflow dùng được hai phần này ngay.

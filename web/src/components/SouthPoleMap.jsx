@@ -27,7 +27,8 @@ function legendItem(color, label, symbol = '') {
   )
 }
 
-function SouthPoleMap({ region, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell }) {
+// background: optional README D8 map entry {image, boundsM} drawn under the cells.
+function SouthPoleMap({ region, background, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell }) {
   const [xMin, yMin, xMax, yMax] = region.boundsM
   const widthM = xMax - xMin
   const heightM = yMax - yMin
@@ -47,6 +48,16 @@ function SouthPoleMap({ region, cells, sites, statusByCellId, currentCellId, sel
         role="img"
         aria-label={`Map of ${region.name}: ${cells.length} cells of 1 km, ${feasibleCount} feasible. Use the Cell list above the map to select one with the keyboard.`}
       >
+        {background && (
+          <image
+            href={background.image}
+            x={background.boundsM[0] - xMin}
+            y={yMax - background.boundsM[3]}
+            width={background.boundsM[2] - background.boundsM[0]}
+            height={background.boundsM[3] - background.boundsM[1]}
+            preserveAspectRatio="none"
+          />
+        )}
         {cells.map((cell) => {
           const [x, y] = toSvg(cell.xM, cell.yM)
           const status = statusByCellId?.get(cell.id)
@@ -61,7 +72,7 @@ function SouthPoleMap({ region, cells, sites, statusByCellId, currentCellId, sel
                 width={CELL_SIZE_M - CELL_GAP_M}
                 height={CELL_SIZE_M - CELL_GAP_M}
                 fill={fill}
-                fillOpacity={cell.feasible ? 0.75 : 1}
+                fillOpacity={(cell.feasible ? 0.75 : 1) * (background ? 0.7 : 1)}
                 stroke={isCurrent ? '#fbbf24' : isSelected ? '#f8fafc' : 'none'}
                 strokeWidth={isCurrent ? 3 : 2}
                 vectorEffect="non-scaling-stroke"

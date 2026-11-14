@@ -9,7 +9,7 @@ import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
-import { hourIndexOf, loadCells, loadEphemeris, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
+import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
 import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
@@ -38,8 +38,12 @@ async function loadAllData() {
   const useMock = regionsFile === null
   if (useMock) regionsFile = await loadRegions(true)
   // The real ephemeris (D1) exists already, so even mock cells get real Sun and Earth positions.
-  const [ephemeris, sitesFile] = await Promise.all([loadEphemeris(false).catch(() => loadEphemeris(true)), loadSites(useMock)])
-  return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites }
+  const [ephemeris, sitesFile, maps] = await Promise.all([
+    loadEphemeris(false).catch(() => loadEphemeris(true)),
+    loadSites(useMock),
+    useMock ? [] : loadMaps(),
+  ])
+  return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites, maps }
 }
 
 /** Regions whose cells the search needs: all of them for radius/all scopes, else the current point's region. */
@@ -233,6 +237,7 @@ export default function App() {
   const map = cells ? (
     <SouthPoleMap
       region={activeRegion}
+      background={data.maps.find((background) => background.id === activeRegion.code)}
       cells={cells}
       sites={data.sites}
       statusByCellId={statusByCellId}

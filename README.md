@@ -92,13 +92,13 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | ID | Workflow | Module | Files | Needs | Size | Owner | Status |
 |---|---|---|---|---|---|---|---|
 | D1 | done | Ephemeris (JPL Horizons) | `pipeline/fetch_horizons.py` | — | M | Claude (trankhan123) | done |
-| D2 | WF5 | LGRS grid (1 km cells) | `pipeline/build_grid.py` | LGRS shapefiles (manual download) | M | | todo |
-| D3 | WF5 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | | todo |
+| D2 | WF5 | LGRS grid (1 km cells) | `pipeline/build_grid.py` | LGRS shapefiles (manual download) | M | trankhan123 (Claude Code) | done (9 regions) |
+| D3 | WF5 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | trankhan123 (Claude Code) | done (9 regions) |
 | D4 | WF1 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | Quoc_Bao | done |
-| D5 | WF5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | | todo |
+| D5 | WF5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | trankhan123 (Claude Code) | done (9 regions; MMP trimmed to 900 cells, see region table) |
 | D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | chubin271-blip | todo |
 | D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | todo |
-| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | | todo |
+| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade; Sun-visibility overlay not done) |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
 | C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | Quoc_Bao | done |
 | C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | chubin271-blip | done |
@@ -180,17 +180,17 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 
 `boundsM` = `[xMin, yMin, xMax, yMax]` of the outer edges of the region's cells (cell centres ± 500 m), so whole squares fit in the map. `cellsFile` is relative to the same folder.
 
-| Code | Region | `siteId` in `pipeline/sites.json` |
-|---|---|---|
-| CAB | Peak near Cabeus B | `peak-near-cabeus-b` |
-| HAW | Haworth | `haworth` |
-| MAL | Malapert Massif | `malapert-massif` |
-| MMP | Mons Mouton Plateau | `mons-mouton-plateau` |
-| MMO | Mons Mouton | `mons-mouton` |
-| NR1 | Nobile Rim 1 | `nobile-rim-1` |
-| NR2 | Nobile Rim 2 | `nobile-rim-2` |
-| DGR | de Gerlache Rim 2 | `de-gerlache-rim-2` |
-| SLP | Slater Plain | `slater-plain` |
+| Code | Region | `siteId` in `pipeline/sites.json` | Cells (feasible), D2/D3 |
+|---|---|---|---|
+| CAB | Peak near Cabeus B | `peak-near-cabeus-b` | 441 (252) |
+| HAW | Haworth | `haworth` | 930 (906) |
+| MAL | Malapert Massif | `malapert-massif` | 462 (286) |
+| MMP | Mons Mouton Plateau | `mons-mouton-plateau` | 4524 (3810) in the grid; the web file keeps the 900 cells nearest the region centre (850 feasible, within about 17 km), because all of them would make 6.3 MB |
+| MMO | Mons Mouton | `mons-mouton` | 289 (222) |
+| NR1 | Nobile Rim 1 | `nobile-rim-1` | 441 (273) |
+| NR2 | Nobile Rim 2 | `nobile-rim-2` | 420 (343) |
+| DGR | de Gerlache Rim 2 | `de-gerlache-rim-2` | 441 (399) |
+| SLP | Slater Plain | `slater-plain` | 441 (419) |
 
 ### `cells_<CODE>.json` (D5)
 
@@ -656,7 +656,7 @@ File: `build_grid.py`.
   - take the centre of each square;
   - get lat/lon with pyproj from the shapefile CRS (USGS suggests `IAU_2015:30100` or `ESRI:104903`);
   - `xM/yM` are in `PGDA_CRS`;
-  - the label is the ACC 1 km label attribute. Write its name here: `______`.
+  - the label is the ACC 1 km label attribute `LGRS_ACC` (always 5 characters, e.g. `AZSPK`; about 10 % contain `-` as part of the label, e.g. `BAS-K`, `AYR--`, so never split a label on `-`), read straight from the zip with no unzip step.
 - **Fallback** if the shapefiles cannot be read: build a 1 km grid in the LPS projection with the `lgrs` Python package (SETI/USGS, Apache-2.0; this is a new library, so the team must agree) and label cells `r<row>c<col>`.
 - **Done when:**
   - all 9 files are written, with the cell count of each region added to the region table above;
@@ -702,7 +702,8 @@ File: `build_site_data.py`.
 - **Output:** `regions.json`, `cells_<CODE>.json` and `sites.json` in `web/public/data/`.
 - **Rules:**
   - apply the feasibility rule;
-  - leave out regions that have no grid yet, with a warning.
+  - leave out regions that have no grid yet, with a warning;
+  - a region whose cells file would pass 2 MB keeps only the 900 cells nearest its centre (`KEPT_CELL_COUNT`; today only MMP).
 - **Done when:** `python pipeline/check_web_data.py` passes and every file is < 2 MB.
 
 ### D6 Famous sites

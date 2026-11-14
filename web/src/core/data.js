@@ -44,6 +44,8 @@ export const loadRegions = (useMock) => loadJson(`${dataFolder(useMock)}/regions
 export const loadCells = (useMock, cellsFile) => loadJson(`${dataFolder(useMock)}/${cellsFile}`)
 export const loadSites = (useMock) => loadJson(`${dataFolder(useMock)}/sites.json`)
 export const loadValidation = (useMock) => loadJson(`${dataFolder(useMock)}/validation.json`)
+/** README D8 map backgrounds; the map works without them. */
+export const loadMaps = () => loadJson('/maps/maps.json').then((file) => file.maps).catch(() => [])
 
 const HOUR_MS = 3600 * 1000
 

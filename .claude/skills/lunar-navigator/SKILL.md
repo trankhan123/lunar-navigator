@@ -72,6 +72,16 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - WF3 (PR #5, #6) đã sửa `rankBestPairs` (quét một lượt giữ top 10: 138 ms ở 225 ô × 728 lần hạ cánh) và chiều câu `explainDifference`.
   - **Lỗi còn mở:** khi không có ô nào trong 1 km, `selectSearchCells` trả `[]`, trong khi README yêu cầu chỉ tìm điểm hiện tại. Vì vậy chọn Apollo 11 làm cả app trắng trang (`summarizeCurrentPoint` ném lỗi).
   - Chưa deploy `main` lên Vercel cho tới khi lỗi này được sửa; production vẫn chạy `web` 7bf0aa3.
+- **WF5 (14/11 tối, Claude Code làm theo yêu cầu của trankhan123):** dữ liệu thật đã có cho 8 vùng.
+  - Chạy lại toàn bộ theo thứ tự: `build_grid.py` → `compute_feasibility.py` (12 s) → `compute_horizon.py --region ALL --sites` (của WF1, ~10 phút) → `build_site_data.py` → `export_map_background.py` → `check_web_data.py`.
+  - Shapefile đọc thẳng từ zip trong `pipeline/raw/lgrs/`, không cần giải nén. Nhãn là thuộc tính `LGRS_ACC`, luôn 5 ký tự; khoảng 10 % nhãn có `-` (ví dụ `AYR--`), nên chỉ lấy phần trước dấu `-` đầu tiên làm mã vùng.
+  - CRS của shapefile là LPS: stereographic cực trên cầu 1737,4 km, k0 = 0,994, lệch Đông/Bắc 500 km. Vì vậy một ô 1 km rộng 1006 m trong `PGDA_CRS`; D3 lấy nửa cạnh ô là 500/0,994 m.
+  - Số ô (khả thi): CAB 441 (252), HAW 930 (906), MAL 462 (286), MMP 4524 (3810), MMO 289 (222), NR1 441 (273), NR2 420 (343), DGR 441 (399), SLP 441 (419).
+  - **MMP (quyết định 14/11):** đủ 4524 ô sẽ nặng 6,3 MB, nên file web chỉ giữ 900 ô gần tâm vùng nhất (850 ô khả thi, bán kính khoảng 17 km), theo `KEPT_CELL_COUNT` trong D5. `pipeline/out/` vẫn giữ đủ 4524 ô.
+  - Test pipeline: `python -m pytest pipeline/test_build_site_data.py pipeline/test_validate.py`.
+- **Skill superpowers (14/11):** đã chép 15 skill của obra/superpowers v7.0.2 vào `.claude/skills/` (MIT, xem `NOTICE.md`), không cài hook. Quy trình cho tính năng lớn: `brainstorming` (hỏi người dùng, viết design doc vào `docs/superpowers/specs/`) → `writing-plans` → `subagent-driven-development` hoặc `executing-plans`, kèm `test-driven-development`.
+  - Thời gian tìm kiếm khoảng 6 tháng: MAL 4,1 s, HAW 11,9 s (chạy trong Worker, mục tiêu là < 3 s).
+  - App tự dùng dữ liệu thật khi có `web/public/data/regions.json`; thêm `?mock=1` để quay về mock. Bản đồ W2 vẽ `web/public/maps/<CODE>.png` theo `maps.json`.
 - **Quy trình nhánh:** thành viên hay push thẳng vào `main` hoặc vào nhánh riêng, đôi khi rebase nên trùng nội dung khác SHA. Trước khi làm, luôn `git fetch`, merge `origin/main` và các nhánh mới vào `web`, chạy `npm test`. README/AI_USAGE/distribution hay conflict: giữ tên người thật và gộp cả hai dòng AI_USAGE.
 - **Vite dev trong VM:** lần đầu import động `echarts-for-react`, Vite tối ưu lại dependency rồi tải gói ~75 s. Màn hình đứng ở "Loading…" là bình thường, bản build không bị.
 - **Còn là khung:** mọi hàm khác `throw notImplemented(...)` hoặc `raise NotImplementedError`. Dòng `eslint-disable no-unused-vars` ở đầu file khung phải xoá khi implement.
