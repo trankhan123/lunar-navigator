@@ -95,9 +95,10 @@ export function explainDifference(current, other) {
 
 /**
  * The pair of cells within maxDistanceKm whose longest dark periods differ most at one landing time.
- * With onlyWithCellId, only pairs that contain that cell are considered.
+ * With onlyWithCellId, only pairs that contain that cell are considered; with onlyBetter too,
+ * only pairs where the other cell has fewer dark hours.
  */
-export function findMostDifferentNeighbors(results, cellsById, landingIndex, maxDistanceKm = 1.5, onlyWithCellId = null) {
+export function findMostDifferentNeighbors(results, cellsById, landingIndex, maxDistanceKm = 1.5, onlyWithCellId = null, onlyBetter = false) {
   const { cellCount = 0, landingCount = 0 } = results || {}
   if (cellCount < 2 || landingIndex < 0 || landingIndex >= landingCount) {
     return null
@@ -122,6 +123,7 @@ export function findMostDifferentNeighbors(results, cellsById, landingIndex, max
       if (onlyWithCellId && idA !== onlyWithCellId && idB !== onlyWithCellId) continue
 
       const darkB = results.longestDarkHours[j * landingCount + landingIndex]
+      if (onlyBetter && (idA === onlyWithCellId ? darkB >= darkA : darkA >= darkB)) continue
 
       const dist = distanceKm(cellA, cellB)
       if (dist <= maxDistanceKm) {
