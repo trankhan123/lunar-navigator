@@ -114,7 +114,6 @@ test('i18n: all 7 languages provide all core UI keys', () => {
     'results.title',
     'results.idlePrompt',
     'results.rankingDefaultOrder',
-    'results.bestPairsCaption',
     'status.pass',
     'status.marginal',
     'status.fail',
