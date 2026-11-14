@@ -116,6 +116,11 @@ export default function App() {
     if (screen === 'results') resultsHeading.current?.focus()
   }, [screen])
 
+  function rejectSharedScenario(linkErrors) {
+    const reasons = linkErrors.map((error) => `${error.field}: ${error.message}`).join('; ')
+    setSearch({ status: 'error', message: `the scenario in this link is not valid (${reasons}). Fix it on the Map & scenario screen.` })
+  }
+
   async function runSearch(searchScenario) {
     cancelSearch.current?.()
     const searchId = ++latestSearch.current
@@ -146,11 +151,16 @@ export default function App() {
     }
   }
 
-  // README W1: a link opened on the Results screen with a current point runs its search once the data is in.
+  // README W1: a link opened on the Results screen with a valid scenario runs its search once the data is in.
   useEffect(() => {
     if (!data || !autoRunPending.current) return
     autoRunPending.current = false
-    runSearch(initialState.scenario)
+    const linkErrors = validateScenario(initialState.scenario, data.ephemeris)
+    // One-time reaction to the async data load (not a render-derived value), so setState here is intended.
+    // eslint-disable-next-line react/set-state-in-effect
+    if (linkErrors.length === 0) runSearch(initialState.scenario)
+    // eslint-disable-next-line react/set-state-in-effect
+    else rejectSharedScenario(linkErrors)
   }, [data]) // eslint-disable-line react-hooks/exhaustive-deps -- runs once, with the scenario from the link
 
   const results = search.status === 'done' ? search.results : null

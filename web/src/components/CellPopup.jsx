@@ -8,25 +8,22 @@ const LOOK_AHEAD_HOURS = 30 * 24
 const EVENT_WORDS = { sunset: 'sets', sunrise: 'rises', earthset: 'sets', earthrise: 'rises' }
 const REASON_TEXT = { slope: 'slope above the limit', psr: 'mostly in permanent shadow' }
 
-// Each body on its own, so the Sun line shows as soon as C1 works even while C2 is still a stub.
-function bodyAt(computeTrack, findNextEvent, cell, ephemeris, hour) {
-  try {
-    const track = computeTrack(cell, ephemeris, hour, Math.min(LOOK_AHEAD_HOURS, ephemeris.hours - hour), 'auto')
-    return { elevationDeg: track.elevationDeg[0], event: findNextEvent(track, 0) }
-  } catch {
-    return null // shortcut: module not implemented yet
+function skyAt(cell, ephemeris, hour) {
+  if (hour === null) return null
+  const lookAheadHours = Math.min(LOOK_AHEAD_HOURS, ephemeris.hours - hour)
+  const sun = computeSunTrack(cell, ephemeris, hour, lookAheadHours, 'auto')
+  const earth = computeEarthTrack(cell, ephemeris, hour, lookAheadHours)
+  return {
+    lookAheadHours,
+    sun: { elevationDeg: sun.elevationDeg[0], event: nextSunEvent(sun, 0) },
+    earth: { elevationDeg: earth.elevationDeg[0], event: nextEarthEvent(earth, 0) },
   }
 }
 
-function skyAt(cell, ephemeris, hour) {
-  if (hour === null) return null
-  const sun = bodyAt(computeSunTrack, nextSunEvent, cell, ephemeris, hour)
-  const earth = bodyAt(computeEarthTrack, nextEarthEvent, cell, ephemeris, hour)
-  return sun || earth ? { sun, earth } : null
-}
-
-function skyLine(name, body) {
-  const event = body.event ? `${EVENT_WORDS[body.event.event]} in ${formatDuration(body.event.hoursFromNow)}` : 'no change in the next 30 days'
+function skyLine(name, body, lookAheadHours) {
+  const event = body.event
+    ? `${EVENT_WORDS[body.event.event]} in ${formatDuration(body.event.hoursFromNow)}`
+    : `no change in the next ${formatDuration(lookAheadHours)}`
   return `${name} ${body.elevationDeg.toFixed(1)}° high, ${event}`
 }
 
@@ -75,11 +72,14 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
         {sky ? (
           <>
             <p className="text-xs text-slate-400">At {formatUtc(timeAtHour(ephemeris, hour))}</p>
-            <p className="text-amber-300">{sky.sun ? skyLine('Sun', sky.sun) : 'Sun: coming with the sunlight module'}</p>
-            <p className="text-sky-300">{sky.earth ? skyLine('Earth', sky.earth) : 'Earth: coming with the communication module'}</p>
+            <p className="text-amber-300">{skyLine('Sun', sky.sun, sky.lookAheadHours)}</p>
+            <p className="text-sky-300">{skyLine('Earth', sky.earth, sky.lookAheadHours)}</p>
           </>
         ) : (
-          <p className="text-xs text-slate-400">Sun and Earth times for this cell appear once the sunlight and communication modules are ready.</p>
+          <p className="text-xs text-slate-400">
+            Pick a landing date between {formatUtc(timeAtHour(ephemeris, 0)).slice(0, 10)} and {formatUtc(timeAtHour(ephemeris, ephemeris.hours - 1)).slice(0, 10)} to
+            see the Sun and Earth from this cell.
+          </p>
         )}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2" aria-live="polite">

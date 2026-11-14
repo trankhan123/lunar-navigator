@@ -9,6 +9,18 @@ const POINT_TYPES = [
 ]
 const SCOPE_LABELS = { region: 'Same region', radius: 'Within a radius', all: 'All 9 regions' }
 const PANEL_LABELS = { auto: 'Automatic', vertical: 'Vertical, Sun-tracking', horizontal: 'Horizontal' }
+// Fields Simple mode shows; errors on any other field are listed above the Submit button there.
+const SIMPLE_MODE_FIELDS = new Set(['currentPoint', 'startDate', 'endDate', 'stayDays'])
+const FIELD_LABELS = {
+  maxDarkHours: 'Longest dark period allowed',
+  maxCommLossHours: 'Longest comm loss allowed',
+  panelMaxW: 'Panel power',
+  batteryCapacityWh: 'Battery capacity',
+  loadW: 'Average load',
+  panelMode: 'Solar panel',
+  searchScope: 'Search',
+  searchRadiusKm: 'Search radius',
+}
 const inputClass = 'w-full rounded border border-slate-500 bg-slate-950 px-2 py-1.5 tabular-nums aria-invalid:border-red-400'
 
 function toNumberOrNull(text) {
@@ -194,6 +206,17 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
       )}
 
       <p className="text-xs text-slate-400">Example values are illustrative, not the specification of any real lander.</p>
+      {mode === 'simple' && errors.some((error) => !SIMPLE_MODE_FIELDS.has(error.field)) && (
+        <ul className="space-y-0.5 text-xs text-red-400">
+          {errors
+            .filter((error) => !SIMPLE_MODE_FIELDS.has(error.field))
+            .map((error) => (
+              <li key={error.field}>
+                {FIELD_LABELS[error.field] ?? error.field}: {error.message} (change it in Expert mode)
+              </li>
+            ))}
+        </ul>
+      )}
       {!pointReady && <p className="text-xs text-slate-300">Choose a cell, a site or coordinates first.</p>}
       <button
         type="submit"

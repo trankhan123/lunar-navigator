@@ -46,7 +46,7 @@ All heavy terrain work is done ahead of time in Python. The browser only needs t
 cd web
 npm install
 npm run dev        # http://localhost:5173
-npm test           # contract tests of web/src/core (fail until each module is implemented)
+npm test           # contract, logic and integration tests of web/src/core (all must pass)
 npm run lint && npm run build
 ```
 
@@ -94,23 +94,23 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D1 | done | Ephemeris (JPL Horizons) | `pipeline/fetch_horizons.py` | — | M | Claude (trankhan123) | done |
 | D2 | WF5 | LGRS grid (1 km cells) | `pipeline/build_grid.py` | LGRS shapefiles (manual download) | M | | todo |
 | D3 | WF5 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | | todo |
-| D4 | WF1 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | | todo |
+| D4 | WF1 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | Quoc_Bao | doing (script done, waits for D2 grids) |
 | D5 | WF5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | | todo |
-| D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | | todo |
-| D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | | todo |
+| D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | chubin271-blip | todo |
+| D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | todo |
 | D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | | todo |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
 | C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | Quoc_Bao | done |
-| C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | | todo |
+| C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | chubin271-blip | done |
 | C3 | WF4 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | hoanggbach | done |
 | C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
 | C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
-| W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | doing |
-| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | trankhan123 | doing |
-| W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | doing |
-| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | todo |
-| W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | todo |
-| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | todo |
+| W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
+| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | trankhan123 | done |
+| W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
+| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | done |
+| W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
+| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | doing (texture done; Sun/Earth arrows left) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | todo |
 | S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
 | X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
@@ -178,7 +178,7 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
                 "boundsM": [0, 0, 0, 0] }] }
 ```
 
-`boundsM` = `[xMin, yMin, xMax, yMax]` of the region's cells. `cellsFile` is relative to the same folder.
+`boundsM` = `[xMin, yMin, xMax, yMax]` of the outer edges of the region's cells (cell centres ± 500 m), so whole squares fit in the map. `cellsFile` is relative to the same folder.
 
 | Code | Region | `siteId` in `pipeline/sites.json` |
 |---|---|---|
@@ -501,7 +501,6 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
 - **Keyboard path to the map:** a Cell list next to the Region list selects any cell without a mouse.
 - **Search:** before starting the worker, load the cells of every region the search needs (all regions for `radius` and `all`).
 - **About screen:** known limitations (window-finder.md §7), data sources and AI usage.
-- **Replace the old draft:** today's `App.jsx` is the old per-site draft reading `/data/mock/legacy/`. Replace it, then delete that folder.
 - **Done when:** `shareLink.test.js` passes; the mock flow map → form → results → detail works; `npm run build` passes.
 
 ### W2 South-pole map
