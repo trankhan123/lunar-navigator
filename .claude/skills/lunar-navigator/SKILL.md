@@ -64,11 +64,14 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - xong lượt đầu: W1 khung app (`App.jsx`: các màn hình map/results/globe/about, Simple/Expert, nhãn MOCK, footer, link chia sẻ đồng bộ URL), W2 `SouthPoleMap.jsx` (SVG theo `xM/yM`) + `CellPopup.jsx`, W3 `ScenarioForm.jsx`, `AboutView.jsx`;
   - logic mới: `core/shareLink.js`, `core/format.js` (`formatDuration`, `formatUtc`), `toPolarXY` và `resolveCurrentCell` trong `core/data.js`;
   - còn chờ: W4 (cần C5), W5 (cần C1/C2/C4), W6 texture, W7. Đã xoá `web/public/data/mock/legacy/`.
-- **Trạng thái 14/11 tối (nhánh `web`):**
-  - Mọi module lõi đã có code thật: C1 (Quoc_Bao), C2 (chubin271-blip), C3/C4/`validateScenario` (hoanggbach), C5/explain (vominhuy28). 44 test hợp đồng qua.
-  - D4 `compute_horizon.py` (Quoc_Bao) đã có trên `main`, chưa review.
+- **Trạng thái 14/11 tối (`web` đã merge vào `main`, commit dccb949):**
+  - Mọi module lõi đã có code thật: C1 (Quoc_Bao), C2 (chubin271-blip), C3/C4/`validateScenario` (hoanggbach), C5/explain (vominhuy28). 83 test qua.
+  - D4 `compute_horizon.py` (Quoc_Bao) đã review: ship được.
   - Luồng web chạy trọn: W4 có thanh trượt, bảng xếp hạng, thẻ điểm hiện tại, dải trạng thái, top cặp; W5 có màn hình chi tiết với `core/detail.js`, `countdownText`, `currentPointSentence`.
   - `DetailView` và globe tải lười.
+  - WF3 (PR #5, #6) đã sửa `rankBestPairs` (quét một lượt giữ top 10: 138 ms ở 225 ô × 728 lần hạ cánh) và chiều câu `explainDifference`.
+  - **Lỗi còn mở:** khi không có ô nào trong 1 km, `selectSearchCells` trả `[]`, trong khi README yêu cầu chỉ tìm điểm hiện tại. Vì vậy chọn Apollo 11 làm cả app trắng trang (`summarizeCurrentPoint` ném lỗi).
+  - Chưa deploy `main` lên Vercel cho tới khi lỗi này được sửa; production vẫn chạy `web` 7bf0aa3.
 - **Quy trình nhánh:** thành viên hay push thẳng vào `main` hoặc vào nhánh riêng, đôi khi rebase nên trùng nội dung khác SHA. Trước khi làm, luôn `git fetch`, merge `origin/main` và các nhánh mới vào `web`, chạy `npm test`. README/AI_USAGE/distribution hay conflict: giữ tên người thật và gộp cả hai dòng AI_USAGE.
 - **Vite dev trong VM:** lần đầu import động `echarts-for-react`, Vite tối ưu lại dependency rồi tải gói ~75 s. Màn hình đứng ở "Loading…" là bình thường, bản build không bị.
 - **Còn là khung:** mọi hàm khác `throw notImplemented(...)` hoặc `raise NotImplementedError`. Dòng `eslint-disable no-unused-vars` ở đầu file khung phải xoá khi implement.
