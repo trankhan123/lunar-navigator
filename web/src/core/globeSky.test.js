@@ -1,7 +1,7 @@
 // W6 globe — sub-body points. Synthetic ephemeris values, not real geometry.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { angularDistanceDeg, regionAtPoint, subBodyPoints } from './globeSky.js'
+import { angularDistanceDeg, rayPoints, regionAtPoint, subBodyPoints } from './globeSky.js'
 
 const ephemeris = {
   hours: 3,
@@ -23,6 +23,14 @@ test('angularDistanceDeg: quarter turns and the pole', () => {
   assert.ok(Math.abs(angularDistanceDeg(0, 0, 0, 90) - 90) < 1e-9)
   assert.ok(Math.abs(angularDistanceDeg(-90, 0, -85, 123) - 5) < 1e-9)
   assert.ok(angularDistanceDeg(10, 20, 10, 20) < 1e-3) // acos is imprecise near 0
+})
+
+test('rayPoints: straight out for an overhead body, sideways for a body on the horizon', () => {
+  const overhead = rayPoints(0, 0, 0, 0, 0.35, 2)
+  assert.deepEqual(overhead.map(([lat, lng, altitude]) => [lat, lng, Math.round(altitude * 1e6) / 1e6]), [[0, 0, 0], [0, 0, 0.175], [0, 0, 0.35]])
+  const [, tip] = rayPoints(0, 0, 0, 90, 0.35, 1)
+  assert.ok(Math.abs(tip[1] - (Math.atan(0.35) * 180) / Math.PI) < 1e-9)
+  assert.ok(Math.abs(tip[2] - (Math.hypot(1, 0.35) - 1)) < 1e-9)
 })
 
 test('regionAtPoint picks the nearest region inside the radius, else null', () => {
