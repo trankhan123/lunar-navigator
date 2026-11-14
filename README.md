@@ -96,9 +96,12 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D3 | WF5 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | trankhan123 (Claude Code) | done (9 regions) |
 | D4 | WF1 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | Quoc_Bao | done |
 | D5 | WF5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | trankhan123 (Claude Code) | done (9 regions; MMP trimmed to 900 cells, see region table) |
-| D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | chubin271-blip | todo |
-| D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | todo |
-| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade, PGDA 69 Sun/Earth and PSR overlays) |
+| D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | chubin271-blip | done (24 of 25 sites have coordinates; IM-3 TODO) |
+| D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | done (PGDA 69 only; QuickMap not done) |
+| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade, whole-pole Sun, Earth, PSR and slope overlays) |
+| D8b | WF5 | Relief tiles (zoomable shaded relief, contours) | `pipeline/export_relief_tiles.py`, `web/public/maps/relief/` | D8, D5 | M | trankhan123 (Claude Code) | done (152 tiles, 5 levels, finest 74 m/px) |
+| D9 | WF5 | Whole-cap 2 km grid (CAP cells) | `pipeline/build_cap_grid.py`, `web/public/data/cap/` | D2, D3, D4 | M | trankhan123 (Claude Code) | done (17,336 cells, 14,996 feasible, 60 tiles) |
+| D10 | WF5 | Terrain meshes for the 3D view | `pipeline/export_terrain_mesh.py`, `web/public/terrain/` | LDEM 80 m (raw), D2 | M | trankhan123 (Claude Code) | done (9 regions, each ≤ 205 kB) |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
 | C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | Quoc_Bao | done |
 | C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | chubin271-blip | done |
@@ -106,11 +109,11 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
 | C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
-| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `CellHoverCard`, `DirectionCard`, `MapSearch`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js` | W1, D8 | L | trankhan123 | done (map v2) |
+| W2 | WEB | South-pole map (relief tiles, whole-cap raster, 3D view) and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `MapReliefTiles`, `CellHoverCard`, `DirectionCard`, `MapSearch`, `TerrainView3D`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js`, `mapTiles.js`, `capGrid.js`, `capSearch.js` | W1, D8, D8b, D9, D10 | L | trankhan123 | done (map v2 + relief, cap raster, 3D view) |
 | W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
 | W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestWindowsTable.jsx` | C5 | L | trankhan123 | done |
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
-| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | doing (texture done; Sun/Earth arrows left) |
+| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | done (lit by the real Sun, Sun/Earth rays, SVS 4720 textures) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
 | S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
 | X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
@@ -740,7 +743,7 @@ File: `build_site_data.py`.
 
 File: `pipeline/sites.json`.
 
-- **Task:** fill `lat/lon` for the 13 entries marked `"source": "TODO"`:
+- **Status (15/11):** 24 of 25 entries have coordinates. Only IM-3 is still TODO (no official measured position found). The list below was the original work list:
   - Apollo 12, 14 and 16;
   - IM-1, IM-2, IM-3 and Blue Ghost 1;
   - Chang'e 3–6, Chandrayaan-3 and SLIM.
