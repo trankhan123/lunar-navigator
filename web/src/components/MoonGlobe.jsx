@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Globe from 'globe.gl'
 import { resolveCurrentCell, timeAtHour } from '../core/data.js'
-import { regionAtPoint, subBodyPoints } from '../core/globeSky.js'
+import { rayPoints, regionAtPoint, subBodyPoints } from '../core/globeSky.js'
 import { bodyDirections, directionText } from '../core/mapSky.js'
 import { useI18n } from '../i18n/index.jsx'
 
 const GROUP_COLORS = { 'artemis-region': '#fbbf24', apollo: '#f8fafc', clps: '#38bdf8', international: '#a78bfa' }
 const SUN_COLOR = '#f0e442' // same colours as the 2D map
-const SUN_PATH_COLOR = '#e69f00'
+const RAY_LENGTH_RADII = 0.35 // direction rays, in Moon radii
 const EARTH_COLOR = '#56b4e9'
 const RING_CLICK_RADIUS_DEG = 2.5
 const VIEWS = {
@@ -71,12 +71,16 @@ export default function MoonGlobe({ sites, regions, ephemeris, hour, selectedSit
       .htmlLng('lng')
       .htmlAltitude(0.004)
       .htmlElement((pin) => pinElement(pin))
-      .arcColor('color')
-      .arcStroke(0.35)
-      .arcAltitude(0.02) // hugs the surface so the path reads as a ground track
-      .arcDashLength(0.5)
-      .arcDashGap(0.15)
-      .arcDashAnimateTime(3500)
+      .htmlAltitude((pin) => pin.altitude ?? 0.004)
+      .pathPoints('points')
+      .pathPointLat((point) => point[0])
+      .pathPointLng((point) => point[1])
+      .pathPointAlt((point) => point[2])
+      .pathColor('color')
+      .pathStroke(1)
+      .pathDashLength('dashLength')
+      .pathDashGap('dashGap')
+      .pathTransitionDuration(0)
       .pointOfView({ ...VIEWS.southPole })
     globeRef.current = globe
     // Follow the container when the window is resized or a phone is rotated.
@@ -121,11 +125,20 @@ export default function MoonGlobe({ sites, regions, ephemeris, hour, selectedSit
     })
     const sunMarker = marker(t('globe.sun'), SUN_COLOR, subPoints.sun)
     const earthMarker = marker(t('globe.earth'), EARTH_COLOR, subPoints.earth)
-    const arc = (color, { latDeg, lonDeg }) => ({ color, startLat: selectedSite.lat, startLng: selectedSite.lon, endLat: latDeg, endLng: lonDeg })
+    // Straight rays from the site toward the Sun and Earth; dashed and dim when that body is below the local horizon.
+    const rays = selectedSite && directions
+      ? [[SUN_COLOR, subPoints.sun, directions[0], 'globe.sun'], [EARTH_COLOR, subPoints.earth, directions[1], 'globe.earth']].map(([color, body, direction, nameKey]) => {
+          const points = rayPoints(selectedSite.lat, selectedSite.lon, body.latDeg, body.lonDeg, RAY_LENGTH_RADII)
+          const isAbove = direction.elevationDeg >= 0
+          const tip = points[points.length - 1]
+          const tipPin = { text: `${t(nameKey)} ${isAbove ? '' : '(below horizon)'}`, color, lat: tip[0], lng: tip[1], altitude: tip[2], sizePx: 8 }
+          return { path: { points, color: isAbove ? color : `${color}80`, dashLength: isAbove ? 1 : 0.04, dashGap: isAbove ? 0 : 0.03 }, tipPin }
+        })
+      : []
     globe
-      .htmlElementsData([...sitePins, sunMarker, earthMarker])
-      .arcsData(selectedSite ? [arc(SUN_PATH_COLOR, subPoints.sun), arc(EARTH_COLOR, subPoints.earth)] : [])
-  }, [subPoints, selectedSite, selectedSiteId, sites, t])
+      .htmlElementsData([...sitePins, sunMarker, earthMarker, ...rays.map((ray) => ray.tipPin)])
+      .pathsData(rays.map((ray) => ray.path))
+  }, [subPoints, selectedSite, selectedSiteId, sites, directions, t])
 
   const showView = (view) => globeRef.current.pointOfView(VIEWS[view], 1200)
   const legendRows = [
