@@ -19,23 +19,25 @@ const DEG = Math.PI / 180
  * @returns {{azimuthDeg:number, elevationDeg:number}}  azimuth 0 ≤ az < 360, clockwise from North
  */
 export function bodyAzimuthElevation(cell, subLonDeg, subLatDeg, distanceKm) {
+  // Plain numbers, no arrays: C1/C2 call this once per hour per cell (millions of times in a search).
   const lat = cell.lat * DEG
   const lon = cell.lon * DEG
+  const sinLat = Math.sin(lat)
+  const cosLat = Math.cos(lat)
+  const sinLon = Math.sin(lon)
+  const cosLon = Math.cos(lon)
   const cellRadiusKm = MOON_RADIUS_KM + cell.heightM / 1000
-  const up = [Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon), Math.sin(lat)]
-  const east = [-Math.sin(lon), Math.cos(lon), 0]
-  const north = [-Math.sin(lat) * Math.cos(lon), -Math.sin(lat) * Math.sin(lon), Math.cos(lat)] // up × east
-  const subLat = subLatDeg * DEG
-  const subLon = subLonDeg * DEG
-  const toBody = [
-    distanceKm * Math.cos(subLat) * Math.cos(subLon) - cellRadiusKm * up[0],
-    distanceKm * Math.cos(subLat) * Math.sin(subLon) - cellRadiusKm * up[1],
-    distanceKm * Math.sin(subLat) - cellRadiusKm * up[2],
-  ]
-  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+  const cosSubLat = Math.cos(subLatDeg * DEG)
+  // d = B − P in Moon-fixed coordinates
+  const dx = distanceKm * cosSubLat * Math.cos(subLonDeg * DEG) - cellRadiusKm * cosLat * cosLon
+  const dy = distanceKm * cosSubLat * Math.sin(subLonDeg * DEG) - cellRadiusKm * cosLat * sinLon
+  const dz = distanceKm * Math.sin(subLatDeg * DEG) - cellRadiusKm * sinLat
+  const up = dx * cosLat * cosLon + dy * cosLat * sinLon + dz * sinLat
+  const east = -dx * sinLon + dy * cosLon
+  const north = -dx * sinLat * cosLon - dy * sinLat * sinLon + dz * cosLat // up × east
   // Clamp: rounding can push the ratio to 1 + ε when the body is exactly overhead, and asin would return NaN.
-  const elevationDeg = Math.asin(Math.min(1, Math.max(-1, dot(toBody, up) / Math.sqrt(dot(toBody, toBody))))) / DEG
-  const azimuthDeg = (Math.atan2(dot(toBody, east), dot(toBody, north)) / DEG + 360) % 360
+  const elevationDeg = Math.asin(Math.min(1, Math.max(-1, up / Math.sqrt(dx * dx + dy * dy + dz * dz)))) / DEG
+  const azimuthDeg = (Math.atan2(east, north) / DEG + 360) % 360
   return { azimuthDeg, elevationDeg }
 }
 

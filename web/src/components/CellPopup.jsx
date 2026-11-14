@@ -8,19 +8,21 @@ const LOOK_AHEAD_HOURS = 30 * 24
 const EVENT_WORDS = { sunset: 'sets', sunrise: 'rises', earthset: 'sets', earthrise: 'rises' }
 const REASON_TEXT = { slope: 'slope above the limit', psr: 'mostly in permanent shadow' }
 
+// Each body on its own, so the Sun line shows as soon as C1 works even while C2 is still a stub.
+function bodyAt(computeTrack, findNextEvent, cell, ephemeris, hour) {
+  try {
+    const track = computeTrack(cell, ephemeris, hour, Math.min(LOOK_AHEAD_HOURS, ephemeris.hours - hour), 'auto')
+    return { elevationDeg: track.elevationDeg[0], event: findNextEvent(track, 0) }
+  } catch {
+    return null // shortcut: module not implemented yet
+  }
+}
+
 function skyAt(cell, ephemeris, hour) {
   if (hour === null) return null
-  try {
-    const hourCount = Math.min(LOOK_AHEAD_HOURS, ephemeris.hours - hour)
-    const sun = computeSunTrack(cell, ephemeris, hour, hourCount, 'auto')
-    const earth = computeEarthTrack(cell, ephemeris, hour, hourCount)
-    return {
-      sun: { elevationDeg: sun.elevationDeg[0], event: nextSunEvent(sun, 0) },
-      earth: { elevationDeg: earth.elevationDeg[0], event: nextEarthEvent(earth, 0) },
-    }
-  } catch {
-    return null // shortcut: C1/C2 are still stubs; the sky lines appear once they are implemented
-  }
+  const sun = bodyAt(computeSunTrack, nextSunEvent, cell, ephemeris, hour)
+  const earth = bodyAt(computeEarthTrack, nextEarthEvent, cell, ephemeris, hour)
+  return sun || earth ? { sun, earth } : null
 }
 
 function skyLine(name, body) {
@@ -73,8 +75,8 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
         {sky ? (
           <>
             <p className="text-xs text-slate-400">At {formatUtc(timeAtHour(ephemeris, hour))}</p>
-            <p className="text-amber-300">{skyLine('Sun', sky.sun)}</p>
-            <p className="text-sky-300">{skyLine('Earth', sky.earth)}</p>
+            <p className="text-amber-300">{sky.sun ? skyLine('Sun', sky.sun) : 'Sun: coming with the sunlight module'}</p>
+            <p className="text-sky-300">{sky.earth ? skyLine('Earth', sky.earth) : 'Earth: coming with the communication module'}</p>
           </>
         ) : (
           <p className="text-xs text-slate-400">Sun and Earth times for this cell appear once the sunlight and communication modules are ready.</p>
