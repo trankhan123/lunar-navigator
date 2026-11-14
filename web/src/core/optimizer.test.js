@@ -80,19 +80,19 @@ test('summarizeCurrentPoint finds the nearest passing time and cell', () => {
   assert.deepEqual(summary.nearestPassingCell, { cellIndex: 1, cellId: 'TEST-1', distanceKm: 3 })
 })
 
-test('selectSearchCells: scope region with Apollo 11 returns [] when beyond 1 km', () => {
-  const scenario = { searchScope: 'region' }
-  const apollo11 = { id: 'SITE-apollo-11', lat: 0.674, lon: 23.473 }
+test('selectSearchCells: scope region with Apollo 11 keeps currentCell at index 0 when beyond 1 km', () => {
+  const scenario = { ...DEFAULT_SCENARIO, searchScope: 'region' }
+  const apollo11 = { id: 'SITE-apollo-11', lat: 0.67416, lon: 23.47314 }
   const cellsByRegion = {
     MAL: [
-      { id: 'MAL-r1c1', lat: -85.82302, lon: -2.53277, feasible: true, region: 'MAL' },
-      { id: 'MAL-r1c2', lat: -85.82434, lon: -2.0809, feasible: false, region: 'MAL' },
+      { id: 'MAL-r1c1', lat: -85.82302, lon: -2.53277, feasible: true },
+      { id: 'MAL-r1c2', lat: -85.82302, lon: -2.5, feasible: false },
     ],
   }
 
-  // Apollo 11 is ~2636 km from Malapert (> 1 km) -> []
+  // Apollo 11 is ~2636 km from Malapert (> 1 km) -> keeps only [apollo11] at index 0
   const distant = selectSearchCells(scenario, apollo11, cellsByRegion)
-  assert.deepEqual(distant, [])
+  assert.deepEqual(distant, [apollo11])
 
   // Point within 1 km matches region and puts currentPoint at index 0
   const nearbySite = { id: 'SITE-malapert', lat: -85.82302, lon: -2.53277 }
