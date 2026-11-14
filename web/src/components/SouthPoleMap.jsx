@@ -28,7 +28,7 @@ function MapImage({ entry }) {
  * activeRegion null = the overview; otherwise that region's cells are drawn.
  */
 function SouthPoleMap({
-  regions, activeRegion, maps, cells, sites, ephemeris, hour, defaultLayerId, statusByCellId, currentCellId, selectedCellId, onSelectCell, onOpenRegion,
+  regions, activeRegion, maps, cells, sites, ephemeris, hour, defaultLayerId, timeBar = null, statusByCellId, currentCellId, selectedCellId, onSelectCell, onOpenRegion,
 }) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
@@ -180,6 +180,7 @@ function SouthPoleMap({
       </div>
       <MapLayersPanel layerId={chosenLayerId} onLayerChange={setChosenLayerId} availability={availability} />
       </div>
+      {timeBar}
       {activeRegion ? <MapLegend layerId={layerId} /> : <MapLegend layerId={dotLayerId} showsCentreDots />}
     </figure>
   )

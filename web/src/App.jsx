@@ -5,11 +5,13 @@ import CellPopup from './components/CellPopup.jsx'
 import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
 import LandingTimeSlider from './components/LandingTimeSlider.jsx'
+import MapTimeBar from './components/MapTimeBar.jsx'
 import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
+import { clampHour, mapHourRange } from './core/mapSky.js'
 import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
@@ -70,6 +72,7 @@ export default function App() {
   const [scenario, setScenario] = useState(initialState.scenario)
   const [selectedCellId, setSelectedCellId] = useState(initialState.selectedCellId)
   const [landingTime, setLandingTime] = useState(initialState.landingTime)
+  const [mapHour, setMapHour] = useState(null) // the Map screen's own hour (time bar); null = follow the landing time
   const [search, setSearch] = useState({ status: 'idle' })
   const [ranking, setRanking] = useState({ sortBy: undefined, direction: undefined })
   const cellRequests = useRef(new Map()) // region code → pending or finished request, so each file is fetched once
@@ -197,6 +200,18 @@ export default function App() {
       return null // date outside the ephemeris; the form reports it
     }
   }, [data, landingTime, scenario.startDate])
+  // Map screen time (spec §5.3): starts at the landing time, else startDate 00:00, and stays inside the form's dates.
+  const mapRange = useMemo(() => data && mapHourRange(data.ephemeris, scenario.startDate, scenario.endDate), [data, scenario.startDate, scenario.endDate])
+  const shownMapHour = mapRange ? clampHour(mapHour ?? viewHour, mapRange) : viewHour
+  const mapTimeBar = useMemo(
+    () =>
+      mapRange ? (
+        <MapTimeBar ephemeris={data.ephemeris} range={mapRange} hour={shownMapHour} onChange={setMapHour} />
+      ) : (
+        <p className="mt-2 text-sm text-slate-400">Pick valid dates in the form to move the map through time.</p>
+      ),
+    [data, mapRange, shownMapHour],
+  )
   // The Results map's hour is the landing time its ✓ ! ✕ colours describe; an off-grid time set in Detail makes landingIndex fall back to 0.
   const resultsHour = useMemo(() => (results ? hourIndexOf(data.ephemeris, results.landingTimes[landingIndex]) : null), [data, results, landingIndex])
   const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
@@ -320,7 +335,7 @@ export default function App() {
                     </label>
                   )}
                 </div>
-                <SouthPoleMap {...mapProps} hour={viewHour} defaultLayerId="sunNow" />
+                <SouthPoleMap {...mapProps} hour={shownMapHour} defaultLayerId="sunNow" timeBar={mapTimeBar} />
               </section>
               <aside className="space-y-4">
                 {selectedCell && (
@@ -328,7 +343,7 @@ export default function App() {
                     key={selectedCell.id}
                     cell={selectedCell}
                     ephemeris={data.ephemeris}
-                    hour={viewHour}
+                    hour={shownMapHour}
                     isCurrent={selectedCell.id === currentCellId}
                     onUseAsCurrent={() => setScenario((current) => ({ ...current, currentPoint: { type: 'cell', cellId: selectedCell.id } }))}
                     onOpenDetail={() => openDetail(selectedCell.id)}
