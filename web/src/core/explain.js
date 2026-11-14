@@ -25,115 +25,79 @@ const COMPASS_ADJECTIVES = {
   'north-west': 'north-western',
 }
 
-// Precision formatter eliminating floating-point binary representation artifacts.
+// Rounds to d decimals and drops float noise (3.2000000000000006 -> 3.2).
 const fmt = (n, d = 1) => Number(Number(n).toFixed(d))
 
-/** Resolves an azimuth to the nearest 45° cardinal or intercardinal compass direction. */
+/** Nearest of the 8 compass directions for an azimuth. */
 export function compassName(azimuthDeg) {
   const normalized = ((azimuthDeg % 360) + 360) % 360
   const index = Math.round(normalized / 45) % 8
   return COMPASS_DIRECTIONS[index]
 }
 
+const middleValue = (sortedValues) => sortedValues[Math.floor(sortedValues.length / 2)]
+
 /**
- * Generates concise telemetry explaining the solar access differential between two landing cells.
- * Identifies the dominant horizon obstruction sector correlated with darkness difference.
+ * Hours of the stay when the darker cell has less than half of the Sun up and the brighter cell has at least half,
+ * as {azimuthDeg, darkerMinusBrighterHorizonDeg} (the horizons are read at the Sun's azimuth).
  */
-export function explainDifference(current, other, resultA, resultB) {
-  const cur = resultA !== undefined ? { cell: current, metrics: resultA } : (current || {})
-  const oth = resultB !== undefined ? { cell: other, metrics: resultB } : (other || {})
-
-  const curCell = cur.cell || {}
-  const othCell = oth.cell || {}
-  const dist = fmt(curCell.lat != null && othCell.lat != null ? distanceKm(curCell, othCell) : 0, 1)
-  const targetId = othCell.id || othCell.label || 'target'
-
-  const rawCurDark = cur.metrics?.longestDarkHours ?? 0
-  const rawOthDark = oth.metrics?.longestDarkHours ?? 0
-  const curDark = fmt(rawCurDark, 1)
-  const otherDark = fmt(rawOthDark, 1)
-  const darkDiff = rawOthDark - rawCurDark
-
-  let verbPhrase
-  if (otherDark < curDark) {
-    verbPhrase = `cuts the longest dark period from ${curDark} h to ${otherDark} h`
-  } else if (otherDark > curDark) {
-    verbPhrase = `increases the longest dark period from ${curDark} h to ${otherDark} h`
-  } else {
-    verbPhrase = `keeps the longest dark period at ${curDark} h`
+function sunHoursOnlyOneCellSees(darker, brighter) {
+  const hours = []
+  for (let i = 0; i < darker.lengthHours; i++) {
+    const darkerHour = darker.startIndex + i
+    const brighterHour = brighter.startIndex + i
+    if (darker.sunTrack.diskFraction[darkerHour] >= 0.5 || brighter.sunTrack.diskFraction[brighterHour] < 0.5) continue
+    const azimuthDeg = darker.sunTrack.azimuthDeg[darkerHour]
+    hours.push({
+      azimuthDeg,
+      darkerMinusBrighterHorizonDeg: horizonElevationAt(darker.cell.horizon, azimuthDeg) - horizonElevationAt(brighter.cell.horizon, azimuthDeg),
+    })
   }
-
-  const curHorizon = Array.isArray(curCell.horizon) && curCell.horizon.length ? curCell.horizon : null
-  const othHorizon = Array.isArray(othCell.horizon) && othCell.horizon.length ? othCell.horizon : null
-
-  let bestSector = null
-
-  if (curHorizon || othHorizon) {
-    let maxDiff = 0
-    let bestAz = -1
-    let bestType = null
-
-    if (darkDiff < 0) {
-      for (let i = 0; i < 360; i++) {
-        const curH = horizonElevationAt(curHorizon, i)
-        const othH = horizonElevationAt(othHorizon, i)
-        const diff = curH - othH
-        if (diff > maxDiff) {
-          maxDiff = diff
-          bestAz = i
-          bestType = 'lower'
-        }
-      }
-    } else if (darkDiff > 0) {
-      for (let i = 0; i < 360; i++) {
-        const curH = horizonElevationAt(curHorizon, i)
-        const othH = horizonElevationAt(othHorizon, i)
-        const diff = othH - curH
-        if (diff > maxDiff) {
-          maxDiff = diff
-          bestAz = i
-          bestType = 'higher'
-        }
-      }
-    }
-
-    if (bestAz === -1) {
-      for (let i = 0; i < 360; i++) {
-        const curH = horizonElevationAt(curHorizon, i)
-        const othH = horizonElevationAt(othHorizon, i)
-        const diff = curH - othH
-        const absDiff = Math.abs(diff)
-        if (absDiff > maxDiff) {
-          maxDiff = absDiff
-          bestAz = i
-          bestType = diff >= 0 ? 'lower' : 'higher'
-        }
-      }
-    }
-
-    if (bestAz !== -1 && maxDiff >= 0.05) {
-      bestSector = { az: bestAz, diff: maxDiff, type: bestType }
-    }
-  }
-
-  let reason
-  if (bestSector && bestSector.diff >= 0.05) {
-    const dir = compassName(bestSector.az)
-    const adj = COMPASS_ADJECTIVES[dir] || dir
-    const diffDeg = fmt(bestSector.diff, 1)
-    reason = `because the ${adj} ridge is ${diffDeg}° ${bestSector.type}.`
-  } else {
-    reason = 'with negligible difference in terrain obstruction.'
-  }
-
-  return `Moving ${dist} km to ${targetId} ${verbPhrase} ${reason}`
+  return hours
 }
 
 /**
- * Identifies the adjacent cell pair within maximum range exhibiting the steepest
- * terrain-driven darkness gradient at the specified landing epoch.
+ * Ending of the sentence that explains why `other` has a different longest dark period than `current`: looks only at
+ * the hours when exactly one of the two cells has the Sun up, and compares the two horizons at the Sun's azimuth then.
+ * @param {{cell, metrics: {longestDarkHours}, sunTrack?: {azimuthDeg, diskFraction}, startIndex?: number, lengthHours?: number}} current
+ * @param {object} other  same shape; both Sun tracks must cover the same hours
+ * @param {string} where  how the sentence names the cell whose ridge differs, when that is `other`
  */
-export function findMostDifferentNeighbors(results, cellsById, landingIndex, maxDistanceKm = 1.5) {
+export function differenceReason(current, other, where = 'there') {
+  if (!current.sunTrack || !other.sunTrack) return '.'
+  const currentIsDarker = (current.metrics?.longestDarkHours ?? 0) >= (other.metrics?.longestDarkHours ?? 0)
+  const [darker, brighter] = currentIsDarker ? [current, other] : [other, current]
+  const hours = sunHoursOnlyOneCellSees(darker, brighter)
+  if (hours.length === 0) {
+    return ', because both cells see the Sun at the same hours; the difference comes from something else (for example Earth visibility or the battery).'
+  }
+  hours.sort((a, b) => a.darkerMinusBrighterHorizonDeg - b.darkerMinusBrighterHorizonDeg)
+  const typical = middleValue(hours)
+  if (typical.darkerMinusBrighterHorizonDeg < 0.05) {
+    return ', with no real difference in the terrain where the Sun is in those hours.'
+  }
+  const adjective = COMPASS_ADJECTIVES[compassName(typical.azimuthDeg)]
+  const place = currentIsDarker ? 'there' : where
+  return `, because the ${adjective} ridge is ${fmt(typical.darkerMinusBrighterHorizonDeg, 1)}° ${currentIsDarker ? 'lower' : 'higher'} ${place}, right where the Sun is in those hours.`
+}
+
+/** "Moving D km to X cuts/increases/keeps the longest dark period ..., because ..." for two cells with the same Sun-track hours. */
+export function explainDifference(current, other) {
+  const curDark = fmt(current.metrics?.longestDarkHours ?? 0, 1)
+  const otherDark = fmt(other.metrics?.longestDarkHours ?? 0, 1)
+  const distKm = fmt(current.cell.lat != null && other.cell.lat != null ? distanceKm(current.cell, other.cell) : 0, 1)
+  let verbPhrase
+  if (otherDark < curDark) verbPhrase = `cuts the longest dark period from ${curDark} h to ${otherDark} h`
+  else if (otherDark > curDark) verbPhrase = `increases the longest dark period from ${curDark} h to ${otherDark} h`
+  else verbPhrase = `keeps the longest dark period at ${curDark} h`
+  return `Moving ${distKm} km to ${other.cell.id || other.cell.label || 'target'} ${verbPhrase}${differenceReason(current, other)}`
+}
+
+/**
+ * The pair of cells within maxDistanceKm whose longest dark periods differ most at one landing time.
+ * With onlyWithCellId, only pairs that contain that cell are considered.
+ */
+export function findMostDifferentNeighbors(results, cellsById, landingIndex, maxDistanceKm = 1.5, onlyWithCellId = null) {
   const { cellCount = 0, landingCount = 0 } = results || {}
   if (cellCount < 2 || landingIndex < 0 || landingIndex >= landingCount) {
     return null
@@ -155,6 +119,7 @@ export function findMostDifferentNeighbors(results, cellsById, landingIndex, max
       const idB = results.cellIds[j]
       const cellB = getCell(idB)
       if (!cellB || cellB.lat == null || cellB.lon == null) continue
+      if (onlyWithCellId && idA !== onlyWithCellId && idB !== onlyWithCellId) continue
 
       const darkB = results.longestDarkHours[j * landingCount + landingIndex]
 

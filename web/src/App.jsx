@@ -472,7 +472,7 @@ export default function App() {
 
           {data && screen === 'learn' && (
             <Suspense fallback={<p className="text-slate-400">Loading learn mode…</p>}>
-              <LearnView results={results} cellsById={cellsById} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
+              <LearnView results={results} cellsById={cellsById} ephemeris={data.ephemeris} scenario={search.scenario} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
             </Suspense>
           )}
 
