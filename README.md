@@ -597,13 +597,16 @@ Files: `DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.
 
 File: `MoonGlobe.jsx`.
 
-- **Props:** `{sites, regions, selectedSiteId, sunDirection, earthDirection, onSelectSite(site), onOpenSouthPoleMap()}`. `sunDirection` and `earthDirection` are `{azimuthDeg, elevationDeg}` or `null`.
+- **Props:** `{sites, regions, ephemeris, hour, selectedSiteId, onSelectSite(site), onOpenRegion(code)}`. `hour` is an ephemeris hour index (App passes the map's current hour, else hour 0). The card for the Sun and Earth is computed inside from `bodyDirections` (`core/mapSky.js`).
 - **Content:**
-  - texture `/textures/lroc_color_2k.jpg` (NASA SVS 4720);
-  - pins for the sites and the 9 regions;
-  - arrows toward the Sun and Earth from the selected site.
-- **Interaction:** a click at lat < −80° opens the map screen.
-- **Lifecycle:** keep `new Globe(container)`, the `_destructor()` cleanup and stable callbacks.
+  - texture `/textures/lroc_color_4k.jpg` (`lroc_color_2k.jpg` below 768 px) plus the LOLA elevation `/textures/ldem_bump_1440.png` as `bumpImageUrl` (NASA SVS 4720);
+  - real light: a directional light at the sub-solar point of `hour` plus a dim ambient light, so the terminator is real; the text "Sunlight at <UTC time>" states the time;
+  - HTML pins for the sites (small, coloured by group, hover title with name, group, lat/lon), the selected site named and highlighted, a colour legend, rings on the 9 Artemis III regions;
+  - labelled markers at the sub-solar and sub-Earth points (`core/globeSky.js` `subBodyPoints`, ephemeris columns of C0) and ground-track arcs from the selected site to each (Sun `#e69f00`, Earth `#56b4e9`);
+  - a card with azimuth, elevation and in view / hidden for the Sun and Earth ("terrain not included" for sites without a horizon);
+  - camera buttons South pole (default view), Near side, Far side.
+- **Interaction:** a click on a region centre site or inside its ring (`regionAtPoint`, 2.5°) calls `onOpenRegion(code)` and App opens the 2D map with that region; a click on any other site selects it as the current point.
+- **Lifecycle:** keep `new Globe(container)`, the `_destructor()` cleanup, the `ResizeObserver` and stable callbacks (kept in a ref).
 
 ### W7 Learn mode
 

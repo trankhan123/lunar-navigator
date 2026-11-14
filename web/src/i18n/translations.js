@@ -31,6 +31,26 @@ export const TRANSLATIONS = {
     'nav.learn': 'Learn',
     'nav.about': 'About',
 
+    // Globe
+    'globe.loading': 'Loading globe…',
+    'globe.sunlightAt': 'Sunlight at {time}',
+    'globe.hint': 'Click a site to use it as the current point. Click an Artemis III region (ring) to open its map.',
+    'globe.southPole': 'South pole',
+    'globe.nearSide': 'Near side',
+    'globe.farSide': 'Far side',
+    'globe.legend.artemis-region': 'Artemis III region centre',
+    'globe.legend.apollo': 'Apollo landing',
+    'globe.legend.clps': 'CLPS / commercial',
+    'globe.legend.international': 'International landing',
+    'globe.legend.sun': 'Sub-solar point (Sun overhead)',
+    'globe.legend.earth': 'Sub-Earth point (Earth overhead)',
+    'globe.legend.ring': 'Artemis III region ring',
+    'globe.sun': 'Sun',
+    'globe.earth': 'Earth',
+    'globe.skyFrom': 'Sky from {name}',
+    'globe.pickSite': 'Pick a site on the globe to see where the Sun and Earth stand in its sky.',
+    'globe.noSunlight': 'Hour is outside the ephemeris.',
+
     // Region & Cell Pickers
     'picker.region': 'Region',
     'picker.cell': 'Cell',
@@ -176,6 +196,26 @@ export const TRANSLATIONS = {
     'nav.globe': 'Quả địa cầu',
     'nav.learn': 'Tìm hiểu',
     'nav.about': 'Giới thiệu',
+
+    // Globe
+    'globe.loading': 'Đang tải quả địa cầu…',
+    'globe.sunlightAt': 'Ánh nắng lúc {time}',
+    'globe.hint': 'Bấm một địa điểm để dùng làm điểm hiện tại. Bấm vòng tròn vùng Artemis III để mở bản đồ vùng đó.',
+    'globe.southPole': 'Cực Nam',
+    'globe.nearSide': 'Mặt gần',
+    'globe.farSide': 'Mặt xa',
+    'globe.legend.artemis-region': 'Tâm vùng Artemis III',
+    'globe.legend.apollo': 'Điểm hạ cánh Apollo',
+    'globe.legend.clps': 'CLPS / thương mại',
+    'globe.legend.international': 'Điểm hạ cánh quốc tế',
+    'globe.legend.sun': 'Điểm dưới Mặt Trời',
+    'globe.legend.earth': 'Điểm dưới Trái Đất',
+    'globe.legend.ring': 'Vòng vùng Artemis III',
+    'globe.sun': 'Mặt Trời',
+    'globe.earth': 'Trái Đất',
+    'globe.skyFrom': 'Bầu trời tại {name}',
+    'globe.pickSite': 'Chọn một địa điểm trên quả cầu để xem Mặt Trời và Trái Đất ở đâu trên bầu trời của nó.',
+    'globe.noSunlight': 'Giờ này nằm ngoài ephemeris.',
 
     // Region & Cell Pickers
     'picker.region': 'Vùng',
