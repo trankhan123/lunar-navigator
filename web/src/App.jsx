@@ -487,10 +487,20 @@ export default function App() {
 
           {data && screen === 'globe' && (
             <section className="space-y-2">
-              <Suspense fallback={<p className="text-slate-400">Loading globe…</p>}>
-                <MoonGlobe sites={data.sites} onSelectSite={selectSite} />
+              <Suspense fallback={<p className="text-slate-400">{t('globe.loading')}</p>}>
+                <MoonGlobe
+                  sites={data.sites}
+                  regions={data.regions}
+                  ephemeris={data.ephemeris}
+                  hour={shownMapHour ?? 0}
+                  selectedSiteId={scenario.currentPoint?.type === 'site' ? scenario.currentPoint.siteId : null}
+                  onSelectSite={selectSite}
+                  onOpenRegion={(code) => {
+                    openRegion(code)
+                    setScreen('map')
+                  }}
+                />
               </Suspense>
-              <p className="text-xs text-slate-400">Click a site to use it as the current point.</p>
             </section>
           )}
 
