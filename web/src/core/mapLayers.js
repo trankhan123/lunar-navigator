@@ -62,6 +62,28 @@ export function fractionColor(fraction) {
 
 const FRACTION_FIELDS = { sunPercent: 'fractionSun', earthPercent: 'fractionEarth' }
 
+/** Image overlays in panel order; kind matches maps.json (relief = the hillshade images). */
+export const MAP_OVERLAYS = [
+  { kind: 'relief', label: 'Relief (LOLA hillshade)', defaultEnabled: true, defaultOpacity: 1 },
+  { kind: 'sun-visibility', label: 'NASA % sunlight (PGDA 69, 60 m)', defaultEnabled: false, defaultOpacity: 0.7 },
+  { kind: 'earth-visibility', label: 'NASA % Earth in view (PGDA 69, 60 m)', defaultEnabled: false, defaultOpacity: 0.7 },
+  { kind: 'psr', label: 'Permanent shadow (PGDA 90, 20 m)', defaultEnabled: false, defaultOpacity: 0.8 },
+]
+
+const CELL_HALF_SIZE_M = 500
+
+/**
+ * Note for a NASA PGDA 69 overlay over a region (spec §5.4): null when every cell's whole 1 km square is inside the image.
+ * @param {{boundsM: number[]}|undefined} overlay  the region's maps.json entry of that kind, if any
+ */
+export function nasaCoverageNote(regionName, cells, overlay) {
+  if (!overlay) return `NASA data covers about 85°S to the pole; not available for ${regionName}.`
+  const [xMin, yMin, xMax, yMax] = overlay.boundsM
+  const isCovered = ({ xM, yM }) =>
+    xM - CELL_HALF_SIZE_M >= xMin && xM + CELL_HALF_SIZE_M <= xMax && yM - CELL_HALF_SIZE_M >= yMin && yM + CELL_HALF_SIZE_M <= yMax
+  return cells.every(isCovered) ? null : `NASA data covers only part of ${regionName}.`
+}
+
 /** Fill colour of a cell on a layer; always a colour. */
 export function cellColor(layerId, sample) {
   if (FRACTION_FIELDS[layerId]) return fractionColor(sample[FRACTION_FIELDS[layerId]]) ?? NO_VALUE_COLOR

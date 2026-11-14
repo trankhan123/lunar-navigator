@@ -1,6 +1,12 @@
 import { FRACTION_RAMP, INFEASIBLE_COLOR, MAP_LAYERS, STATUS_SYMBOLS } from '../core/mapLayers.js'
 
 const FRACTION_BODY_WORDS = { sunPercent: 'with the Sun in view', earthPercent: 'with Earth in view' }
+// The PGDA 69 averaging period is not stated in the file, so the caption says "long-term average" only.
+const NASA_CAPTIONS = {
+  'sun-visibility': 'NASA PGDA 69: % of time the Sun is visible · 60 m pixels · long-term average, not your dates',
+  'earth-visibility': 'NASA PGDA 69: % of time Earth is in view · 60 m pixels · long-term average, not your dates',
+}
+const PSR_COLOR = '#cc79a7'
 
 function FractionRamp({ caption }) {
   return (
@@ -24,7 +30,7 @@ function Swatch({ color, symbol = '', label }) {
 }
 
 // Colour never stands alone: every swatch has its text, search results keep ✕ ! ✓, infeasible cells are hatched.
-export default function MapLegend({ layerId, showsCentreDots = false, dateRangeText = '' }) {
+export default function MapLegend({ layerId, showsCentreDots = false, dateRangeText = '', enabledOverlayKinds = [] }) {
   const layer = MAP_LAYERS.find((candidate) => candidate.id === layerId)
   const levelSwatches = layer.legend.map((entry, level) => ({ ...entry, symbol: layerId === 'searchResult' ? STATUS_SYMBOLS[level] : '' })).reverse()
   return (
@@ -44,10 +50,21 @@ export default function MapLegend({ layerId, showsCentreDots = false, dateRangeT
           Hatched: not feasible (too steep or in permanent shadow)
         </span>
       </p>
+      {enabledOverlayKinds.map((kind) =>
+        NASA_CAPTIONS[kind] ? (
+          <p key={kind}>
+            <FractionRamp caption={NASA_CAPTIONS[kind]} />
+          </p>
+        ) : (
+          <p key={kind}>
+            <Swatch color={PSR_COLOR} label="Permanent shadow (NASA PGDA 90 LPSR, 20 m)" />
+          </p>
+        ),
+      )}
       {showsCentreDots && <p>Dots: region centres (terrain horizon of the centre point)</p>}
       <p>Amber outline: current point · white: selected</p>
       <p>1 square = 1 km · up = towards 0° longitude (Earth-facing side)</p>
-      <p>Sources: LOLA PGDA 90 (80 m), USGS LGRS, JPL Horizons.</p>
+      <p>Sources: LOLA PGDA 90 (80 m), PGDA 69 (60 m, 85°S+), USGS LGRS, JPL Horizons.</p>
     </div>
   )
 }

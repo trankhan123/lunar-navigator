@@ -1,7 +1,7 @@
 // W2 map v2 — layers, levels and colours (plan Task 2). Synthetic samples, not real data.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { INFEASIBLE_COLOR, MAP_LAYERS, NOT_SEARCHED_COLOR, NO_VALUE_COLOR, cellColor, cellLevel, earthLevel, fractionColor, sunEarthLevel, sunLevel } from './mapLayers.js'
+import { INFEASIBLE_COLOR, MAP_LAYERS, NOT_SEARCHED_COLOR, NO_VALUE_COLOR, cellColor, cellLevel, earthLevel, fractionColor, nasaCoverageNote, sunEarthLevel, sunLevel } from './mapLayers.js'
 
 const legend = (layerId) => MAP_LAYERS.find((layer) => layer.id === layerId).legend
 
@@ -48,4 +48,14 @@ test('fractionColor interpolates the colour-blind-safe ramp', () => {
   assert.equal(fractionColor(Number.NaN), null)
   assert.equal(cellColor('sunPercent', { fractionSun: 1 }), '#fde725')
   assert.equal(cellColor('earthPercent', {}), NO_VALUE_COLOR)
+})
+
+test('nasaCoverageNote: whole 1 km squares inside the NASA image', () => {
+  const overlay = { boundsM: [0, 0, 10000, 10000] }
+  const inside = { xM: 5000, yM: 5000 }
+  const edge = { xM: 9500, yM: 5000 } // square reaches x = 10000 exactly: still covered
+  const outside = { xM: 9501, yM: 5000 }
+  assert.equal(nasaCoverageNote('Malapert Massif', [inside, edge], overlay), null)
+  assert.equal(nasaCoverageNote('Nobile Rim 2', [inside, outside], overlay), 'NASA data covers only part of Nobile Rim 2.')
+  assert.equal(nasaCoverageNote('Peak near Cabeus B', [inside], undefined), 'NASA data covers about 85°S to the pole; not available for Peak near Cabeus B.')
 })

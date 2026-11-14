@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
 import { timeAtHour, toPolarXY } from '../core/data.js'
-import { MAP_LAYERS, STATUS_SYMBOLS, cellColor, cellLevel } from '../core/mapLayers.js'
+import { MAP_LAYERS, MAP_OVERLAYS, STATUS_SYMBOLS, cellColor, cellLevel, nasaCoverageNote } from '../core/mapLayers.js'
 import { bodyDirections, computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
 import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, VIEW_SIZE_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap, mapAngleDeg, viewBoundsM } from '../core/mapView.js'
 import { startVisibilityFractions } from '../core/startWindowSearch.js'
@@ -34,9 +34,14 @@ const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: r
 const layerById = (layerId) => MAP_LAYERS.find((layer) => layer.id === layerId)
 const skySample = (sky, index) => ({ sunDiskFraction: sky?.sunDiskFraction[index], earthDiskFraction: sky?.earthDiskFraction[index] })
 
-function MapImage({ entry }) {
+const NASA_KINDS = ['sun-visibility', 'earth-visibility', 'psr'] // drawn over the cells, in this order
+const initialOverlays = () => Object.fromEntries(MAP_OVERLAYS.map((overlay) => [overlay.kind, { enabled: overlay.defaultEnabled, opacity: overlay.defaultOpacity }]))
+
+function MapImage({ entry, opacity = 1 }) {
   const [xMin, yMin, xMax, yMax] = entry.boundsM
-  return <image href={entry.image} x={xMin} y={-yMax} width={xMax - xMin} height={yMax - yMin} preserveAspectRatio="none" pointerEvents="none" />
+  return (
+    <image href={entry.image} x={xMin} y={-yMax} width={xMax - xMin} height={yMax - yMin} preserveAspectRatio="none" opacity={opacity} pointerEvents="none" />
+  )
 }
 
 /**
@@ -55,7 +60,9 @@ function SouthPoleMap({
   const [, setFractionsDone] = useState(0) // bumped when a worker result lands in fractionsCache
   const [fractionsError, setFractionsError] = useState(null)
   const [hoveredCell, setHoveredCell] = useState(null)
+  const [overlays, setOverlays] = useState(initialOverlays)
   const regionCode = activeRegion?.code ?? null
+  const changeOverlay = (kind, changes) => setOverlays((current) => ({ ...current, [kind]: { ...current[kind], ...changes } }))
 
   useEffect(() => {
     if (!hoveredCell) return
@@ -193,6 +200,20 @@ function SouthPoleMap({
 
   const southPoleImage = maps.find((entry) => entry.id === 'south_pole' && entry.kind === 'hillshade')
   const regionImage = activeRegion && maps.find((entry) => entry.id === activeRegion.code && entry.kind === 'hillshade')
+  // The panel lists relief always and each NASA kind only when this data set has it (mock mode has none).
+  const overlayKinds = ['relief', ...NASA_KINDS.filter((kind) => maps.some((entry) => entry.kind === kind))]
+  const enabledNasaKinds = NASA_KINDS.filter((kind) => overlayKinds.includes(kind) && overlays[kind].enabled)
+  const nasaImages = activeRegion
+    ? enabledNasaKinds.map((kind) => ({ kind, entry: maps.find((entry) => entry.id === activeRegion.code && entry.kind === kind) })).filter(({ entry }) => entry)
+    : []
+  const coverageNotes = enabledNasaKinds
+    .filter((kind) => kind !== 'psr')
+    .map((kind) =>
+      activeRegion
+        ? cells && nasaCoverageNote(activeRegion.name, cells, maps.find((entry) => entry.id === activeRegion.code && entry.kind === kind))
+        : 'Open a region to see the NASA layers.',
+    )
+  const coverageNote = [...new Set(coverageNotes.filter(Boolean))].join(' ')
   const outlines = [[currentCellId, '#fbbf24', 3], [selectedCellId, '#f8fafc', 2]]
     .map(([cellId, color, width]) => ({ cell: cells?.find((cell) => cell.id === cellId), color, width }))
     .filter(({ cell }) => cell)
@@ -241,9 +262,12 @@ function SouthPoleMap({
           </pattern>
         </defs>
         <g transform={transform.toString()}>
-          {southPoleImage && <MapImage entry={southPoleImage} />}
-          {regionImage && <MapImage entry={regionImage} />}
+          {overlays.relief.enabled && southPoleImage && <MapImage entry={southPoleImage} opacity={overlays.relief.opacity} />}
+          {overlays.relief.enabled && regionImage && <MapImage entry={regionImage} opacity={overlays.relief.opacity} />}
           {activeRegion && cells && <MapCells cells={cells} colors={colors} symbols={symbols} onSelectCell={onSelectCell} onHoverCell={setHoveredCell} />}
+          {nasaImages.map(({ kind, entry }) => (
+            <MapImage key={kind} entry={entry} opacity={overlays[kind].opacity} />
+          ))}
           <MapMarks regions={regions} activeRegionCode={regionCode} pinSites={pinSites} centres={centres} zoomScale={transform.k} onOpenRegion={onOpenRegion} />
           <g pointerEvents="none">
             {outlines.map(({ cell, color, width }) => (
@@ -291,11 +315,23 @@ function SouthPoleMap({
       <p aria-live="polite" className="mt-1 min-h-4 text-xs text-slate-400">
         {statusText}
       </p>
+      {coverageNote && <p className="text-xs text-amber-200">{coverageNote}</p>}
       </div>
-      <MapLayersPanel layerId={chosenLayerId} onLayerChange={setChosenLayerId} availability={availability} />
+      <MapLayersPanel
+        layerId={chosenLayerId}
+        onLayerChange={setChosenLayerId}
+        availability={availability}
+        overlays={overlays}
+        overlayKinds={overlayKinds}
+        onOverlayChange={changeOverlay}
+      />
       </div>
       {timeBar}
-      {activeRegion ? <MapLegend layerId={layerId} dateRangeText={dateRangeText} /> : <MapLegend layerId={dotLayerId} showsCentreDots />}
+      {activeRegion ? (
+        <MapLegend layerId={layerId} dateRangeText={dateRangeText} enabledOverlayKinds={enabledNasaKinds} />
+      ) : (
+        <MapLegend layerId={dotLayerId} showsCentreDots enabledOverlayKinds={enabledNasaKinds} />
+      )}
     </figure>
   )
 }
