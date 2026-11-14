@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  AmbientLight, ArrowHelper, BufferGeometry, CanvasTexture, Color, DirectionalLight, Mesh, MeshStandardMaterial, PCFShadowMap,
+  AmbientLight, ArrowHelper, CanvasTexture, Color, DirectionalLight, Mesh, MeshStandardMaterial, PCFShadowMap,
   PerspectiveCamera, PlaneGeometry, Scene, SRGBColorSpace, Vector3, WebGLRenderer,
 } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -141,7 +141,6 @@ export default function TerrainView3D({ regionCode, cells, colors, maps, ephemer
 
     stage.current = { scene, mesh, light, canvas, texture, render, heightAt, centre, widthM, depthM, reliefM, radiusM, controls, arrows: [], entry }
     resize()
-    setBaseVersion((version) => version + 1)
     return () => {
       observer.disconnect()
       controls.dispose()
@@ -150,6 +149,7 @@ export default function TerrainView3D({ regionCode, cells, colors, maps, ephemer
       renderer.forceContextLoss()
       renderer.domElement.remove()
       stage.current = null
+      baseCanvas.current = null
     }
   }, [terrain])
 
@@ -199,7 +199,7 @@ export default function TerrainView3D({ regionCode, cells, colors, maps, ephemer
     Object.assign(light.shadow.camera, { left: -shadowReach, right: shadowReach, top: shadowReach, bottom: -shadowReach, near: 1, far: shadowReach * 4 })
     light.shadow.camera.updateProjectionMatrix()
     current.render()
-  }, [exaggeration, baseVersion])
+  }, [exaggeration, terrain])
 
   // A new hour moves only the light and the arrows.
   useEffect(() => {
@@ -227,7 +227,7 @@ export default function TerrainView3D({ regionCode, cells, colors, maps, ephemer
       return arrow
     })
     current.render()
-  }, [directions, lonDeg, focusCell, exaggeration, baseVersion])
+  }, [directions, lonDeg, focusCell, exaggeration, terrain])
 
   return (
     <div>

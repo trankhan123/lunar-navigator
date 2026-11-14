@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
 import { timeAtHour, toPolarXY } from '../core/data.js'
@@ -16,6 +16,8 @@ import MapLegend from './MapLegend.jsx'
 import MapMarks from './MapMarks.jsx'
 import MapMinimap from './MapMinimap.jsx'
 import MapSearch from './MapSearch.jsx'
+
+const TerrainView3D = lazy(() => import('./TerrainView3D.jsx'))
 
 const SITE_FOCUS_HALF_M = 5000
 const CELL_FOCUS_HALF_M = 3000
@@ -62,6 +64,7 @@ function SouthPoleMap({
   const [, setFractionsDone] = useState(0) // bumped when a worker result lands in fractionsCache
   const [fractionsError, setFractionsError] = useState(null)
   const [hoveredCell, setHoveredCell] = useState(null)
+  const [view3d, setView3d] = useState(false)
   const [overlays, setOverlays] = useState(initialOverlays)
   const [labelsFit, setLabelsFit] = useState(false) // a 1 km cell is wide enough on screen for its LGRS label
   const regionCode = activeRegion?.code ?? null
@@ -209,6 +212,7 @@ function SouthPoleMap({
   const selectedInRegion = cells?.find((cell) => cell.id === selectedCellId)
   const measuredCell = activeRegion && availability.hour ? (selectedInRegion ?? centreCells.find((centre) => centre.regionCode === regionCode)?.cell) : null
   const directions = useMemo(() => (measuredCell ? bodyDirections(measuredCell, ephemeris, hour) : null), [measuredCell, ephemeris, hour])
+  const show3d = view3d && Boolean(activeRegion && cells)
   const placeLabel = selectedInRegion ? `At ${selectedInRegion.id}` : `At the centre of ${activeRegion?.name}`
   const arrowStart = measuredCell && transform.apply([measuredCell.xM, -measuredCell.yM])
 
@@ -255,13 +259,28 @@ function SouthPoleMap({
           )}
         </nav>
         <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} onNeedRegionCells={onNeedRegionCells} onPick={pickSearchMatch} />
-        <span className="ml-auto text-xs text-slate-400">Click the map, then scroll to zoom</span>
+        <span className="ml-auto text-xs text-slate-400">{show3d ? 'Drag to rotate, scroll or pinch to zoom' : 'Click the map, then scroll to zoom'}</span>
+        {activeRegion && (
+          <button type="button" aria-pressed={view3d} onClick={() => setView3d(!view3d)} className="h-9 rounded border border-slate-600 px-3 transition-colors hover:bg-slate-800 aria-pressed:bg-slate-700">
+            {view3d ? '2D' : '3D'}
+          </button>
+        )}
         <button type="button" aria-label="Zoom in" onClick={() => zoomBy(ZOOM_STEP)} className={toolbarButton}>+</button>
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)} className={toolbarButton}>−</button>
       </div>
       <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]">
       <div>
-      <div className="relative mx-auto w-full max-w-[75vh]">
+      {show3d && (
+        <div className="mx-auto w-full max-w-[75vh]">
+          <Suspense fallback={<p className="p-4 text-sm text-slate-400">Loading 3D view…</p>}>
+            <TerrainView3D
+              regionCode={regionCode} cells={cells} colors={colors} maps={maps} ephemeris={ephemeris} hour={hour}
+              directions={directions} lonDeg={measuredCell?.lon} focusCell={measuredCell}
+            />
+          </Suspense>
+        </div>
+      )}
+      <div className={`relative mx-auto w-full max-w-[75vh] ${show3d ? 'hidden' : ''}`}>
       <svg
         ref={svgRef}
         viewBox={VIEW_BOX}

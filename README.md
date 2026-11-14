@@ -784,6 +784,19 @@ File: `build_cap_grid.py` (tests: `test_build_cap_grid.py`; checker: `check_cap`
   - `web/public/data/cap/cap_<tx>_<ty>.json` = `{tileId, cells: [...]}`; tiles are 40 km squares aligned to multiples of 40000 m (`tx = floor(xM / 40000)`, can be negative), only non-empty tiles are written, each < 2 MB.
 - **Re-run:** `python pipeline/build_cap_grid.py` (needs the raw rasters; horizons use all CPU cores, `--jobs N` to limit; `--limit 200` is a dry timing run that writes nothing), then `python pipeline/check_web_data.py`. The checker runs `check_cap` only when `cap/index.json` exists.
 
+### D10 Terrain meshes
+
+File: `export_terrain_mesh.py` (3D view of an open region, `TerrainView3D.jsx`).
+
+- **Input:** `LDEM_80S_80MPP_ADJ.TIF` (optional path argument) and `regions.json`.
+- **Output:** `web/public/terrain/<CODE>.bin` for the 9 regions and `web/public/terrain/index.json` = `{"regions": [{"code", "boundsM", "width", "height", "file", "metresPerSample", "minHeightM", "maxHeightM", "curvatureRemoved": true}]}`.
+- **Rules:**
+  - window = region `boundsM` + 8 km on each side, resampled (average) to at most 320 samples on the longer side;
+  - `.bin` = little-endian Int16 metres, row-major, row 0 = north edge, column 0 = west edge, size `width × height × 2` bytes (≤ 300 KB);
+  - the Moon's curvature relative to the window centre is already subtracted: `height = DEM − d²/(2R)`, R = 1737.4 km;
+  - `boundsM` = image edges in `PGDA_CRS`, containing the region; `check_web_data.py` checks files, sizes and bounds.
+- **Browser:** scene axes x = PGDA x, y = up, z = −PGDA y; Sun direction from `sunLightDirection(azimuthDeg, elevationDeg, lonDeg)` in `core/terrainLight.js` (map angle = azimuth + longitude, README D4).
+
 ## Site coordinates
 
 `pipeline/sites.json` has 25 sites:
