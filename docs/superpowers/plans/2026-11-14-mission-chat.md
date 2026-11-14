@@ -25,26 +25,35 @@ the public endpoint, while existing browser code computes scientific results.
 
 ## Task 1: Scenario preparation
 
-- [ ] Add `src/core/missionChat.test.js`: assert kWh/W/h normalization, preserve other fields, reject invented IDs/extra keys, report invalid dates and missing point.
-- [ ] Run the test and observe missing module failure.
-- [ ] Add `src/core/missionChat.js`: `normalizeChatPatch(patch, catalog)`, `prepareChatDraft(reply, scenario, catalog)` and UI field formatting; reuse `validateScenario`.
-- [ ] Run `node --test src/core/missionChat.test.js`.
+- [x] Add `src/core/missionChat.test.js`: assert kWh/W/h normalization, preserve other fields, reject invented IDs/extra keys, report invalid dates and missing point.
+- [x] Run the test and observe missing module failure.
+- [x] Add `src/core/missionChat.js`: `normalizeChatPatch(patch, catalog)`, `prepareChatDraft(reply, scenario, catalog)` and UI field formatting; reuse `validateScenario`.
+- [x] Run `node --test src/core/missionChat.test.js`.
 
 ## Task 2: Protected API
 
-- [ ] Add `server/missionChat.test.js`: missing config and Redis denial cause zero provider calls; duplicate ID rejected; upstream failure never retries.
-- [ ] Add `server/missionChat.js`, `server/chatQuota.js`, `server/chatCatalog.js`, and `api/mission-chat.js`; use native fetch and atomic Redis EVAL.
-- [ ] Add same handler to Vite dev middleware, env example and Vercel function bundling.
-- [ ] Run server tests, including actual Lua concurrency test when Redis is available.
+- [x] Add `server/missionChat.test.js`: missing config and Redis denial cause zero provider calls; duplicate ID rejected; upstream failure never retries.
+- [x] Add `server/missionChat.js`, `server/chatQuota.js`, `server/chatCatalog.js`, and `api/mission-chat.js`; use native fetch and atomic Redis EVAL.
+- [x] Add same handler to Vite dev middleware, env example and Vercel function bundling.
+- [x] Run server tests, including actual Lua concurrency test when Redis is available.
 
 ## Task 3: UX and delivery
 
-- [ ] Add `components/MissionChat.jsx`, wire above ScenarioForm in App, expose reviewed draft only after validation.
-- [ ] Check clarification, apply, stale draft, keyboard and unavailable service in Chromium with stubbed API responses.
-- [ ] Document resources, limits, privacy and deployment in `docs/mission-chat-setup.md`; update README and AI usage.
-- [ ] Run `npm test`, `npm run lint`, `npm run build`; review diff for secrets and scope.
+- [x] Add `components/MissionChat.jsx`, wire above ScenarioForm in App, expose reviewed draft only after validation.
+- [x] Check clarification, apply, stale draft, keyboard and unavailable service in Chromium with stubbed API responses.
+- [x] Document resources, limits, privacy and deployment in `docs/mission-chat-setup.md`; update README and AI usage.
+- [x] Run `npm test`, `npm run lint`, `npm run build`; review diff for secrets and scope.
 
 Execution: the user's instruction to start setup authorizes implementation;
 continue in this session without reopening the already discussed design.
 WF2 was fast-forwarded to origin/main because the completed form is required.
 Live credentials and deployment remain pending; do not imply live verification.
+
+## Verification and delivery status
+
+- Integrated origin/main `b948f7c` into WF2.
+- 128 tests pass (including the actual Redis Lua concurrency check), lint and production build pass.
+- Chromium smoke tests pass on desktop and 390px mobile with stubbed AI replies.
+- Reviewer coordinate-provenance findings fixed with regression tests.
+- WF2 pushed and draft PR #11 opened; no merge or Production deployment.
+- Vercel received the branch but Preview build failed. Build Logs require the owner's Vercel access; requested the error excerpt. Live Gemini/Upstash verification remains pending.
