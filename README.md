@@ -111,7 +111,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | done |
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
 | W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | doing (texture done; Sun/Earth arrows left) |
-| W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | todo |
+| W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
 | S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
 | X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
 
@@ -599,9 +599,10 @@ File: `MoonGlobe.jsx`.
 
 ### W7 Learn mode
 
-File: `LearnView.jsx`.
+Files: `LearnView.jsx` (the Learn tab, lazy-loaded) and `core/learn.js` (pure logic, tested in `learn.test.js`).
 
-- **Props:** `{results, cellsById, landingIndex}`.
+- **Props:** `{results, cellsById, landingIndex, onStartSearch}`. Before a search, only the Moon card is filled and the other two invite the user to search.
+- **`core/learn.js`:** `metricSentences(metrics)` → `[{label, value, sentence}]` (11 rows); `neighborLesson(results, cellsById, landingIndex)` → `{darkerCell, lighterCell, darkerHours, lighterHours, distanceKm, sentence}` or `null`; `moonFacts(metrics|null)` → `[{title, text}]` (4 facts).
 - **Cards:**
   - a plain-English sentence for each metric;
   - "Why moving 1 km matters": `findMostDifferentNeighbors` plus the two horizons;

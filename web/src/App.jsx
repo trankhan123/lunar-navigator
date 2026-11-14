@@ -18,12 +18,14 @@ import { startWindowSearch } from './core/startWindowSearch.js'
 // The globe pulls in three.js and the detail screen pulls in ECharts (most of the bundle): load each when first opened.
 const MoonGlobe = lazy(() => import('./components/MoonGlobe.jsx'))
 const DetailView = lazy(() => import('./components/DetailView.jsx'))
+const LearnView = lazy(() => import('./components/LearnView.jsx'))
 
 const SCREENS = [
   ['map', 'Map & scenario'],
   ['results', 'Results'],
   ['detail', 'Cell detail'],
   ['globe', 'Globe'],
+  ['learn', 'Learn'],
   ['about', 'About'],
 ]
 const forceMock = new URLSearchParams(window.location.search).get('mock') === '1'
@@ -422,6 +424,12 @@ export default function App() {
               </Suspense>
               <p className="text-xs text-slate-400">Click a site to use it as the current point.</p>
             </section>
+          )}
+
+          {data && screen === 'learn' && (
+            <Suspense fallback={<p className="text-slate-400">Loading learn mode…</p>}>
+              <LearnView results={results} cellsById={cellsById} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
+            </Suspense>
           )}
 
           {screen === 'about' && <AboutView />}

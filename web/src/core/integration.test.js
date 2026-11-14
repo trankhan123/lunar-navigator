@@ -183,3 +183,16 @@ test('detail helpers run on a real detail', () => {
   const sunPath = pathForChart(detail.sun.azimuthDeg, detail.sun.elevationDeg, 0, detail.stayHours)
   assert.equal(sunPath.filter((point) => point !== null).length, detail.stayHours)
 })
+
+test('learn mode (W7) explains a real search: one row per metric, and a darker-first neighbour pair within 1.5 km', async () => {
+  const { metricSentences, neighborLesson } = await import('./learn.js')
+  const { results } = runSearch()
+  const cellsById = new Map(grid.cells.map((cell) => [cell.id, cell]))
+  assert.equal(metricSentences(metricsAt(results, 0, 0)).length, 11)
+  const lessons = results.landingTimes.map((_, landingIndex) => neighborLesson(results, cellsById, landingIndex)).filter(Boolean)
+  assert.ok(lessons.length > 0, 'some landing time has two neighbours with different dark periods')
+  for (const lesson of lessons) {
+    assert.ok(lesson.darkerHours > lesson.lighterHours && lesson.distanceKm <= 1.5)
+    assert.match(lesson.sentence, /^Moving .* km to .* cuts the longest dark period/)
+  }
+})
