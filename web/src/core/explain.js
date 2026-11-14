@@ -1,5 +1,4 @@
 import {
-  VISIBLE_THRESHOLD,
   distanceKm,
   horizonElevationAt,
 } from './geometry.js'
@@ -38,7 +37,7 @@ export function compassName(azimuthDeg) {
 
 /**
  * Generates concise telemetry explaining the solar access differential between two landing cells.
- * Evaluates horizon blockage along the solar vector during divergent illumination periods.
+ * Identifies the dominant horizon obstruction sector correlated with darkness difference.
  */
 export function explainDifference(current, other, resultA, resultB) {
   const cur = resultA !== undefined ? { cell: current, metrics: resultA } : (current || {})
@@ -49,8 +48,11 @@ export function explainDifference(current, other, resultA, resultB) {
   const dist = fmt(curCell.lat != null && othCell.lat != null ? distanceKm(curCell, othCell) : 0, 1)
   const targetId = othCell.id || othCell.label || 'target'
 
-  const curDark = fmt(cur.metrics?.longestDarkHours ?? 0, 1)
-  const otherDark = fmt(oth.metrics?.longestDarkHours ?? 0, 1)
+  const rawCurDark = cur.metrics?.longestDarkHours ?? 0
+  const rawOthDark = oth.metrics?.longestDarkHours ?? 0
+  const curDark = fmt(rawCurDark, 1)
+  const otherDark = fmt(rawOthDark, 1)
+  const darkDiff = rawOthDark - rawCurDark
 
   let verbPhrase
   if (otherDark < curDark) {
@@ -61,81 +63,65 @@ export function explainDifference(current, other, resultA, resultB) {
     verbPhrase = `keeps the longest dark period at ${curDark} h`
   }
 
-  const lengthHours = cur.lengthHours || oth.lengthHours || 0
-  let bestHour = null
-  let maxDiff = -Infinity
+  const curHorizon = Array.isArray(curCell.horizon) && curCell.horizon.length ? curCell.horizon : null
+  const othHorizon = Array.isArray(othCell.horizon) && othCell.horizon.length ? othCell.horizon : null
 
-  const curTrack = cur.sunTrack
-  const othTrack = oth.sunTrack
-  const curStart = cur.startIndex || 0
-  const othStart = oth.startIndex || 0
+  let bestSector = null
 
-  if (curTrack?.diskFraction && othTrack?.diskFraction && lengthHours > 0) {
-    const curHorizon = Array.isArray(curCell.horizon) && curCell.horizon.length ? curCell.horizon : null
-    const othHorizon = Array.isArray(othCell.horizon) && othCell.horizon.length ? othCell.horizon : null
+  if (curHorizon || othHorizon) {
+    let maxDiff = 0
+    let bestAz = -1
+    let bestType = null
 
-    // Target gained illumination where baseline was shadowed
-    for (let h = 0; h < lengthHours; h++) {
-      const curIdx = curStart + h
-      const othIdx = othStart + h
-      const curSun = (curTrack.diskFraction[curIdx] ?? 0) >= VISIBLE_THRESHOLD
-      const othSun = (othTrack.diskFraction[othIdx] ?? 0) >= VISIBLE_THRESHOLD
-
-      if (!curSun && othSun) {
-        const az = curTrack.azimuthDeg ? curTrack.azimuthDeg[curIdx] : 0
-        const curH = curHorizon ? horizonElevationAt(curHorizon, az) : 0
-        const othH = othHorizon ? horizonElevationAt(othHorizon, az) : 0
+    if (darkDiff < 0) {
+      for (let i = 0; i < 360; i++) {
+        const curH = horizonElevationAt(curHorizon, i)
+        const othH = horizonElevationAt(othHorizon, i)
         const diff = curH - othH
         if (diff > maxDiff) {
           maxDiff = diff
-          bestHour = { az, diff, type: 'lower' }
+          bestAz = i
+          bestType = 'lower'
+        }
+      }
+    } else if (darkDiff > 0) {
+      for (let i = 0; i < 360; i++) {
+        const curH = horizonElevationAt(curHorizon, i)
+        const othH = horizonElevationAt(othHorizon, i)
+        const diff = othH - curH
+        if (diff > maxDiff) {
+          maxDiff = diff
+          bestAz = i
+          bestType = 'higher'
         }
       }
     }
 
-    // Baseline had illumination where target was shadowed
-    if (!bestHour) {
-      for (let h = 0; h < lengthHours; h++) {
-        const curIdx = curStart + h
-        const othIdx = othStart + h
-        const curSun = (curTrack.diskFraction[curIdx] ?? 0) >= VISIBLE_THRESHOLD
-        const othSun = (othTrack.diskFraction[othIdx] ?? 0) >= VISIBLE_THRESHOLD
-
-        if (curSun && !othSun) {
-          const az = othTrack.azimuthDeg ? othTrack.azimuthDeg[othIdx] : 0
-          const curH = curHorizon ? horizonElevationAt(curHorizon, az) : 0
-          const othH = othHorizon ? horizonElevationAt(othHorizon, az) : 0
-          const diff = othH - curH
-          if (diff > maxDiff) {
-            maxDiff = diff
-            bestHour = { az, diff, type: 'higher' }
-          }
-        }
-      }
-    }
-
-    // Fallback: maximum horizon deviation along the active solar path
-    if (!bestHour) {
-      for (let h = 0; h < lengthHours; h++) {
-        const curIdx = curStart + h
-        const az = curTrack.azimuthDeg ? curTrack.azimuthDeg[curIdx] : 0
-        const curH = curHorizon ? horizonElevationAt(curHorizon, az) : 0
-        const othH = othHorizon ? horizonElevationAt(othHorizon, az) : 0
+    if (bestAz === -1) {
+      for (let i = 0; i < 360; i++) {
+        const curH = horizonElevationAt(curHorizon, i)
+        const othH = horizonElevationAt(othHorizon, i)
         const diff = curH - othH
-        if (Math.abs(diff) > maxDiff) {
-          maxDiff = Math.abs(diff)
-          bestHour = { az, diff, type: diff >= 0 ? 'lower' : 'higher' }
+        const absDiff = Math.abs(diff)
+        if (absDiff > maxDiff) {
+          maxDiff = absDiff
+          bestAz = i
+          bestType = diff >= 0 ? 'lower' : 'higher'
         }
       }
+    }
+
+    if (bestAz !== -1 && maxDiff >= 0.05) {
+      bestSector = { az: bestAz, diff: maxDiff, type: bestType }
     }
   }
 
   let reason
-  if (bestHour && Math.abs(bestHour.diff) >= 0.05) {
-    const dir = compassName(bestHour.az)
+  if (bestSector && bestSector.diff >= 0.05) {
+    const dir = compassName(bestSector.az)
     const adj = COMPASS_ADJECTIVES[dir] || dir
-    const diffDeg = fmt(Math.abs(bestHour.diff), 1)
-    reason = `because the ${adj} ridge is ${diffDeg}° ${bestHour.type}.`
+    const diffDeg = fmt(bestSector.diff, 1)
+    reason = `because the ${adj} ridge is ${diffDeg}° ${bestSector.type}.`
   } else {
     reason = 'with negligible difference in terrain obstruction.'
   }

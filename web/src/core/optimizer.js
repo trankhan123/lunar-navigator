@@ -201,6 +201,47 @@ function safeSimulateBattery(powerFactor, startIndex, lengthHours, scenario) {
 }
 
 /**
+ * Flat typed-array slot comparator for high-throughput candidate selection.
+ */
+function compareResultSlots(results, c1, k1, c2, k2) {
+  const lc = results.landingCount
+  const idx1 = c1 * lc + k1
+  const idx2 = c2 * lc + k2
+
+  const s1 = results.status?.[idx1] ?? 0
+  const s2 = results.status?.[idx2] ?? 0
+  if (s1 !== s2) return s2 - s1
+
+  const bat1 = results.minBatteryFraction?.[idx1] ?? 0
+  const bat2 = results.minBatteryFraction?.[idx2] ?? 0
+  if (bat1 !== bat2) return bat2 - bat1
+
+  const sun1 = results.fractionBoth?.[idx1] ?? results.fractionSun?.[idx1] ?? 0
+  const sun2 = results.fractionBoth?.[idx2] ?? results.fractionSun?.[idx2] ?? 0
+  if (sun1 !== sun2) return sun2 - sun1
+
+  const d1 = results.distanceKm?.[c1] ?? 0
+  const d2 = results.distanceKm?.[c2] ?? 0
+  if (d1 !== d2) return d1 - d2
+
+  const comm1 = results.longestCommLossHours?.[idx1] ?? 0
+  const comm2 = results.longestCommLossHours?.[idx2] ?? 0
+  if (comm1 !== comm2) return comm1 - comm2
+
+  const dark1 = results.longestDarkHours?.[idx1] ?? 0
+  const dark2 = results.longestDarkHours?.[idx2] ?? 0
+  if (dark1 !== dark2) return dark1 - dark2
+
+  const id1 = results.cellIds?.[c1] ?? ''
+  const id2 = results.cellIds?.[c2] ?? ''
+  if (id1 !== id2) return String(id1).localeCompare(String(id2))
+
+  if (c1 !== c2) return c1 - c2
+  if (k1 !== k2) return k1 - k2
+  return 0
+}
+
+/**
  * Deterministic multi-tier landing candidate comparator:
  * 1. Feasibility status (pass > marginal > fail)
  * 2. Minimum battery state-of-charge margin (descending)
@@ -300,59 +341,74 @@ export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
  */
 export function selectSearchCells(scenario, currentCell, cellsByRegion) {
   const scope = scenario?.searchScope || 'region'
-  const result = [currentCell]
-  const seen = new Set()
-  if (currentCell && currentCell.id) {
-    seen.add(currentCell.id)
-  }
+  const allCells = Array.isArray(cellsByRegion)
+    ? cellsByRegion
+    : Object.values(cellsByRegion || {}).flat()
 
   let candidates = []
 
   if (scope === 'region') {
-    let regionCode = null
-    if (currentCell?.region && cellsByRegion?.[currentCell.region]) {
-      regionCode = currentCell.region
-    } else if (currentCell?.id) {
-      const prefix = currentCell.id.split('-')[0]
-      if (cellsByRegion?.[prefix]) {
-        regionCode = prefix
-      }
+    if (!currentCell || currentCell.lat == null || currentCell.lon == null || allCells.length === 0) {
+      return []
     }
-    if (!regionCode && cellsByRegion) {
+
+    let closestCell = null
+    let minDist = Infinity
+    let closestRegionKey = null
+
+    if (cellsByRegion && !Array.isArray(cellsByRegion)) {
       for (const [code, rCells] of Object.entries(cellsByRegion)) {
-        if (rCells.some((c) => c.id === currentCell?.id)) {
-          regionCode = code
-          break
-        }
-      }
-    }
-    if (!regionCode && cellsByRegion) {
-      const keys = Object.keys(cellsByRegion)
-      if (keys.length === 1) {
-        regionCode = keys[0]
-      } else if (keys.length > 1 && currentCell?.lat != null && currentCell?.lon != null) {
-        let minDist = Infinity
-        for (const [code, rCells] of Object.entries(cellsByRegion)) {
-          for (const c of rCells) {
+        for (const c of rCells) {
+          if (c.lat != null && c.lon != null) {
             const d = distanceKm(currentCell, c)
             if (d < minDist) {
               minDist = d
-              regionCode = code
+              closestCell = c
+              closestRegionKey = code
             }
           }
         }
       }
+    } else {
+      for (const c of allCells) {
+        if (c.lat != null && c.lon != null) {
+          const d = distanceKm(currentCell, c)
+          if (d < minDist) {
+            minDist = d
+            closestCell = c
+          }
+        }
+      }
     }
-    candidates = regionCode ? (cellsByRegion[regionCode] || []) : []
+
+    if (!closestCell || minDist > 1) {
+      return []
+    }
+
+    const targetRegion = closestCell.region || closestCell.regionId || closestRegionKey || (closestCell.id ? closestCell.id.split('-')[0] : null)
+    if (cellsByRegion && !Array.isArray(cellsByRegion) && targetRegion && cellsByRegion[targetRegion]) {
+      candidates = cellsByRegion[targetRegion]
+    } else {
+      candidates = allCells.filter(
+        (c) => (c.region && c.region === targetRegion) ||
+               (c.regionId && c.regionId === targetRegion) ||
+               (targetRegion && c.id?.startsWith(targetRegion + '-')),
+      )
+    }
   } else if (scope === 'radius') {
     const radius = scenario?.searchRadiusKm ?? 10
-    const allCells = Object.values(cellsByRegion || {}).flat()
     candidates = allCells.filter((cell) => {
       if (cell.feasible !== true) return false
       return distanceKm(currentCell, cell) <= radius
     })
   } else if (scope === 'all') {
-    candidates = Object.values(cellsByRegion || {}).flat()
+    candidates = allCells
+  }
+
+  const result = [currentCell]
+  const seen = new Set()
+  if (currentCell && currentCell.id) {
+    seen.add(currentCell.id)
   }
 
   for (const cell of candidates) {
@@ -612,22 +668,48 @@ export function rankCells(results, landingIndex, options = {}) {
 }
 
 /**
- * Identifies optimal global (cell, landing epoch) opportunities across the entire mission horizon.
+ * Identifies optimal global (cell, landing epoch) opportunities across the entire mission horizon
+ * using a single-pass top-K buffer.
  */
 export function rankBestPairs(results, options = {}) {
   const { limit = 10 } = options
-  const pairs = []
-  for (let c = 0; c < results.cellCount; c++) {
-    for (let k = 0; k < results.landingCount; k++) {
-      pairs.push(metricsAt(results, c, k))
+  const cellCount = results?.cellCount ?? 0
+  const landingCount = results?.landingCount ?? 0
+  const totalSlots = cellCount * landingCount
+  if (totalSlots === 0) return []
+
+  const effectiveLimit = limit != null && limit > 0 ? limit : totalSlots
+  const top = []
+
+  for (let c = 0; c < cellCount; c++) {
+    for (let k = 0; k < landingCount; k++) {
+      if (top.length === effectiveLimit) {
+        const worst = top[effectiveLimit - 1]
+        if (compareResultSlots(results, c, k, worst.cellIndex, worst.landingIndex) >= 0) {
+          continue
+        }
+      }
+
+      let low = 0
+      let high = top.length
+      while (low < high) {
+        const mid = (low + high) >> 1
+        if (compareResultSlots(results, c, k, top[mid].cellIndex, top[mid].landingIndex) < 0) {
+          high = mid
+        } else {
+          low = mid + 1
+        }
+      }
+
+      top.splice(low, 0, { cellIndex: c, landingIndex: k })
+      if (top.length > effectiveLimit) {
+        top.pop()
+      }
     }
   }
 
-  pairs.sort(defaultCompare)
-
-  const sliced = limit != null && limit > 0 ? pairs.slice(0, limit) : pairs
-  return sliced.map((pair, i) => ({
-    ...pair,
+  return top.map((entry, i) => ({
+    ...metricsAt(results, entry.cellIndex, entry.landingIndex),
     rank: i + 1,
   }))
 }
