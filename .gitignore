@@ -6,7 +6,7 @@ __pycache__/
 *.pyc
 
 # Large data: re-download with `python pipeline/download_data.py`
-pipeline/raw/
+pipeline/raw
 *.tif
 *.TIF
 *.tiff
