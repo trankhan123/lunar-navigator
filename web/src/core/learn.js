@@ -84,6 +84,7 @@ export function metricSentences(metrics) {
   ]
 }
 
+const MIN_USEFUL_IMPROVEMENT_HOURS = 12
 const darkPeriodWords = (hours) => (hours === 0 ? 'no dark period' : `a ${Math.round(hours)} h dark period`)
 
 /**
@@ -96,9 +97,10 @@ const darkPeriodWords = (hours) => (hours === 0 ? 'no dark period' : `a ${Math.r
  */
 export function neighborLesson(results, cellsById, landingIndex, { ephemeris, scenario }) {
   const currentId = results.cellIds[0]
-  // A neighbour with fewer dark hours is what a planner wants; otherwise the biggest difference.
-  const currentPair = findMostDifferentNeighbors(results, cellsById, landingIndex, 1.5, currentId, true)
-    ?? findMostDifferentNeighbors(results, cellsById, landingIndex, 1.5, currentId)
+  // A neighbour that cuts the dark period noticeably is what a planner wants; otherwise the biggest difference.
+  const better = findMostDifferentNeighbors(results, cellsById, landingIndex, 1.5, currentId, true)
+  const worthMoving = better && Math.abs(better.longestDarkHoursA - better.longestDarkHoursB) >= MIN_USEFUL_IMPROVEMENT_HOURS
+  const currentPair = worthMoving ? better : findMostDifferentNeighbors(results, cellsById, landingIndex, 1.5, currentId)
   const scope = currentPair && currentPair.longestDarkHoursA !== currentPair.longestDarkHoursB ? 'current' : 'elsewhere'
   const pair = scope === 'current' ? currentPair : findMostDifferentNeighbors(results, cellsById, landingIndex)
   if (!pair || pair.longestDarkHoursA === pair.longestDarkHoursB) return null
