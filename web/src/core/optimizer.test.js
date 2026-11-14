@@ -152,3 +152,149 @@ test('rankBestPairs: 225 cells completes in < 200 ms returning top 10', () => {
   assert.ok(top10[0].minBatteryFraction > top10[1].minBatteryFraction)
   assert.ok(elapsed < 200, `Expected rankBestPairs to complete in < 200 ms, took ${elapsed.toFixed(2)} ms`)
 })
+
+test('rankBestPairs: never returns duplicate cellIds (strictly at most one row per cell) and returns 10 distinct cells', () => {
+  const cellCount = 15
+  const landingCount = 10
+  const size = cellCount * landingCount
+  const status = new Uint8Array(size).fill(0)
+  const minBatteryFraction = new Float32Array(size).fill(0.1)
+
+  // Each cell has multiple passing steps (e.g. 3 consecutive passing steps)
+  for (let c = 0; c < 12; c++) {
+    for (let k = 2; k <= 4; k++) {
+      const idx = c * landingCount + k
+      status[idx] = 2 // pass
+      minBatteryFraction[idx] = 0.5 + c * 0.02
+    }
+  }
+
+  const results = {
+    cellCount,
+    landingCount,
+    cellIds: Array.from({ length: cellCount }, (_, i) => `CELL-${i}`),
+    distanceKm: new Float32Array(cellCount).map((_, i) => i * 0.5),
+    landingTimes: Array.from({ length: landingCount }, (_, k) => `2028-01-01T${String(k * 6).padStart(2, '0')}:00Z`),
+    status,
+    failReasonBits: new Uint8Array(size),
+    minBatteryFraction,
+    longestDarkHours: new Uint16Array(size),
+    longestCommLossHours: new Uint16Array(size),
+    fractionSun: new Float32Array(size).fill(0.8),
+    fractionEarth: new Float32Array(size).fill(0.8),
+    fractionBoth: new Float32Array(size).fill(0.8),
+    meanSunElevationDeg: new Float32Array(size).fill(2),
+    hoursToSunset: new Int16Array(size).fill(-1),
+    rechargeHours: new Int16Array(size).fill(-1),
+    deadAtHour: new Int16Array(size).fill(-1),
+  }
+
+  const rows = rankBestPairs(results, { limit: 10 })
+  assert.equal(rows.length, 10)
+
+  const cellIds = rows.map((r) => r.cellId)
+  const uniqueCellIds = new Set(cellIds)
+  assert.equal(uniqueCellIds.size, 10, 'All 10 rows must belong to distinct cells')
+  assert.equal(uniqueCellIds.size, cellIds.length, 'No duplicate cell IDs allowed')
+})
+
+test('rankBestPairs: correctly merges contiguous passing steps into a single window with accurate metrics', () => {
+  const cellCount = 1
+  const landingCount = 8
+  const size = cellCount * landingCount
+  const status = new Uint8Array(size).fill(0)
+  const minBatteryFraction = new Float32Array(size).fill(0)
+  const longestDarkHours = new Uint16Array(size).fill(0)
+  const landingTimes = Array.from({ length: landingCount }, (_, k) => `2028-01-01T${String(k * 6).padStart(2, '0')}:00Z`)
+
+  // Steps 2, 3, 4 are passing (contiguous window [2..4])
+  for (let k = 2; k <= 4; k++) {
+    status[k] = 2 // pass
+    minBatteryFraction[k] = 0.8 - (k - 2) * 0.1 // 0.8, 0.7, 0.6 -> bottleneck is 0.6
+    longestDarkHours[k] = 5 + (k - 2) * 2 // 5, 7, 9 -> bottleneck is 9
+  }
+
+  const results = {
+    cellCount,
+    landingCount,
+    cellIds: ['TEST-CELL'],
+    distanceKm: new Float32Array([1.5]),
+    landingTimes,
+    status,
+    failReasonBits: new Uint8Array(size),
+    minBatteryFraction,
+    longestDarkHours,
+    longestCommLossHours: new Uint16Array(size),
+    fractionSun: new Float32Array(size).fill(0.9),
+    fractionEarth: new Float32Array(size).fill(0.9),
+    fractionBoth: new Float32Array(size).fill(0.9),
+    meanSunElevationDeg: new Float32Array(size).fill(1.8),
+    hoursToSunset: new Int16Array(size).fill(-1),
+    rechargeHours: new Int16Array(size).fill(-1),
+    deadAtHour: new Int16Array(size).fill(-1),
+  }
+
+  const rows = rankBestPairs(results, { limit: 10 })
+  assert.equal(rows.length, 1)
+
+  const w = rows[0]
+  assert.equal(w.cellId, 'TEST-CELL')
+  assert.equal(w.startStep, 2)
+  assert.equal(w.endStep, 4)
+  assert.equal(w.windowSteps, 3)
+  assert.equal(w.windowHours, 18) // 3 steps * 6h
+  assert.equal(w.slipHours, 12) // (4 - 2) * 6h
+  assert.equal(w.startTime, landingTimes[2])
+  assert.equal(w.endTime, landingTimes[4])
+  assert.equal(w.status, 'pass')
+  // Bottleneck metrics across [2..4]
+  assertNear(w.minBatteryFraction, 0.6)
+  assert.equal(w.longestDarkHours, 9)
+})
+
+test('rankBestPairs: picks the longest/best contiguous window when a cell has multiple separate passing windows', () => {
+  const cellCount = 1
+  const landingCount = 12
+  const size = cellCount * landingCount
+  const status = new Uint8Array(size).fill(0)
+  const minBatteryFraction = new Float32Array(size).fill(0.5)
+
+  // Window 1: steps 1..2 (2 steps, 12h)
+  status[1] = 2
+  status[2] = 2
+
+  // Window 2: steps 5..9 (5 steps, 30h) -> longer window
+  for (let k = 5; k <= 9; k++) {
+    status[k] = 2
+  }
+
+  const results = {
+    cellCount,
+    landingCount,
+    cellIds: ['MULTI-WINDOW-CELL'],
+    distanceKm: new Float32Array([0.8]),
+    landingTimes: Array.from({ length: landingCount }, (_, k) => `2028-01-01T${String(k * 2).padStart(2, '0')}:00Z`),
+    status,
+    failReasonBits: new Uint8Array(size),
+    minBatteryFraction,
+    longestDarkHours: new Uint16Array(size),
+    longestCommLossHours: new Uint16Array(size),
+    fractionSun: new Float32Array(size).fill(0.7),
+    fractionEarth: new Float32Array(size).fill(0.7),
+    fractionBoth: new Float32Array(size).fill(0.7),
+    meanSunElevationDeg: new Float32Array(size).fill(1.2),
+    hoursToSunset: new Int16Array(size).fill(-1),
+    rechargeHours: new Int16Array(size).fill(-1),
+    deadAtHour: new Int16Array(size).fill(-1),
+  }
+
+  const rows = rankBestPairs(results, { limit: 10 })
+  assert.equal(rows.length, 1)
+
+  const w = rows[0]
+  assert.equal(w.cellId, 'MULTI-WINDOW-CELL')
+  assert.equal(w.startStep, 5)
+  assert.equal(w.endStep, 9)
+  assert.equal(w.windowSteps, 5)
+  assert.equal(w.windowHours, 30)
+})

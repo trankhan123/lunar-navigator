@@ -676,11 +676,167 @@ export function rankCells(results, landingIndex, options = {}) {
   }))
 }
 
-/**
- * Identifies optimal global (cell, landing epoch) opportunities across the entire mission horizon
- * using a single-pass top-K buffer.
- */
-export function rankBestPairs(results, options = {}) {
+function createWindow(results, c, startStep, endStep, stepHours, statusStr) {
+  const landingCount = results.landingCount
+  const windowSteps = endStep - startStep + 1
+  const windowHours = windowSteps * stepHours
+  const slipHours = (endStep - startStep) * stepHours
+
+  let bestStep = startStep
+  let minBatteryFraction = 1
+  let longestDarkHours = 0
+  let longestCommLossHours = 0
+  let fractionSun = 1
+  let fractionEarth = 1
+  let fractionBoth = 1
+  let minMeanSun = Infinity
+  let maxRechargeHours = -1
+  let minHoursToSunset = Infinity
+
+  for (let k = startStep; k <= endStep; k++) {
+    const idx = c * landingCount + k
+
+    if (k !== bestStep && compareResultSlots(results, c, k, c, bestStep) < 0) {
+      bestStep = k
+    }
+
+    const bat = results.minBatteryFraction[idx]
+    if (bat < minBatteryFraction) minBatteryFraction = bat
+
+    const dark = results.longestDarkHours[idx]
+    if (dark > longestDarkHours) longestDarkHours = dark
+
+    const comm = results.longestCommLossHours[idx]
+    if (comm > longestCommLossHours) longestCommLossHours = comm
+
+    const sun = results.fractionSun[idx]
+    if (sun < fractionSun) fractionSun = sun
+
+    const earth = results.fractionEarth[idx]
+    if (earth < fractionEarth) fractionEarth = earth
+
+    const both = results.fractionBoth[idx]
+    if (both < fractionBoth) fractionBoth = both
+
+    const meanSun = results.meanSunElevationDeg[idx]
+    if (!Number.isNaN(meanSun) && meanSun !== -1) {
+      if (meanSun < minMeanSun) minMeanSun = meanSun
+    }
+
+    const rh = results.rechargeHours[idx]
+    if (!Number.isNaN(rh) && rh !== -1) {
+      if (rh > maxRechargeHours) maxRechargeHours = rh
+    }
+
+    const hts = results.hoursToSunset[idx]
+    if (!Number.isNaN(hts) && hts !== -1) {
+      if (hts < minHoursToSunset) minHoursToSunset = hts
+    }
+  }
+
+  const bestIdx = c * landingCount + bestStep
+  const bits = results.failReasonBits[bestIdx]
+  const failReasons = []
+  if (statusStr === 'fail') {
+    if (bits & FAIL_REASON_BITS.dark) failReasons.push('dark')
+    if (bits & FAIL_REASON_BITS.commLoss) failReasons.push('commLoss')
+    if (bits & FAIL_REASON_BITS.battery) failReasons.push('battery')
+  }
+
+  const cellId = results.cellIds[c]
+  const dist = results.distanceKm[c]
+  const startTime = results.landingTimes[startStep]
+  const endTime = results.landingTimes[endStep]
+  const bestTime = results.landingTimes[bestStep]
+
+  return {
+    cellIndex: c,
+    cellId,
+    startStep,
+    endStep,
+    stepIndex: bestStep,
+    landingStep: bestStep,
+    landingIndex: bestStep,
+    landingTime: bestTime,
+    startTime,
+    endTime,
+    windowSteps,
+    windowHours,
+    slipHours,
+    bestStep,
+    status: statusStr,
+    failReasons,
+    minBatteryFraction,
+    minBatteryPct: minBatteryFraction * 100,
+    longestDarkHours,
+    longestCommLossHours,
+    fractionSun,
+    fractionEarth,
+    fractionBoth,
+    sunPct: fractionSun * 100,
+    earthPct: fractionEarth * 100,
+    meanSunElevationDeg: minMeanSun !== Infinity ? minMeanSun : null,
+    rechargeHours: maxRechargeHours !== -1 ? maxRechargeHours : null,
+    hoursToSunset: minHoursToSunset !== Infinity ? minHoursToSunset : null,
+    deadAtHour: results.deadAtHour?.[bestIdx] !== -1 ? (results.deadAtHour?.[bestIdx] ?? null) : null,
+    distanceKm: dist,
+  }
+}
+
+function compareCellWindows(w1, w2) {
+  const sDiff = (STATUS[w2.status] ?? 0) - (STATUS[w1.status] ?? 0)
+  if (sDiff !== 0) return sDiff
+
+  if (w2.windowSteps !== w1.windowSteps) return w2.windowSteps - w1.windowSteps
+
+  const batDiff = (w2.minBatteryFraction ?? 0) - (w1.minBatteryFraction ?? 0)
+  if (batDiff !== 0) return batDiff
+
+  const darkDiff = (w1.longestDarkHours ?? 0) - (w2.longestDarkHours ?? 0)
+  if (darkDiff !== 0) return darkDiff
+
+  const commDiff = (w1.longestCommLossHours ?? 0) - (w2.longestCommLossHours ?? 0)
+  if (commDiff !== 0) return commDiff
+
+  const se1 = (w1.fractionSun ?? 0) + (w1.fractionEarth ?? 0)
+  const se2 = (w2.fractionSun ?? 0) + (w2.fractionEarth ?? 0)
+  if (se2 !== se1) return se2 - se1
+
+  const m1 = w1.meanSunElevationDeg ?? -999
+  const m2 = w2.meanSunElevationDeg ?? -999
+  if (m2 !== m1) return m2 - m1
+
+  return w1.startStep - w2.startStep
+}
+
+function compareCrossCellWindows(w1, w2) {
+  const sDiff = (STATUS[w2.status] ?? 0) - (STATUS[w1.status] ?? 0)
+  if (sDiff !== 0) return sDiff
+
+  if (w2.windowSteps !== w1.windowSteps) return w2.windowSteps - w1.windowSteps
+
+  const batDiff = (w2.minBatteryFraction ?? 0) - (w1.minBatteryFraction ?? 0)
+  if (batDiff !== 0) return batDiff
+
+  const darkDiff = (w1.longestDarkHours ?? 0) - (w2.longestDarkHours ?? 0)
+  if (darkDiff !== 0) return darkDiff
+
+  const commDiff = (w1.longestCommLossHours ?? 0) - (w2.longestCommLossHours ?? 0)
+  if (commDiff !== 0) return commDiff
+
+  const se1 = (w1.fractionSun ?? 0) + (w1.fractionEarth ?? 0)
+  const se2 = (w2.fractionSun ?? 0) + (w2.fractionEarth ?? 0)
+  if (se2 !== se1) return se2 - se1
+
+  const distDiff = (w1.distanceKm ?? 0) - (w2.distanceKm ?? 0)
+  if (distDiff !== 0) return distDiff
+
+  if (w1.startStep !== w2.startStep) return w1.startStep - w2.startStep
+
+  return String(w1.cellId ?? '').localeCompare(String(w2.cellId ?? ''))
+}
+
+function rankLegacyBestPairs(results, options = {}) {
   const { limit = 10 } = options
   const cellCount = results?.cellCount ?? 0
   const landingCount = results?.landingCount ?? 0
@@ -719,6 +875,91 @@ export function rankBestPairs(results, options = {}) {
 
   return top.map((entry, i) => ({
     ...metricsAt(results, entry.cellIndex, entry.landingIndex),
+    rank: i + 1,
+  }))
+}
+
+/**
+ * Identifies optimal landing windows across the entire search horizon,
+ * grouping contiguous time steps per cell into landing windows and enforcing
+ * "one row per cell".
+ */
+export function rankBestPairs(results, options) {
+  if (options === undefined || options?.legacy === true) {
+    return rankLegacyBestPairs(results, { limit: 10 })
+  }
+
+  const { limit = 10 } = options ?? {}
+  const cellCount = results?.cellCount ?? 0
+  const landingCount = results?.landingCount ?? 0
+  if (cellCount === 0 || landingCount === 0) return []
+
+  const stepHours = LANDING_STEP_HOURS
+  const bestWindowPerCell = []
+
+  for (let c = 0; c < cellCount; c++) {
+    let hasPass = false
+    let hasMarginal = false
+    let bestFailStep = 0
+    let bestFailIdx = -1
+
+    for (let k = 0; k < landingCount; k++) {
+      const idx = c * landingCount + k
+      const s = results.status[idx]
+      if (s === STATUS.pass) {
+        hasPass = true
+        break
+      } else if (s === STATUS.marginal) {
+        hasMarginal = true
+      } else {
+        if (bestFailIdx === -1 || compareResultSlots(results, c, k, c, bestFailStep) < 0) {
+          bestFailStep = k
+          bestFailIdx = idx
+        }
+      }
+    }
+
+    const targetStatus = hasPass ? STATUS.pass : (hasMarginal ? STATUS.marginal : STATUS.fail)
+    const targetStatusStr = hasPass ? 'pass' : (hasMarginal ? 'marginal' : 'fail')
+
+    const candidateWindows = []
+
+    if (targetStatus === STATUS.fail) {
+      candidateWindows.push(createWindow(results, c, bestFailStep, bestFailStep, stepHours, targetStatusStr))
+    } else {
+      let inWindow = false
+      let startK = 0
+      for (let k = 0; k < landingCount; k++) {
+        const idx = c * landingCount + k
+        const s = results.status[idx]
+        if (s === targetStatus) {
+          if (!inWindow) {
+            inWindow = true
+            startK = k
+          }
+        } else {
+          if (inWindow) {
+            candidateWindows.push(createWindow(results, c, startK, k - 1, stepHours, targetStatusStr))
+            inWindow = false
+          }
+        }
+      }
+      if (inWindow) {
+        candidateWindows.push(createWindow(results, c, startK, landingCount - 1, stepHours, targetStatusStr))
+      }
+    }
+
+    if (candidateWindows.length === 0) continue
+
+    candidateWindows.sort(compareCellWindows)
+    bestWindowPerCell.push(candidateWindows[0])
+  }
+
+  bestWindowPerCell.sort(compareCrossCellWindows)
+
+  const effectiveLimit = limit != null && limit > 0 ? limit : bestWindowPerCell.length
+  return bestWindowPerCell.slice(0, effectiveLimit).map((row, i) => ({
+    ...row,
     rank: i + 1,
   }))
 }
