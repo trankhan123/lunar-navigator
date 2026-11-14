@@ -89,7 +89,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 
 | ID | Module | Files | Needs | Size | Owner | Status |
 |---|---|---|---|---|---|---|
-| D1 | Ephemeris (JPL Horizons) | `pipeline/fetch_horizons.py` | — | M | | todo |
+| D1 | Ephemeris (JPL Horizons) | `pipeline/fetch_horizons.py` | — | M | Claude (trankhan123) | doing |
 | D2 | LGRS grid (1 km cells) | `pipeline/build_grid.py` | LGRS shapefiles (manual download) | M | | todo |
 | D3 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | | todo |
 | D4 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | | todo |
@@ -97,7 +97,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D6 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | | todo |
 | D7 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | | todo |
 | D8 | Map background images | `pipeline/export_map_background.py` | D5 | S | | todo |
-| C0 | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | | todo |
+| C0 | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | doing |
 | C1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | | todo |
 | C2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | | todo |
 | C3 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | | todo |
