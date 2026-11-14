@@ -199,6 +199,14 @@ def check_sites(data, expect_mock):
 def check_validation(data, expect_mock):
     if not (isinstance(data.get("pgda69"), list) and isinstance(data.get("horizons"), dict) and isinstance(data.get("quickmap"), list)):
         problem("validation.json", "needs pgda69 (list), horizons (object) and quickmap (list)")
+    stats = data.get("pgda69Stats", [])
+    if data.get("pgda69") and not (stats and stats[-1].get("region") == "ALL"):
+        problem("validation.json", "pgda69 rows need pgda69Stats ending with region ALL")
+    for entry in stats:
+        for body in ("sun", "earth"):
+            for key in ("halfDisk", "anyPart", "meanDisk"):
+                if set(entry.get(body, {}).get(key, {})) != {"n", "meanOurs", "meanPgda", "meanDifference", "rmse", "pearsonR"}:
+                    problem("validation.json", f"pgda69Stats {entry.get('region')} {body} {key}: wrong fields")
 
 
 def check_maps(data, maps_folder):

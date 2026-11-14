@@ -236,7 +236,8 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 
 ```json
 {
-  "pgda69": [{ "cellId": "MAL-…", "pgdaSunFraction": 0, "pgdaEarthFraction": 0, "ourSunFraction": 0, "ourEarthFraction": 0 }],
+  "pgda69": [{ "cellId": "MAL-…", "region": "MAL", "pgdaSunFraction": 0, "pgdaEarthFraction": 0, "pgdaSunCentreFraction": 0, "pgdaEarthCentreFraction": 0, "ourSunHalfDiskFraction": 0, "ourSunAnyPartFraction": 0, "ourSunMeanDiskFraction": 0, "ourEarthHalfDiskFraction": 0, "ourEarthAnyPartFraction": 0, "ourEarthMeanDiskFraction": 0 }],
+  "pgda69Stats": [{ "region": "MAL", "sun": { "halfDisk": { "n": 0, "meanOurs": 0, "meanPgda": 0, "meanDifference": 0, "rmse": 0, "pearsonR": 0 }, "anyPart": {}, "meanDisk": {} }, "earth": {} }],
   "horizons": { "pointCount": 30, "maxAzimuthErrorDeg": 0, "maxElevationErrorDeg": 0, "checkedAt": "2026-11-15" },
   "quickmap": [{ "cellId": "MAL-…", "image": "/validation/quickmap_MAL.png", "note": "" }]
 }
@@ -735,19 +736,26 @@ File: `pipeline/sites.json`.
 
 ### D7 Validation
 
-File: `validate.py`.
+Files: `compute_our_visibility.mjs` and `validate.py`. Re-run in this order (about 6 s for the node script, then a few seconds of raster reads):
+
+```bash
+node pipeline/compute_our_visibility.mjs   # -> pipeline/out/our_visibility.json
+python pipeline/validate.py                # -> web/public/data/validation.json, prints the statistics
+```
 
 - **Input:**
-  - PGDA 69 `AVGVISIB_85S_060M_201608*.TIF`: pixel × 4e-05 = fraction of time visible, an 18.6-year average;
-  - `pipeline/out/our_visibility.json`, written by a small node script that imports `sunlight.js` and `communication.js` and runs over the whole ephemeris.
-- **Output:** `validation.json`.
+  - PGDA 69 `AVGVISIB_85S_060M_201608*.TIF`: int16, pixel × 4e-05, nodata −32768, 60 m, ±151,740 m square, an hourly 18.6-year (nutation cycle) average. NASA's page says the Earth counts as visible if any part of its disc is unobscured; the products are "average illumination", not a share of hours with at least half a disc;
+  - `pipeline/out/our_visibility.json`: the node script imports `sunlight.js`, `communication.js` and `timeSeries.js`, takes 30 evenly spaced cells per region (MAL, HAW, MMO, NR1, DGR, SLP, NR2, MMP; only cells whose 1 km square lies inside the PGDA square) and runs the whole ephemeris (2027-01 → 2029-01, hourly). Per body it stores three readings: `halfDisk` (share of hours with diskFraction ≥ 0.5, the app's rule), `anyPart` (share with diskFraction > 0) and `meanDisk` (mean disk fraction).
+- **Matching:** the PGDA value of a cell is the mean of the 60 m pixels whose centre lies inside the 1 km square around `xM, yM` (cells with under half valid pixels are dropped). The centre-pixel value is kept as `pgda*CentreFraction`.
+- **Output:** `validation.json` gets `pgda69` (one row per cell) and `pgda69Stats` (per region and `ALL`, for Sun and Earth and each reading: `n, meanOurs, meanPgda, meanDifference` = ours − NASA, `rmse, pearsonR`). The About screen shows the `halfDisk` reading.
 - **Rules:**
-  - PGDA 69 covers 85–90°S only, so CAB, MMP and NR2 have no PGDA value;
-  - expect the same trend, not equality (2 years against 18.6 years).
+  - PGDA 69 covers 85–90°S only: CAB has no value, MMP and NR2 only in the covered part;
+  - expect the same pattern, not equal means: PGDA 69 is an 18.6-year average with its own disk and height assumptions, ours is 2027–2028;
+  - nothing is tuned: the numbers are reported as computed.
 - **Done when:**
   - `validation.json` is written;
   - the comparison is shown on the About screen and in the README;
-  - one QuickMap "Compute Visibility" screenshot is saved for the slides.
+  - one QuickMap "Compute Visibility" screenshot is saved for the slides (**not done yet**, `quickmap` is still empty).
 
 ### D8 Map background
 

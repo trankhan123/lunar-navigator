@@ -18,3 +18,15 @@ def test_check_maps_flags_unknown_kinds_duplicates_and_missing_images(tmp_path):
     assert any("duplicate hillshade" in line for line in checker.problems)
     assert any("/maps/MAL_heat.png: missing" in line for line in checker.problems)
     assert not any("/maps/MAL.png: missing" in line for line in checker.problems)
+
+
+def test_check_validation_needs_stats_for_pgda69_rows():
+    stat = {"n": 1, "meanOurs": 0, "meanPgda": 0, "meanDifference": 0, "rmse": 0, "pearsonR": 1}
+    whole = {key: stat for key in ("halfDisk", "anyPart", "meanDisk")}
+    base = {"horizons": {}, "quickmap": [], "pgda69": [{"cellId": "MAL-X"}]}
+    checker.problems.clear()
+    checker.check_validation(base, False)
+    assert any("pgda69Stats" in line for line in checker.problems)
+    checker.problems.clear()
+    checker.check_validation({**base, "pgda69Stats": [{"region": "ALL", "sun": whole, "earth": whole}]}, False)
+    assert not checker.problems
