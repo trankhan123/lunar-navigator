@@ -25,6 +25,9 @@ export function viewBoundsM({ k, x, y }) {
   return [(-VIEW_HALF_WIDTH_M - x) / k, (y - VIEW_HALF_WIDTH_M) / k, (VIEW_HALF_WIDTH_M - x) / k, (y + VIEW_HALF_WIDTH_M) / k]
 }
 
+/** Map angle (clockwise from map up) of azimuth k at a cell of longitude λ: k + λ (README D4), in 0…360. */
+export const mapAngleDeg = (azimuthDeg, lonDeg) => (((azimuthDeg + lonDeg) % 360) + 360) % 360
+
 /** 0…1 values as an SVG path across widthPx (value 1 at the top), numbers rounded to 2 decimals; '' for no values. */
 export function sparklinePath(values, widthPx, heightPx) {
   const step = values.length > 1 ? widthPx / (values.length - 1) : 0

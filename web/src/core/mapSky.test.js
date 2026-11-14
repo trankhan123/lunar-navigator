@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear, constantEphemeris, equatorCell } from './testHelpers.js'
-import { clampHour, computeSkyAtHour, computeVisibilityFractions, mapHourRange, nextPlayHour, regionCentreCells, stayPreview } from './mapSky.js'
+import { bodyDirections, clampHour, computeSkyAtHour, computeVisibilityFractions, directionText, mapHourRange, nextPlayHour, regionCentreCells, stayPreview } from './mapSky.js'
 
 test('computeSkyAtHour: one Sun and Earth value per cell at that hour', () => {
   const ephemeris = { ...constantEphemeris({ hours: 3 }), sunSubLonDeg: [0, 180, 0] }
@@ -63,4 +63,23 @@ test('stayPreview: stay-long tracks from the map hour, cut at the ephemeris end'
   assert.equal(stayPreview(equatorCell, ephemeris, 0, 1).hourCount, 24)
   assert.equal(stayPreview(equatorCell, ephemeris, 20, null), null)
   assert.equal(stayPreview(equatorCell, ephemeris, null, 1), null)
+})
+
+test('bodyDirections: azimuth, elevation, terrain and visibility', () => {
+  const ephemeris = constantEphemeris({ hours: 2, sun: [90, 0, 1] })
+  const [sun, earth] = bodyDirections({ ...equatorCell, horizon: Array(360).fill(-10) }, ephemeris, 1)
+  assert.equal(sun.body, 'sun')
+  assertNear(sun.azimuthDeg, 90, 1e-3)
+  assertNear(sun.elevationDeg, 0, 1e-2)
+  assertNear(sun.terrainDeg, -1)
+  assert.equal(sun.isVisible, true)
+  assert.equal(earth.body, 'earth')
+  assertNear(earth.elevationDeg, 90, 1e-3)
+  assert.equal(bodyDirections({ ...equatorCell, horizon: Array(360).fill(20) }, ephemeris, 1)[0].isVisible, false)
+  assert.equal(bodyDirections(equatorCell, ephemeris, 1)[0].terrainDeg, null)
+})
+
+test('directionText: one plain line per body', () => {
+  assert.equal(directionText({ body: 'sun', azimuthDeg: 112.4, elevationDeg: 1.44, terrainDeg: 2.3, isVisible: false }), 'Sun 112° · 1.4° high · terrain 2.3° · hidden')
+  assert.equal(directionText({ body: 'earth', azimuthDeg: 359.7, elevationDeg: 4.06, terrainDeg: null, isVisible: true }), 'Earth 0° · 4.1° high · terrain not included · in view')
 })

@@ -1,7 +1,7 @@
 // W2 map v2 — Sun and Earth numbers for the map, built on C1 (sunlight.js) and C2 (communication.js).
 import { computeEarthTrack } from './communication.js'
 import { hourIndexOf, resolveCurrentCell } from './data.js'
-import { VISIBLE_THRESHOLD } from './geometry.js'
+import { VISIBLE_THRESHOLD, horizonElevationAt } from './geometry.js'
 import { countDays } from './scenario.js'
 import { computeSunTrack } from './sunlight.js'
 import { fractionAtLeast } from './timeSeries.js'
@@ -85,6 +85,32 @@ export function stayPreview(cell, ephemeris, hour, stayDays) {
     fractionSun: fractionAtLeast(sunDiskFraction, VISIBLE_THRESHOLD, 0, hourCount),
     fractionEarth: fractionAtLeast(earthDiskFraction, VISIBLE_THRESHOLD, 0, hourCount),
   }
+}
+
+const BODY_NAMES = { sun: 'Sun', earth: 'Earth' }
+
+/**
+ * Where the Sun and Earth are from one cell at one hour (Sun first), with the terrain horizon in that direction.
+ * @returns {{body: 'sun'|'earth', azimuthDeg: number, elevationDeg: number, terrainDeg: number|null, isVisible: boolean}[]}
+ */
+export function bodyDirections(cell, ephemeris, hour) {
+  const sky = computeSkyAtHour([cell], ephemeris, hour)
+  return Object.keys(BODY_NAMES).map((body) => {
+    const azimuthDeg = sky[`${body}AzimuthDeg`][0]
+    return {
+      body,
+      azimuthDeg,
+      elevationDeg: sky[`${body}ElevationDeg`][0],
+      terrainDeg: cell.horizon ? horizonElevationAt(cell.horizon, azimuthDeg) : null,
+      isVisible: sky[`${body}DiskFraction`][0] >= VISIBLE_THRESHOLD,
+    }
+  })
+}
+
+/** One plain line, e.g. 'Sun 112° · 1.4° high · terrain 2.3° · hidden'. */
+export function directionText({ body, azimuthDeg, elevationDeg, terrainDeg, isVisible }) {
+  const terrainText = terrainDeg === null ? 'terrain not included' : `terrain ${terrainDeg.toFixed(1)}°`
+  return `${BODY_NAMES[body]} ${Math.round(azimuthDeg) % 360}° · ${elevationDeg.toFixed(1)}° high · ${terrainText} · ${isVisible ? 'in view' : 'hidden'}`
 }
 
 /** One pseudo-cell per region whose centre site exists (the 9 centre sites carry D4 horizons). */

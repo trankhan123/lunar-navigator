@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear } from './testHelpers.js'
-import { MAX_ZOOM_SCALE, fitTransform, isOnPolarMap, sparklinePath, viewBoundsM } from './mapView.js'
+import { MAX_ZOOM_SCALE, fitTransform, isOnPolarMap, mapAngleDeg, sparklinePath, viewBoundsM } from './mapView.js'
 
 function assertTransform(actual, expected) {
   for (const key of ['k', 'x', 'y']) assertNear(actual[key], expected[key], 1e-6)
@@ -34,4 +34,12 @@ test('sparklinePath: 0…1 values to an SVG path, 1 at the top', () => {
   assert.equal(sparklinePath([1, 0, 0.5], 10, 4), 'M0,0 L5,4 L10,2')
   assert.equal(sparklinePath(new Float32Array([0.25]), 10, 4), 'M0,3')
   assert.equal(sparklinePath([], 10, 4), '')
+})
+
+test('mapAngleDeg: azimuth + longitude, clockwise from map up', () => {
+  assert.equal(mapAngleDeg(0, 0), 0)
+  assert.equal(mapAngleDeg(90, 0), 90)
+  assert.equal(mapAngleDeg(350, 20), 10)
+  assert.equal(mapAngleDeg(10, -30), 340)
+  assert.equal(mapAngleDeg(180, -90), 90) // at lon −90° the pole lies towards +x
 })

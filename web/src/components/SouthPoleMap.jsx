@@ -3,10 +3,11 @@ import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
 import { timeAtHour, toPolarXY } from '../core/data.js'
 import { MAP_LAYERS, STATUS_SYMBOLS, cellColor, cellLevel } from '../core/mapLayers.js'
-import { computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
-import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap, viewBoundsM } from '../core/mapView.js'
+import { bodyDirections, computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
+import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, VIEW_SIZE_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap, mapAngleDeg, viewBoundsM } from '../core/mapView.js'
 import { startVisibilityFractions } from '../core/startWindowSearch.js'
 import CellHoverCard from './CellHoverCard.jsx'
+import DirectionCard from './DirectionCard.jsx'
 import MapCells from './MapCells.jsx'
 import MapLayersPanel from './MapLayersPanel.jsx'
 import MapLegend from './MapLegend.jsx'
@@ -14,6 +15,8 @@ import MapMarks from './MapMarks.jsx'
 import MapMinimap from './MapMinimap.jsx'
 
 const MINIMAP_MIN_ZOOM = 1.5
+const ARROW_LENGTH = 0.09 * VIEW_SIZE_M // in viewBox units, drawn outside the zoom group so it keeps its size
+const ARROW_COLORS = { sun: '#f0e442', earth: '#56b4e9' }
 const FRACTIONS_WAIT_MS = 400 // typing a date must not start one worker job per keystroke
 // "% over your dates" results, keyed `${code}|${firstHour}|${lastHour}`; kept for the session so going back is instant.
 const fractionsCache = new Map()
@@ -168,6 +171,13 @@ function SouthPoleMap({
     [sites],
   )
 
+  // Sun/Earth directions at the selected cell of this region, else at the region centre (spec §5.6); only inside a region.
+  const selectedInRegion = cells?.find((cell) => cell.id === selectedCellId)
+  const measuredCell = activeRegion && availability.hour ? (selectedInRegion ?? centreCells.find((centre) => centre.regionCode === regionCode)?.cell) : null
+  const directions = useMemo(() => (measuredCell ? bodyDirections(measuredCell, ephemeris, hour) : null), [measuredCell, ephemeris, hour])
+  const placeLabel = selectedInRegion ? `At ${selectedInRegion.id}` : `At the centre of ${activeRegion?.name}`
+  const arrowStart = measuredCell && transform.apply([measuredCell.xM, -measuredCell.yM])
+
   const southPoleImage = maps.find((entry) => entry.id === 'south_pole' && entry.kind === 'hillshade')
   const regionImage = activeRegion && maps.find((entry) => entry.id === activeRegion.code && entry.kind === 'hillshade')
   const outlines = [[currentCellId, '#fbbf24', 3], [selectedCellId, '#f8fafc', 2]]
@@ -237,7 +247,28 @@ function SouthPoleMap({
             ))}
           </g>
         </g>
+        {directions && (
+          <g pointerEvents="none">
+            {directions.map((direction) => (
+              <g
+                key={direction.body}
+                transform={`translate(${arrowStart[0]} ${arrowStart[1]}) rotate(${mapAngleDeg(direction.azimuthDeg, measuredCell.lon)})`}
+                stroke={ARROW_COLORS[direction.body]}
+                strokeWidth={2.5}
+                strokeDasharray={direction.isVisible ? undefined : '6 4'}
+                fill="none"
+              >
+                <line x1={0} y1={0} x2={0} y2={-ARROW_LENGTH} vectorEffect="non-scaling-stroke" />
+                <polyline
+                  points={`${-ARROW_LENGTH * 0.15},${-ARROW_LENGTH * 0.85} 0,${-ARROW_LENGTH} ${ARROW_LENGTH * 0.15},${-ARROW_LENGTH * 0.85}`}
+                  vectorEffect="non-scaling-stroke"
+                />
+              </g>
+            ))}
+          </g>
+        )}
       </svg>
+      {directions && <DirectionCard directions={directions} placeLabel={placeLabel} />}
       {hoveredCell && cells?.includes(hoveredCell) && <CellHoverCard cell={hoveredCell} ephemeris={ephemeris} hour={hour} stayDays={stayDays} />}
       {transform.k >= MINIMAP_MIN_ZOOM && (
         <MapMinimap regions={regions} activeRegionCode={regionCode} background={southPoleImage} viewBoundsM={viewBoundsM(transform)} />
