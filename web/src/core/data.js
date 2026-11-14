@@ -60,3 +60,36 @@ export function hourIndexOf(ephemeris, isoTime) {
 export function timeAtHour(ephemeris, hour) {
   return new Date(Date.parse(ephemeris.startTime) + hour * HOUR_MS).toISOString().slice(0, 16) + 'Z'
 }
+
+const MOON_RADIUS_M = 1737400
+const DEG = Math.PI / 180
+
+/** Polar stereographic x/y in metres (PGDA CRS, +y = lon 0°) for lat ≤ −60°; null outside the south polar maps. */
+export function toPolarXY(latDeg, lonDeg) {
+  if (latDeg > -60) return { xM: null, yM: null }
+  const radiusM = 2 * MOON_RADIUS_M * Math.tan(((90 + latDeg) * DEG) / 2)
+  return { xM: radiusM * Math.sin(lonDeg * DEG), yM: radiusM * Math.cos(lonDeg * DEG) }
+}
+
+/**
+ * Scenario.currentPoint → Cell: a grid cell, or a pseudo-cell for a famous site / typed coordinates (README "Shared objects").
+ * @param {Object<string, Cell[]>} cellsByRegion  regions loaded so far
+ * @returns {Cell}
+ */
+export function resolveCurrentCell(currentPoint, cellsByRegion, sites) {
+  if (!currentPoint) throw new Error('Pick a current landing point first')
+  if (currentPoint.type === 'cell') {
+    const cell = Object.values(cellsByRegion).flat().find((candidate) => candidate.id === currentPoint.cellId)
+    if (!cell) throw new Error(`Cell ${currentPoint.cellId} is not in the loaded grid`)
+    return cell
+  }
+  const unknownTerrain = { heightM: 0, slopeDeg: null, psrFraction: null, feasible: null, infeasibleReason: null }
+  if (currentPoint.type === 'site') {
+    const site = sites.find((candidate) => candidate.id === currentPoint.siteId)
+    if (!site) throw new Error(`Unknown site ${currentPoint.siteId}`)
+    const position = toPolarXY(site.lat, site.lon)
+    return { id: `SITE-${site.id}`, label: site.name, lat: site.lat, lon: site.lon, ...position, ...unknownTerrain, horizon: site.horizon }
+  }
+  const { lat, lon } = currentPoint
+  return { id: 'CUSTOM', label: 'Custom point', lat, lon, ...toPolarXY(lat, lon), ...unknownTerrain, horizon: null }
+}
