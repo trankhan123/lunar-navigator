@@ -19,6 +19,8 @@
 
 ## Libraries
 
+- Optional mission chat: Google Gemini structured output — https://aistudio.google.com/docs/structured-output ; Upstash Redis REST/EVAL usage counters — https://upstash.com/docs/redis/features/restapi . Neither is a scientific data source.
+
 - Vite — build tool. https://vite.dev
 - React — UI. https://react.dev
 - Tailwind CSS — styling. https://tailwindcss.com

@@ -5,6 +5,7 @@ import CellPopup from './components/CellPopup.jsx'
 import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
 import LandingTimeSlider from './components/LandingTimeSlider.jsx'
+import MissionChat from './components/MissionChat.jsx'
 import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
@@ -331,6 +332,14 @@ export default function App() {
                     onClose={() => setSelectedCellId(null)}
                   />
                 )}
+                <MissionChat
+                  value={scenario}
+                  sites={data.sites}
+                  ephemeris={data.ephemeris}
+                  busy={search.status === 'running'}
+                  useMock={data.useMock}
+                  onApply={(next) => { setScenario(next); setMode('expert') }}
+                />
                 <ScenarioForm
                   mode={mode}
                   value={scenario}

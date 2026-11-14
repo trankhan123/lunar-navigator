@@ -112,6 +112,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
 | W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | doing (texture done; Sun/Earth arrows left) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
+| W8 | WF2 | Optional mission chat | `components/MissionChat.jsx`, `core/missionChat.js`, `web/server/`, `web/api/mission-chat.js` | W3 + owner API resources | S | chubin271-blip (Codex) | implemented locally; live validation pending |
 | S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
 | X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
 
@@ -777,6 +778,15 @@ Vercel, static site:
 
 - set **Root Directory = `web`**, framework preset Vite (`npm run build`, output `dist`);
 - the final link must open in a private window without login.
+
+Optional mission chat adds a Node Vercel Function at `POST /api/mission-chat`.
+It prepares a validated partial Scenario draft; review and Apply are required,
+then the existing form submits to the browser worker. Request fields:
+`{requestId, message, history: [{role, content}], scenario}`. Response:
+`{message, questions, patch, scenario, errors, canApply}`. Quantities from the
+model use `{value, unit}` and are converted to the existing Scenario units in code.
+No scientific data contract changes. Configuration, privacy, quotas and the
+Hobby owner deployment workflow: [mission chat setup](docs/mission-chat-setup.md).
 
 ## Claude Code (optional)
 

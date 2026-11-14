@@ -45,6 +45,10 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 
 ## 3. Kiến trúc: tính trước, phục vụ tĩnh
 
+Ngoại lệ được yêu cầu cho chat UX: `web/api/mission-chat.js` là Node Vercel Function
+gọi Gemini để chuẩn bị form, có Redis hạn mức; mọi tính toán khoa học vẫn ở browser.
+Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay training.
+
 ```
 [Python, chạy trên máy, một lần]
   JPL Horizons ── D1 ─> ephemeris.json (điểm dưới Mặt Trời / Trái Đất theo giờ, 2027-01 → 2029-01)

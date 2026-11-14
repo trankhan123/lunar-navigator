@@ -1,0 +1,9 @@
+{
+  "regions": ["hnd1"],
+  "functions": {
+    "api/mission-chat.js": {
+      "maxDuration": 30,
+      "includeFiles": "public/data/*.json"
+    }
+  }
+}

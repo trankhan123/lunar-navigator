@@ -1,5 +1,7 @@
 # AI Usage
 
+- 2026-11-15 — OpenAI Codex implemented the optional mission chat UI and Gemini extraction endpoint, deterministic quantity/location validation, Redis usage reservations, tests and owner deployment instructions on WF2. Synthetic API/browser tests and local Redis verification completed; live Gemini and Vercel deployment pending owner resources.
+
 Tool: Claude Code (Anthropic).
 
 - 2026-11-14 — Set up the dev environment, scaffolded `web/` (Vite + React + Tailwind + globe.gl + ECharts) with a mock-data draft page, generated mock data in `web/public/data/mock/`, and test-deployed a draft to Vercel.

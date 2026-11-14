@@ -23,6 +23,10 @@ Trang gốc: PGDA 90 https://pgda.gsfc.nasa.gov/products/90 · PGDA 69 https://p
 
 ## 2. API
 
+Optional chat only: Google Gemini API (https://aistudio.google.com/docs/structured-output)
+extracts form parameters; Upstash Redis REST (https://upstash.com/docs/redis/features/restapi)
+stores usage counters. Neither supplies scientific results or new lunar data.
+
 | Nguồn | URL | Dùng để |
 |---|---|---|
 | JPL Horizons API (ephemeris) | https://ssd.jpl.nasa.gov/api/horizons.api | Module D1: `COMMAND=301`, `CENTER=500@399`, `QUANTITIES=14,15,19,20`, bước 1h, 2027-01-01 → 2029-01-31, chia theo quý → `web/public/data/ephemeris.json`. Cache vào `pipeline/raw/horizons/` |
