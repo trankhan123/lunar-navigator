@@ -1,6 +1,12 @@
 // C2 — Communication (direct-to-Earth). Contract: README "C2 Communication".
-/* eslint-disable no-unused-vars -- stub parameters; delete this line when you implement the module */
-import { notImplemented } from './notImplemented.js'
+import {
+  EARTH_DISK_RADIUS_DEG,
+  VISIBLE_THRESHOLD,
+  bodyAzimuthElevation,
+  horizonElevationAt,
+  visibleDiskFraction,
+} from './geometry.js'
+import { fractionAtLeast, longestRunBelow, nextCrossing } from './timeSeries.js'
 
 /**
  * @typedef {Object} EarthTrack  one value per hour; index i ↔ ephemeris hour firstHour + i
@@ -12,7 +18,30 @@ import { notImplemented } from './notImplemented.js'
 
 /** @returns {EarthTrack} */
 export function computeEarthTrack(cell, ephemeris, firstHour, hourCount) {
-  throw notImplemented('C2', 'computeEarthTrack')
+  const azimuthDeg = new Float32Array(hourCount)
+  const elevationDeg = new Float32Array(hourCount)
+  const diskFraction = new Float32Array(hourCount)
+
+  for (let i = 0; i < hourCount; i++) {
+    const ephHour = firstHour + i
+    const subLon = ephemeris.earthSubLonDeg[ephHour]
+    const subLat = ephemeris.earthSubLatDeg[ephHour]
+    const distKm = ephemeris.earthDistanceKm[ephHour]
+
+    const { azimuthDeg: az, elevationDeg: el } = bodyAzimuthElevation(cell, subLon, subLat, distKm)
+    azimuthDeg[i] = az
+    elevationDeg[i] = el
+
+    const horizonDeg = horizonElevationAt(cell.horizon, az)
+    diskFraction[i] = visibleDiskFraction(el, horizonDeg, EARTH_DISK_RADIUS_DEG)
+  }
+
+  return {
+    firstHour,
+    azimuthDeg,
+    elevationDeg,
+    diskFraction,
+  }
 }
 
 /**
@@ -20,10 +49,18 @@ export function computeEarthTrack(cell, ephemeris, firstHour, hourCount) {
  * @returns {{longestCommLossHours:number, fractionEarth:number}}
  */
 export function summarizeEarthWindow(earthTrack, startIndex, lengthHours) {
-  throw notImplemented('C2', 'summarizeEarthWindow')
+  return {
+    longestCommLossHours: longestRunBelow(earthTrack.diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
+    fractionEarth: fractionAtLeast(earthTrack.diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
+  }
 }
 
 /** Countdown: @returns {{event:'earthset'|'earthrise', hoursFromNow:number}|null} */
 export function nextEarthEvent(earthTrack, atIndex) {
-  throw notImplemented('C2', 'nextEarthEvent')
+  const crossing = nextCrossing(earthTrack.diskFraction, VISIBLE_THRESHOLD, atIndex)
+  if (!crossing) return null
+  return {
+    event: crossing.direction === 'down' ? 'earthset' : 'earthrise',
+    hoursFromNow: crossing.hoursFromNow,
+  }
 }
