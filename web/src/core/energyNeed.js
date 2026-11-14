@@ -1,23 +1,48 @@
-// C3 — Energy need. Contract: README "C3 Energy need".
-/* eslint-disable no-unused-vars -- stub parameters; delete this line when you implement the module */
-import { notImplemented } from './notImplemented.js'
+import { VISIBLE_THRESHOLD } from './geometry.js'
 
-/**
- * Dark periods (diskFraction < 0.5) inside the window, in time order.
- * @returns {{startOffset:number, lengthHours:number}[]}  startOffset counted from startIndex
- */
 export function findDarkPeriods(diskFraction, startIndex, lengthHours) {
-  throw notImplemented('C3', 'findDarkPeriods')
+  const periods = []
+  let runStart = -1
+  for (let h = 0; h < lengthHours; h++) {
+    const dark = diskFraction[startIndex + h] < VISIBLE_THRESHOLD
+    if (dark && runStart === -1) runStart = h
+    if (!dark && runStart !== -1) {
+      periods.push({ startOffset: runStart, lengthHours: h - runStart })
+      runStart = -1
+    }
+  }
+  if (runStart !== -1) periods.push({ startOffset: runStart, lengthHours: lengthHours - runStart })
+  return periods
 }
 
-/**
- * @param {import('./sunlight.js').SunTrack} sunTrack
- * @param {{panelMaxW:number, loadW:number}} lander
- * @returns {{totalLoadWh:number, totalGeneratedWh:number, energyBalanceWh:number,
- *            minimumCapacityWh:number, longestDarkEnergyWh:number,
- *            darkPeriods:{startOffset:number, lengthHours:number, energyWh:number}[]}}
- *   minimumCapacityWh: a battery that starts full and is larger than this never runs empty in the window
- */
-export function summarizeEnergyNeed(sunTrack, startIndex, lengthHours, lander) {
-  throw notImplemented('C3', 'summarizeEnergyNeed')
+export function summarizeEnergyNeed(sunTrack, startIndex, lengthHours, { panelMaxW, loadW }) {
+  let totalGeneratedWh = 0
+  let deficitWh = 0
+  let minimumCapacityWh = 0
+
+  for (let h = 0; h < lengthHours; h++) {
+    const generatedWh = panelMaxW * sunTrack.powerFactor[startIndex + h]
+    totalGeneratedWh += generatedWh
+    deficitWh = Math.max(0, deficitWh - (generatedWh - loadW))
+    if (deficitWh > minimumCapacityWh) minimumCapacityWh = deficitWh
+  }
+
+  const darkPeriods = findDarkPeriods(sunTrack.diskFraction, startIndex, lengthHours).map((period) => ({
+    ...period,
+    energyWh: loadW * period.lengthHours,
+  }))
+  let longestDarkEnergyWh = 0
+  for (const period of darkPeriods) {
+    if (period.energyWh > longestDarkEnergyWh) longestDarkEnergyWh = period.energyWh
+  }
+
+  const totalLoadWh = loadW * lengthHours
+  return {
+    totalLoadWh,
+    totalGeneratedWh,
+    energyBalanceWh: totalGeneratedWh - totalLoadWh,
+    minimumCapacityWh,
+    longestDarkEnergyWh,
+    darkPeriods,
+  }
 }
