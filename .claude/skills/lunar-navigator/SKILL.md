@@ -70,8 +70,8 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - Luồng web chạy trọn: W4 có thanh trượt, bảng xếp hạng, thẻ điểm hiện tại, dải trạng thái, top cặp; W5 có màn hình chi tiết với `core/detail.js`, `countdownText`, `currentPointSentence`.
   - `DetailView` và globe tải lười.
   - WF3 (PR #5, #6) đã sửa `rankBestPairs` (quét một lượt giữ top 10: 138 ms ở 225 ô × 728 lần hạ cánh) và chiều câu `explainDifference`.
-  - **Lỗi còn mở:** khi không có ô nào trong 1 km, `selectSearchCells` trả `[]`, trong khi README yêu cầu chỉ tìm điểm hiện tại. Vì vậy chọn Apollo 11 làm cả app trắng trang (`summarizeCurrentPoint` ném lỗi).
-  - Chưa deploy `main` lên Vercel cho tới khi lỗi này được sửa; production vẫn chạy `web` 7bf0aa3.
+  - Lỗi trắng trang Apollo (`selectSearchCells` trả `[]` khi không có ô nào trong 1 km) đã được Quoc_Bao sửa trên nhánh `PathAndFuel` (f939da2), merge vào `main` ở 66fdf5d ngày 15/11.
+  - Vercel production deploy lại lúc 04:01 ngày 15/11 từ efc1beb (`main` = `web`, có bản đồ v2), thay cho bản 02:25 từ 66fdf5d. Đã kiểm tra link công khai không đăng nhập: dữ liệu thật, đủ 35 ảnh lớp phủ, lớp "% sunlight" ở MAL tính trong 2 s, giao diện 1280 px và 390 px, console 0 lỗi.
 - **WF5 (14/11 tối, Claude Code làm theo yêu cầu của trankhan123):** dữ liệu thật đã có cho 8 vùng.
   - Chạy lại toàn bộ theo thứ tự: `build_grid.py` → `compute_feasibility.py` (12 s) → `compute_horizon.py --region ALL --sites` (của WF1, ~10 phút) → `build_site_data.py` → `export_map_background.py` → `check_web_data.py`.
   - Shapefile đọc thẳng từ zip trong `pipeline/raw/lgrs/`, không cần giải nén. Nhãn là thuộc tính `LGRS_ACC`, luôn 5 ký tự; khoảng 10 % nhãn có `-` (ví dụ `AYR--`), nên chỉ lấy phần trước dấu `-` đầu tiên làm mã vùng.
@@ -80,6 +80,14 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - **MMP (quyết định 14/11):** đủ 4524 ô sẽ nặng 6,3 MB, nên file web chỉ giữ 900 ô gần tâm vùng nhất (850 ô khả thi, bán kính khoảng 17 km), theo `KEPT_CELL_COUNT` trong D5. `pipeline/out/` vẫn giữ đủ 4524 ô.
   - Test pipeline: `python -m pytest pipeline/test_build_site_data.py pipeline/test_validate.py`.
 - **W7 Learn (14/11 khuya, xong):** tab "Learn" (`LearnView.jsx`, tải lười, dùng chung ECharts với DetailView); logic thuần trong `core/learn.js` gồm `metricSentences`, `neighborLesson`, `moonFacts`, có test `learn.test.js` và một test tích hợp. Góc Mặt Trời trung bình có thể âm ở ô trên cao vì ô đó nhìn vượt độ cong Mặt Trăng; câu chữ phải nói "dưới đường chân trời phẳng", không ghi "cao −1,4°". `HorizonChart` giờ nhận các prop tuỳ chọn `horizonLabel`, `caption`; đường đi Sun/Earth cũng tuỳ chọn.
+- **Bản đồ W2 v2 (15/11, xong):** spec `docs/superpowers/specs/2026-11-14-polar-map-design.md`, kế hoạch `docs/superpowers/plans/2026-11-14-polar-map.md` (16 task; sổ theo dõi trong `.superpowers/sdd/`, đã gitignore).
+  - `SouthPoleMap.jsx` được viết lại tại chỗ: một SVG theo mét PGDA, viewBox ±304 km, SVG y = −yM, d3-zoom. Các component con: `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `CellHoverCard`, `DirectionCard`, `MapSearch`. Logic thuần có test: `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js`.
+  - Ghim cả 17 gói d3 (kể cả 11 gói `globe.gl` kéo vào) bằng `overrides` trong `web/package.json`, về bản trước đợt phát hành 03/11/2026; riêng `d3-delaunay` ghim 6.0.4.
+  - `maps.json` có 4 kind: `hillshade`, `sun-visibility`, `earth-visibility`, `psr` (35 mục); checker kiểm cả `maps.json`.
+  - Lớp "% theo khoảng ngày" chạy trong Web Worker tìm kiếm (message `fractions`), có cache theo vùng và khoảng ngày, khởi chạy sau 400 ms. Mất khoảng 3 s cho HAW 930 ô × 6 tháng.
+  - Hiệu năng: React chỉ dựng cấu trúc ô; màu ô được ghi trực tiếp trong `useLayoutEffect` của `SouthPoleMap`. Đo trên bản build với HAW: trung vị 8 ms, tối đa 15 ms mỗi giờ (trước đó tối đa 29 ms).
+  - Cuộn chuột chỉ phóng khi bản đồ đang được chọn (hoặc giữ Ctrl/⌘). Ở toàn cực, khung vùng nhận cú bấm; khi đã mở vùng thì khung không nhận nữa.
+  - Chú giải PGDA 69 ghi "long-term average", không ghi "18.6-year", vì metadata không nêu giai đoạn lấy trung bình.
 - **Skill superpowers (14/11):** đã chép 15 skill của obra/superpowers v7.0.2 vào `.claude/skills/` (MIT, xem `NOTICE.md`), không cài hook. Quy trình cho tính năng lớn: `brainstorming` (hỏi người dùng, viết design doc vào `docs/superpowers/specs/`) → `writing-plans` → `subagent-driven-development` hoặc `executing-plans`, kèm `test-driven-development`.
   - Thời gian tìm kiếm khoảng 6 tháng: MAL 4,1 s, HAW 11,9 s (chạy trong Worker, mục tiêu là < 3 s).
   - App tự dùng dữ liệu thật khi có `web/public/data/regions.json`; thêm `?mock=1` để quay về mock. Bản đồ W2 vẽ `web/public/maps/<CODE>.png` theo `maps.json`.
@@ -191,7 +199,7 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 | Web | Vite + React (**JavaScript, không dùng TypeScript**) |
 | Tính toán trong trình duyệt | JS thuần trong `web/src/core/`, chạy tìm kiếm trong **Web Worker** |
 | Test | `node --test` có sẵn trong Node (không thêm thư viện test) và `pipeline/check_web_data.py` |
-| Bản đồ 2D cực Nam | ECharts hoặc SVG, ảnh nền hillshade PNG |
+| Bản đồ 2D cực Nam | SVG + d3-zoom 3.0.0 (kéo/phóng; cả chuỗi d3 ghim bằng overrides trong web/package.json), ảnh nền hillshade PNG |
 | Quả cầu 3D | `globe.gl` (không dùng three.js thuần) |
 | Biểu đồ | ECharts (`echarts` + `echarts-for-react`) |
 | CSS | Tailwind |

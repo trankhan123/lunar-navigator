@@ -6,11 +6,14 @@ import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
 import LandingTimeSlider from './components/LandingTimeSlider.jsx'
 import LanguageSwitcher from './components/LanguageSwitcher.jsx'
+import MapTimeBar from './components/MapTimeBar.jsx'
 import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
+import { nearestRegionCode } from './core/mapSearch.js'
+import { clampHour, mapHourRange } from './core/mapSky.js'
 import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
@@ -73,6 +76,9 @@ export default function App() {
   const [scenario, setScenario] = useState(initialState.scenario)
   const [selectedCellId, setSelectedCellId] = useState(initialState.selectedCellId)
   const [landingTime, setLandingTime] = useState(initialState.landingTime)
+  const [mapHour, setMapHour] = useState(null) // the Map screen's own hour (time bar); null = follow the landing time
+  const [mapFocus, setMapFocus] = useState(null) // {boundsM, requestId} after a find-box pick of a site or cell
+  const focusRequests = useRef(0)
   const [search, setSearch] = useState({ status: 'idle' })
   const [ranking, setRanking] = useState({ sortBy: undefined, direction: undefined })
   const cellRequests = useRef(new Map()) // region code → pending or finished request, so each file is fetched once
@@ -104,7 +110,8 @@ export default function App() {
     [data],
   )
 
-  const activeRegion = data?.regions.find((region) => region.code === regionCode) ?? data?.regions[0] ?? null
+  // null = the south-pole overview (README W2); a link with a cell opens that cell's region.
+  const activeRegion = data?.regions.find((region) => region.code === regionCode) ?? null
   useEffect(() => {
     if (activeRegion) loadRegionCells(activeRegion).catch((error) => setLoadError(error.message))
   }, [activeRegion, loadRegionCells])
@@ -144,6 +151,14 @@ export default function App() {
       const loaded = { ...cellsByRegion, ...Object.fromEntries(loadedLists) }
       const currentCell = resolveCurrentCell(searchScenario.currentPoint, loaded, data.sites)
       const cells = selectSearchCells(searchScenario, currentCell, loaded)
+      // Open the searched region so the Results map shows its ✓ ! ✕ colours: the current point's own region, else the region of the
+      // nearest searched grid cell (a site with no region, coordinates outside every frame); otherwise keep the open one.
+      const ownRegion = regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites)[0]
+      const searchedRegion = ownRegion ?? nearestRegionCode(currentCell, cells, data.regions)
+      if (searchedRegion) {
+        setRegionCode(searchedRegion)
+        setMapFocus(null)
+      }
       const { promise, cancel } = startWindowSearch({
         cells,
         ephemeris: data.ephemeris,
@@ -184,6 +199,18 @@ export default function App() {
   const currentPointSummary = useMemo(() => results && summarizeCurrentPoint(results, landingIndex), [results, landingIndex])
 
   const selectCell = useCallback((cell) => setSelectedCellId(cell.id), [])
+  const openRegion = useCallback((code, { cellId = null, focusBoundsM = null } = {}) => {
+    setRegionCode(code)
+    setSelectedCellId(cellId)
+    setMapFocus(focusBoundsM ? { boundsM: focusBoundsM, requestId: ++focusRequests.current } : null)
+  }, [])
+  const needRegionCells = useCallback(
+    (code) => {
+      const region = data?.regions.find((candidate) => candidate.code === code)
+      if (region) loadRegionCells(region).catch((error) => setLoadError(error.message))
+    },
+    [data, loadRegionCells],
+  )
   const selectSite = useCallback((site) => setScenario((current) => ({ ...current, currentPoint: { type: 'site', siteId: site.id } })), [])
   const errors = useMemo(() => (data ? validateScenario(scenario, data.ephemeris) : []), [data, scenario])
   const viewHour = useMemo(() => {
@@ -193,6 +220,25 @@ export default function App() {
       return null // date outside the ephemeris; the form reports it
     }
   }, [data, landingTime, scenario.startDate])
+  // Map screen time (spec §5.3): starts at the landing time, else startDate 00:00, and stays inside the form's dates.
+  const mapRange = useMemo(() => data && mapHourRange(data.ephemeris, scenario.startDate, scenario.endDate), [data, scenario.startDate, scenario.endDate])
+  const shownMapHour = mapRange ? clampHour(mapHour ?? viewHour, mapRange) : viewHour
+  const mapTimeBar = useMemo(
+    () =>
+      mapRange ? (
+        <MapTimeBar ephemeris={data.ephemeris} range={mapRange} hour={shownMapHour} onChange={setMapHour} />
+      ) : (
+        <p className="mt-2 text-sm text-slate-400">Pick valid dates in the form to move the map through time.</p>
+      ),
+    [data, mapRange, shownMapHour],
+  )
+  // The Results map's hour is the landing time its ✓ ! ✕ colours describe; an off-grid time set in Detail makes landingIndex fall back to 0.
+  const resultsHour = useMemo(() => (results ? hourIndexOf(data.ephemeris, results.landingTimes[landingIndex]) : null), [data, results, landingIndex])
+  // Memoised: a fresh object on every render would restart the % layer's 400 ms wait each time Play re-renders the app.
+  const resultsRange = useMemo(
+    () => (search.status === 'done' ? mapHourRange(data.ephemeris, search.scenario.startDate, search.scenario.endDate) : null),
+    [data, search],
+  )
   const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
   const currentCell = useMemo(() => {
     try {
@@ -215,7 +261,7 @@ export default function App() {
     setScreen('detail')
   }
 
-  const cells = activeRegion ? cellsByRegion[activeRegion.code] : null
+  const cells = activeRegion ? (cellsByRegion[activeRegion.code] ?? null) : null
   const selectedCell = cells?.find((cell) => cell.id === selectedCellId) ?? null
   const detailCell = cellsById.get(selectedCellId) ?? (currentCell?.id === selectedCellId ? currentCell : null)
   const detailScenario = search.status === 'done' ? search.scenario : scenario
@@ -225,34 +271,30 @@ export default function App() {
   const regionPicker = data && (
     <label className="text-sm text-slate-300">
       {t('picker.region')}{' '}
-      <select
-        value={activeRegion?.code ?? ''}
-        onChange={(event) => {
-          setRegionCode(event.target.value)
-          setSelectedCellId(null)
-        }}
-        className={selectClass}
-      >
+      <select value={activeRegion?.code ?? ''} onChange={(event) => openRegion(event.target.value || null)} className={selectClass}>
+        <option value="">{t('picker.allRegions')}</option>
         {data.regions.map((region) => (
           <option key={region.code} value={region.code}>{region.name}</option>
         ))}
       </select>
     </label>
   )
-  const map = cells ? (
-    <SouthPoleMap
-      region={activeRegion}
-      background={data.maps.find((background) => background.id === activeRegion.code)}
-      cells={cells}
-      sites={data.sites}
-      statusByCellId={statusByCellId}
-      currentCellId={currentCellId}
-      selectedCellId={selectedCellId}
-      onSelectCell={selectCell}
-    />
-  ) : (
-    <p className="text-slate-400">{t('picker.loadingCells')}</p>
-  )
+  const mapProps = data && {
+    regions: data.regions,
+    activeRegion,
+    maps: data.maps,
+    cells,
+    sites: data.sites,
+    ephemeris: data.ephemeris,
+    statusByCellId,
+    currentCellId,
+    selectedCellId,
+    onSelectCell: selectCell,
+    onOpenRegion: openRegion,
+    focus: mapFocus,
+    cellsByRegion,
+    onNeedRegionCells: needRegionCells,
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
@@ -309,20 +351,22 @@ export default function App() {
                 <div className="mb-2 flex flex-wrap items-center gap-3">
                   <h2 id="map-title" className="font-medium">South pole landing cells</h2>
                   {regionPicker}
-                  <label className="text-sm text-slate-300">
-                    {t('picker.cell')}{' '}
-                    <select value={selectedCell ? selectedCellId : ''} onChange={(event) => setSelectedCellId(event.target.value || null)} className={`${selectClass} font-mono`}>
-                      <option value="">{t('picker.choose')}</option>
-                      {cells?.map((cell) => (
-                        <option key={cell.id} value={cell.id}>
-                          {cell.id}
-                          {cell.feasible ? '' : ` ${t('picker.notFeasible')}`}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {activeRegion && (
+                    <label className="text-sm text-slate-300">
+                      {t('picker.cell')}{' '}
+                      <select value={selectedCell ? selectedCellId : ''} onChange={(event) => setSelectedCellId(event.target.value || null)} className={`${selectClass} font-mono`}>
+                        <option value="">{t('picker.choose')}</option>
+                        {cells?.map((cell) => (
+                          <option key={cell.id} value={cell.id}>
+                            {cell.id}
+                            {cell.feasible ? '' : ` ${t('picker.notFeasible')}`}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                 </div>
-                {map}
+                <SouthPoleMap {...mapProps} hour={shownMapHour} hourRange={mapRange} stayDays={scenario.stayDays} defaultLayerId="sunNow" timeBar={mapTimeBar} />
               </section>
               <aside className="space-y-4">
                 {selectedCell && (
@@ -330,7 +374,7 @@ export default function App() {
                     key={selectedCell.id}
                     cell={selectedCell}
                     ephemeris={data.ephemeris}
-                    hour={viewHour}
+                    hour={shownMapHour}
                     isCurrent={selectedCell.id === currentCellId}
                     onUseAsCurrent={() => setScenario((current) => ({ ...current, currentPoint: { type: 'cell', cellId: selectedCell.id } }))}
                     onOpenDetail={() => openDetail(selectedCell.id)}
@@ -379,7 +423,7 @@ export default function App() {
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                     <div className="space-y-2">
                       {regionPicker}
-                      {map}
+                      <SouthPoleMap {...mapProps} hour={resultsHour} hourRange={resultsRange} stayDays={search.scenario?.stayDays} defaultLayerId="searchResult" />
                     </div>
                     <div className="space-y-2">
                       {ranking.sortBy && (

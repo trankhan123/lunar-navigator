@@ -23,6 +23,7 @@
 - React — UI. https://react.dev
 - Tailwind CSS — styling. https://tailwindcss.com
 - globe.gl — 3D globe. https://github.com/vasturiano/globe.gl
+- d3-zoom, d3-selection — pan and zoom for the SVG south-pole map (3.0.0, versions pinned). https://d3js.org/d3-zoom
 - Apache ECharts — charts. https://echarts.apache.org
 - echarts-for-react — React wrapper for ECharts. https://github.com/hustcc/echarts-for-react
 - Astronomy Engine — Sun/Earth positions in the browser. https://github.com/cosinekitty/astronomy

@@ -98,7 +98,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D5 | WF5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | trankhan123 (Claude Code) | done (9 regions; MMP trimmed to 900 cells, see region table) |
 | D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | chubin271-blip | todo |
 | D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | todo |
-| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade; Sun-visibility overlay not done) |
+| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade, PGDA 69 Sun/Earth and PSR overlays) |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
 | C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | Quoc_Bao | done |
 | C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | chubin271-blip | done |
@@ -106,7 +106,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
 | C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
-| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | trankhan123 | done |
+| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `CellHoverCard`, `DirectionCard`, `MapSearch`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js` | W1, D8 | L | trankhan123 | done (map v2) |
 | W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
 | W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | done |
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
@@ -248,9 +248,12 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 { "maps": [{ "id": "south_pole", "kind": "hillshade", "image": "/maps/south_pole.png", "boundsM": [0, 0, 0, 0], "metersPerPixel": 400 }] }
 ```
 
-- `id` is `south_pole` or a region code.
-- `kind` is `hillshade` or `sun-visibility`.
-- Each PNG is ≤ 1 MB.
+- `id` is `south_pole` or a region code; one entry per (`id`, `kind`); hillshades are listed first.
+- `kind` is one of:
+  - `hillshade`: grey PGDA 90 relief, `south_pole` at 500 m/px and each region at its native 80 m;
+  - `sun-visibility` / `earth-visibility`: PGDA 69 value × 4e-05 (share of time the Sun / Earth is in view), RGBA with the ramp `#440154 → #3b528b → #21918c → #5ec962 → #fde725` for 0 → 1, transparent where there is no data; only for regions that overlap the ±151.74 km square (about 85°S to the pole), with `boundsM` clipped to it (CAB has none, NR2 and MMP are partly covered);
+  - `psr`: PGDA 90 LPSR 20 m, `#cc79a7` on permanent shadow, transparent elsewhere; one entry per region.
+- Each PNG is ≤ 1 MB; `python pipeline/check_web_data.py` also checks `maps.json` (kinds, duplicates, files, sizes, `boundsM`).
 
 ### Pipeline intermediate files (`pipeline/out/`, committed so others can build without raw data)
 
@@ -472,6 +475,7 @@ Rules:
 - **Worker protocol:**
   - main → worker: `{type:'run', requestId, cells, ephemeris, scenario}`;
   - worker → main: `{type:'progress', requestId, doneCells, totalCells}`, then `{type:'done', requestId, results}` (typed array buffers are transferred) or `{type:'error', requestId, message}`.
+  - the same worker also answers the W2 map's `{type:'fractions', requestId, cells, ephemeris, firstHour, hourCount}` with `{type:'done', requestId, results: {fractionSun, fractionEarth}}` (Float32Array per cell, buffers transferred; no progress messages). `startWindowSearch.js` exports `startVisibilityFractions` next to `startWindowSearch`.
 - **Speed:** region scope (about 225 cells × 730 landings × 144 h) in under 3 s on a laptop.
 
 ## Web UI modules (`web/src/components/`, one component per file)
@@ -505,15 +509,19 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
 
 ### W2 South-pole map
 
-Files: `SouthPoleMap.jsx`, `CellPopup.jsx`.
+Files: `SouthPoleMap.jsx` (+ `MapCells.jsx`, `MapMarks.jsx`, `MapLegend.jsx`, `MapLayersPanel.jsx`, `MapTimeBar.jsx`, `MapMinimap.jsx`, `CellHoverCard.jsx`, `DirectionCard.jsx`, `MapSearch.jsx`), `CellPopup.jsx`; pure logic in `core/mapView.js`, `core/mapLayers.js`, `core/mapSky.js` and `core/mapSearch.js`, all tested. Map v2 was built from `docs/superpowers/plans/2026-11-14-polar-map.md` (spec: `docs/superpowers/specs/2026-11-14-polar-map-design.md`).
 
-- **`SouthPoleMap` props:** `{region, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell(cell)}`, one region at a time. A `mapBackground` prop (the region's entry in `maps.json`) is added when D8 lands.
+- **`SouthPoleMap` props:** `{regions, activeRegion, maps, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell(cell), onOpenRegion(code|null)}`.
+  - `activeRegion` is `null` at the overview: the whole south pole (`south_pole` image, the 9 region frames, pins of the other sites). With a region, its hillshade image and its 1 km cells are drawn. A link with a cell opens that cell's region.
+  - `cells` is `null` while the region's file loads.
+  - Layers (`core/mapLayers.js`): Sunlight / Earth in view / Sun and Earth at the map hour (`hour`, C1/C2 with one hour), % sunlight and % Earth in view over the scenario dates (`hourRange`; computed in the search worker, cached per region and date range, started 400 ms after the last date change), Search result, Feasibility.
   - `statusByCellId` is a `Map<cellId, 0|1|2>` at the current landing time, or `null` before Submit;
   - every status also shows a symbol (✓ ! ✕) so it does not rely on colour alone.
 - **Drawing:**
   - draw in `xM/yM`, with x to the right and y up (the 0° meridian points up);
   - square cells 1 km wide;
-  - use ECharts or SVG; no new library.
+  - one SVG in PGDA metres, viewBox ±304 km, SVG y = −yM; pan and zoom with d3-zoom 3.0.0, the only map library. Every d3 package, globe.gl's included, is pinned with `overrides` in `web/package.json`;
+  - the wheel zooms only once the map has focus (click it) or with Ctrl/⌘, so page scrolling is never captured; region frames take clicks at the overview only.
 - **Colours:**
   - before Submit: feasible cells blue, infeasible cells grey (the tooltip gives the reason);
   - after Submit: green pass, yellow marginal, red fail, grey infeasible.
@@ -741,8 +749,8 @@ File: `validate.py`.
 
 File: `export_map_background.py`.
 
-- **Input:** the hillshade `LDEM_80S_80MPP_ADJ_HILL.TIF`, the PGDA 69 Sun visibility raster and `regions.json`.
-- **Output:** `web/public/maps/*.png` and `maps.json`.
+- **Input:** the hillshade `LDEM_80S_80MPP_ADJ_HILL.TIF`, the PGDA 69 Sun and Earth visibility rasters (`AVGVISIB_85S_060M_201608.TIF`, `…_EARTH.TIF`), the PGDA 90 permanent-shadow raster `LPSR_80S_20MPP_ADJ.TIF` and `regions.json`.
+- **Output:** `web/public/maps/south_pole.png`, `<CODE>.png`, `<CODE>_sun.png`, `<CODE>_earth.png`, `<CODE>_psr.png` and `maps.json` (35 entries today).
 - **Rules:**
   - write the PNGs with rasterio (GDAL PNG driver), no new library;
   - each image is ≤ 1 MB.
