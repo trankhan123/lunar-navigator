@@ -5,6 +5,7 @@ File này là bối cảnh cố định cho Claude Code. Đọc hết trước k
 
 - `README.md`: **hợp đồng module**, bản chính thức gồm input/output, đơn vị, định dạng file và bảng chia việc.
 - `docs/window-finder.md`: ý tưởng cuối cùng của nhóm.
+- `distribution.md`: phân công 5 người, gồm 5 workflow (WF1–WF5 gom các module D + C liên quan) và WEB, kèm thứ tự làm và việc giao nhận giữa các workflow.
 - `DATA_SOURCES.md`: mọi file dữ liệu, URL và thư viện.
 
 ## 1. Bối cảnh
@@ -117,7 +118,7 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 - **Kết quả mỗi khung:**
   - **đạt** khi tối dài nhất ≤ giới hạn, mất liên lạc dài nhất ≤ giới hạn và pin không cạn;
   - đạt mà pin thấp nhất < 20 % thì là **sát ngưỡng**.
-- **Xếp hạng:** đạt trước, rồi pin thấp nhất cao hơn, rồi % có cả nắng lẫn Trái Đất cao hơn, rồi gần hơn. Không dùng điểm có trọng số.
+- **Xếp hạng:** đạt trước, rồi pin thấp nhất cao hơn, rồi % có cả nắng lẫn Trái Đất cao hơn, rồi gần hơn, rồi liên lạc liền mạch hơn (mất liên lạc dài nhất ngắn hơn). Không dùng điểm có trọng số.
 - **Kiểm chứng:**
   - so vector với Horizons (< 0,1°) qua fixture. **Đã đạt ngày 14/11:** 30 điểm, sai lệch tối đa 0,015° phương vị và 0,010° góc cao;
   - so % nắng và % thấy Trái Đất với PGDA 69 (chỉ cần cùng xu hướng);

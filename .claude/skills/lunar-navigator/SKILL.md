@@ -55,6 +55,11 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - C0 (`geometry.js`, `timeSeries.js`);
   - D1 (`fetch_horizons.py`): `web/public/data/ephemeris.json` thật (2027-01-01 → 2029-01-31, 18.288 giờ, 0,69 MB) và fixture `web/src/core/fixtures/horizons_check.json`;
   - kiểm chứng vector với Horizons: sai lệch tối đa 0,015° phương vị, 0,010° góc cao trên 30 điểm.
+- **Phân công (14/11):** `distribution.md`.
+  - WF1 = C1 + D4 (sunlight, địa hình); WF2 = C2 + D6 + D7 (liên lạc, kiểm chứng); WF3 = C5 + `explain.js` (quãng đường, tối ưu); WF4 = C3 + C4 + `validateScenario` (năng lượng, sạc); WF5 = D2 + D3 + D5 + D8 (bản đồ, toạ độ); WEB = W1–W7 + S1 (trankhan123).
+  - Nhóm 5 người nhưng chỉ 4 bạn cho 5 workflow, nên tách WF2: C2 → WF4, D6 → WF5, D7 → ai xong trước.
+  - Khi người dùng nói "làm WFn", đọc mục đó trong `distribution.md` rồi làm đúng thứ tự và chỉ sửa file trong "File của bạn".
+- **Tiêu chí xếp hạng thứ 5:** thành viên `vominhuy28` thêm "liên lạc liền mạch nhất" vào docs (commit 3af1fed); đã quy thành `longestCommLossHours` nhỏ hơn.
 - **Còn là khung:** mọi hàm khác `throw notImplemented(...)` hoặc `raise NotImplementedError`. Dòng `eslint-disable no-unused-vars` ở đầu file khung phải xoá khi implement.
 - **Bản nháp cũ:** `App.jsx` đọc `/data/mock/legacy/`. W1 thay nó bằng luồng Window Finder rồi xoá `legacy/`.
 
@@ -91,6 +96,10 @@ cd web && vercel deploy --prod # deploy (Root Directory = web)
 - **Vercel public:** domain production `<project>.vercel.app` công khai, mở bằng tab ẩn danh không cần đăng nhập (đã kiểm tra).
 - **Bundle:** khoảng 3,4 MB JS (gzip ~1 MB) vì import toàn bộ ECharts cộng three.js của globe.gl. Chấp nhận được; chỉ tối ưu khi thật sự cần.
 - **ECharts 6 + theme dark:** nhãn trục y bị chồng ở hai đầu. Cần đặt `min`/`max` hoặc `interval` hợp lý khi có dữ liệu thật.
+- **Raster mới (kiểm tra 14/11):** cùng `PGDA_CRS`, nodata `nan`, không có scale.
+  - `LDSM_80S_80MPP_ADJ`: độ dốc tính bằng độ, 7600², 80 m.
+  - `LPSR_80S_20MPP_ADJ`: giá trị 0/1, **30400²** (khoảng 3,7 GB float32), phải đọc theo cửa sổ.
+  - `LDEM_60S_240MPP_ADJ`: độ cao tính bằng mét, 7760², 240 m, phủ ±931 km.
 - **Hệ chiếu PGDA:** `+x` hướng về kinh độ 90°E, `+y` hướng về kinh tuyến 0°. Vẽ bản đồ với x sang phải, y lên trên.
 - **LGRS:**
   - USGS T&M 11-E1 (2025, doi:10.3133/tm11E1) định nghĩa LTM, LPS, LGRS và ACC;
@@ -228,7 +237,7 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 - **Kết quả mỗi khung:**
   - **đạt** khi tối dài nhất ≤ giới hạn, mất liên lạc dài nhất ≤ giới hạn và pin không cạn;
   - đạt mà pin thấp nhất < 20 % thì là **sát ngưỡng**.
-- **Xếp hạng:** đạt trước, rồi pin thấp nhất cao hơn, rồi % có cả nắng lẫn Trái Đất cao hơn, rồi gần hơn. Không dùng điểm có trọng số.
+- **Xếp hạng:** đạt trước, rồi pin thấp nhất cao hơn, rồi % có cả nắng lẫn Trái Đất cao hơn, rồi gần hơn, rồi liên lạc liền mạch hơn (mất liên lạc dài nhất ngắn hơn). Không dùng điểm có trọng số.
 - **Kiểm chứng:**
   - so vector với Horizons (< 0,1°) qua fixture. **Đã đạt ngày 14/11:** 30 điểm, sai lệch tối đa 0,015° phương vị và 0,010° góc cao;
   - so % nắng và % thấy Trái Đất với PGDA 69 (chỉ cần cùng xu hướng);

@@ -83,35 +83,37 @@ LGRS shapefiles cannot be downloaded by script (ScienceBase returns 403). See [D
 
    Then set `Status` to `done`.
 
+**Team of 5:** the modules are bundled into workflows WF1–WF5 (D + C modules that belong together) plus WEB. Pick a whole workflow in [distribution.md](distribution.md), which also gives the order of work and the handoffs. Logic parts of two web modules belong to workflows: `core/explain.js` → WF3, and `validateScenario` / `LANDER_PRESETS` in `core/scenario.js` → WF4. WEB builds the components.
+
 Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** ≈ 1–2 h, **M** ≈ 3–4 h, **L** ≈ 5 h or more.
 
 ## Module board
 
-| ID | Module | Files | Needs | Size | Owner | Status |
-|---|---|---|---|---|---|---|
-| D1 | Ephemeris (JPL Horizons) | `pipeline/fetch_horizons.py` | — | M | Claude (trankhan123) | done |
-| D2 | LGRS grid (1 km cells) | `pipeline/build_grid.py` | LGRS shapefiles (manual download) | M | | todo |
-| D3 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | | todo |
-| D4 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | | todo |
-| D5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | | todo |
-| D6 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | | todo |
-| D7 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | | todo |
-| D8 | Map background images | `pipeline/export_map_background.py` | D5 | S | | todo |
-| C0 | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
-| C1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | | todo |
-| C2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | | todo |
-| C3 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | | todo |
-| C4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | | todo |
-| C5 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | | todo |
-| W1 | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | | todo |
-| W2 | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | | todo |
-| W3 | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | | todo |
-| W4 | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | | todo |
-| W5 | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | | todo |
-| W6 | 3D globe | `components/MoonGlobe.jsx` | W1 | M | | todo |
-| W7 | Learn mode | `components/LearnView.jsx`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | | todo |
-| S1 | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | | todo |
-| X1 | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
+| ID | Workflow | Module | Files | Needs | Size | Owner | Status |
+|---|---|---|---|---|---|---|---|
+| D1 | done | Ephemeris (JPL Horizons) | `pipeline/fetch_horizons.py` | — | M | Claude (trankhan123) | done |
+| D2 | WF5 | LGRS grid (1 km cells) | `pipeline/build_grid.py` | LGRS shapefiles (manual download) | M | | todo |
+| D3 | WF5 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | | todo |
+| D4 | WF1 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | | todo |
+| D5 | WF5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | | todo |
+| D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | | todo |
+| D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | | todo |
+| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | | todo |
+| C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
+| C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | | todo |
+| C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | | todo |
+| C3 | WF4 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | | todo |
+| C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | | todo |
+| C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | | todo |
+| W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | | todo |
+| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | | todo |
+| W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | | todo |
+| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | | todo |
+| W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | | todo |
+| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | | todo |
+| W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | | todo |
+| S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | | todo |
+| X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
 
 **Already done:** C0 and D1. The real `web/public/data/ephemeris.json` is in the repo: 2027-01-01 → 2029-01-31, 18,288 h, 0.69 MB. The vector method matches Horizons within 0.015°. Also done: `web/src/core/data.js` (loaders, `hourIndexOf`, `timeAtHour`), `scenario.js` constants and `countDays`, the Web Worker files (`windowSearchWorker.js`, `startWindowSearch.js`), the data checker, the mock data and `pipeline/download_data.py`.
 
@@ -453,7 +455,8 @@ Rules:
   1. pass or marginal before fail;
   2. higher `minBatteryFraction`;
   3. higher `fractionBoth`;
-  4. smaller `distanceKm`.
+  4. smaller `distanceKm`;
+  5. smaller `longestCommLossHours` ("most seamless communication", docs/window-finder.md §3.3).
 
   There is no weighted score.
 - **Sorting by column:**

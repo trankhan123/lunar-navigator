@@ -75,7 +75,7 @@ export function metricsAt(results, cellIndex, landingIndex) {
 
 /**
  * Top cells at one landing time. Default order: pass/marginal first, then higher minBatteryFraction,
- * higher fractionBoth, smaller distanceKm. Other sortBy keys sort that column (better first unless direction given), nulls last.
+ * higher fractionBoth, smaller distanceKm, smaller longestCommLossHours. Other sortBy keys sort that column (better first unless direction given), nulls last.
  * @param {{sortBy?:string, direction?:'asc'|'desc', limit?:number}} [options]
  * @returns {(ReturnType<typeof metricsAt> & {rank:number})[]}
  */
