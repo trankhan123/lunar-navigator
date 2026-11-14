@@ -23,7 +23,6 @@ export function resolvePanelType(panelMode, latDeg) {
   return Math.abs(latDeg) >= 60 ? 'vertical' : 'horizontal';
 }
 
-// 2. Hệ số góc chiếu vào tấm pin: vertical = cos(el), horizontal = max(sin(el), 0)
 export function panelFactor(elevationDeg, panelType) {
   const elRad = elevationDeg * DEG_TO_RAD;
   if (panelType === 'vertical') {
@@ -32,7 +31,6 @@ export function panelFactor(elevationDeg, panelType) {
   return Math.max(0, Math.sin(elRad));
 }
 
-// 3. Tính quỹ đạo Mặt Trời theo từng giờ (yêu cầu < 5ms cho 4.500 giờ)
 export function computeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode = 'auto') {
   const panelType = resolvePanelType(panelMode, cell.lat);
   const azimuthDeg = new Float32Array(hourCount);
@@ -76,7 +74,6 @@ export function computeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode
   };
 }
 
-// 4. Thống kê cửa sổ nắng trong khoảng (startIndex, lengthHours)
 export function summarizeSunWindow(sunTrack, startIndex, lengthHours) {
   const { diskFraction, elevationDeg } = sunTrack;
   return {
@@ -93,7 +90,6 @@ export function summarizeSunWindow(sunTrack, startIndex, lengthHours) {
   };
 }
 
-// 5. Tìm sự kiện Mặt Trời mọc / lặn tiếp theo từ thời điểm atIndex
 export function nextSunEvent(sunTrack, atIndex) {
   const crossing = nextCrossing(sunTrack.diskFraction, VISIBLE_THRESHOLD, atIndex);
   if (!crossing) return null;

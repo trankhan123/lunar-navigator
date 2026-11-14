@@ -1,6 +1,4 @@
 // W3 — scenario (form output). Contract: README "Scenario".
-/* eslint-disable no-unused-vars -- stub parameters; delete this line when you implement the module */
-import { notImplemented } from './notImplemented.js'
 
 export const PANEL_MODES = ['auto', 'vertical', 'horizontal']
 export const SEARCH_SCOPES = ['region', 'radius', 'all']
@@ -42,6 +40,19 @@ export function countDays(startDate, endDate) {
   return Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86400000) + 1
 }
 
+const DAY_MS = 86400000
+const HOUR_MS = 3600000
+
+/** Milliseconds of 'YYYY-MM-DD' at 00:00Z, or null when the text is not a real date. */
+function parseDay(text) {
+  if (typeof text !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(text)) return null
+  const ms = Date.parse(`${text}T00:00:00Z`)
+  if (Number.isNaN(ms) || new Date(ms).toISOString().slice(0, 10) !== text) return null
+  return ms
+}
+
+const isNumber = (value) => typeof value === 'number' && Number.isFinite(value)
+
 /**
  * Rules: README "Scenario". Messages are English UI text.
  * @param {typeof DEFAULT_SCENARIO} scenario
@@ -49,5 +60,77 @@ export function countDays(startDate, endDate) {
  * @returns {{field:string, message:string}[]} empty when valid
  */
 export function validateScenario(scenario, ephemeris) {
-  throw notImplemented('W3', 'validateScenario')
+  const errors = []
+  const fail = (field, message) => {
+    if (!errors.some((error) => error.field === field)) errors.push({ field, message })
+  }
+
+  const point = scenario.currentPoint
+  if (!point) {
+    fail('currentPoint', 'Choose a current point: a cell, a famous site or coordinates.')
+  } else if (point.type === 'cell') {
+    if (!point.cellId) fail('currentPoint', 'Enter a cell ID.')
+  } else if (point.type === 'site') {
+    if (!point.siteId) fail('currentPoint', 'Choose a site.')
+  } else if (point.type === 'coordinates') {
+    if (!isNumber(point.lat) || point.lat < -90 || point.lat > 90) {
+      fail('currentPoint', 'Latitude must be between -90 and 90.')
+    } else if (!isNumber(point.lon) || point.lon < -180 || point.lon > 180) {
+      fail('currentPoint', 'Longitude must be between -180 and 180.')
+    }
+  } else {
+    fail('currentPoint', 'Choose a current point: a cell, a famous site or coordinates.')
+  }
+
+  const stayOk = Number.isInteger(scenario.stayDays) && scenario.stayDays >= 1 && scenario.stayDays <= MAX_STAY_DAYS
+  if (!stayOk) fail('stayDays', `Stay length must be a whole number from 1 to ${MAX_STAY_DAYS} days.`)
+
+  const startMs = parseDay(scenario.startDate)
+  const endMs = parseDay(scenario.endDate)
+  if (startMs === null) {
+    fail('startDate', 'Enter a valid start date.')
+  } else if (ephemeris && startMs < Date.parse(ephemeris.startTime)) {
+    fail('startDate', 'Start date is before the available ephemeris data.')
+  }
+  if (endMs === null) {
+    fail('endDate', 'Enter a valid end date.')
+  } else if (startMs !== null) {
+    const days = countDays(scenario.startDate, scenario.endDate)
+    if (endMs < startMs) {
+      fail('endDate', 'End date must be on or after the start date.')
+    } else if (days > MAX_RANGE_DAYS) {
+      fail('endDate', `The date range can be at most ${MAX_RANGE_DAYS} days.`)
+    } else if (stayOk && ephemeris) {
+      const ephEnd = Date.parse(ephemeris.startTime) + ephemeris.hours * ephemeris.stepHours * HOUR_MS
+      if (startMs + (days + scenario.stayDays) * DAY_MS > ephEnd) {
+        fail('endDate', 'End date plus the stay length goes past the available ephemeris data.')
+      }
+    }
+  }
+
+  if (!isNumber(scenario.maxDarkHours) || scenario.maxDarkHours < 0) {
+    fail('maxDarkHours', 'Longest dark period must be 0 or more hours.')
+  }
+  if (!isNumber(scenario.maxCommLossHours) || scenario.maxCommLossHours < 0) {
+    fail('maxCommLossHours', 'Longest comm loss must be 0 or more hours.')
+  }
+  if (!isNumber(scenario.panelMaxW) || scenario.panelMaxW <= 0) {
+    fail('panelMaxW', 'Panel power must be greater than 0 W.')
+  }
+  if (!isNumber(scenario.batteryCapacityWh) || scenario.batteryCapacityWh <= 0) {
+    fail('batteryCapacityWh', 'Battery capacity must be greater than 0.')
+  }
+  if (!isNumber(scenario.loadW) || scenario.loadW < 0) {
+    fail('loadW', 'Load must be 0 W or more.')
+  }
+  if (!PANEL_MODES.includes(scenario.panelMode)) {
+    fail('panelMode', 'Choose auto, vertical or horizontal.')
+  }
+  if (!SEARCH_SCOPES.includes(scenario.searchScope)) {
+    fail('searchScope', 'Choose region, radius or all.')
+  } else if (scenario.searchScope === 'radius' && (!isNumber(scenario.searchRadiusKm) || scenario.searchRadiusKm <= 0)) {
+    fail('searchRadiusKm', 'Search radius must be greater than 0 km.')
+  }
+
+  return errors
 }
