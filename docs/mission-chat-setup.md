@@ -26,6 +26,10 @@ required. No new npm dependency was added.
 3. Use the existing Vercel project serving
    https://lunar-navigator-six.vercel.app/. Root Directory stays `web`, framework
    Vite, build `npm run build`, output `dist`. Node 22+ is recommended.
+   `web/vercel.json` pins the install command to `npm ci --include=dev` so Vite
+   and its build plugins are installed even when the environment defaults to
+   production-only dependencies. For `vite: command not found`, first confirm
+   Root Directory is `web`; root-level builds cannot see this configuration.
 
 ## Two Hobby accounts, one public repository
 
