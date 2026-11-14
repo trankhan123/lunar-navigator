@@ -6,6 +6,7 @@ import { MAP_LAYERS, STATUS_SYMBOLS, cellColor, cellLevel } from '../core/mapLay
 import { computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
 import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap, viewBoundsM } from '../core/mapView.js'
 import { startVisibilityFractions } from '../core/startWindowSearch.js'
+import CellHoverCard from './CellHoverCard.jsx'
 import MapCells from './MapCells.jsx'
 import MapLayersPanel from './MapLayersPanel.jsx'
 import MapLegend from './MapLegend.jsx'
@@ -35,8 +36,8 @@ function MapImage({ entry }) {
  * activeRegion null = the overview; otherwise that region's cells are drawn.
  */
 function SouthPoleMap({
-  regions, activeRegion, maps, cells, sites, ephemeris, hour, hourRange = null, defaultLayerId, timeBar = null, statusByCellId, currentCellId, selectedCellId,
-  onSelectCell, onOpenRegion,
+  regions, activeRegion, maps, cells, sites, ephemeris, hour, hourRange = null, stayDays = null, defaultLayerId, timeBar = null, statusByCellId, currentCellId,
+  selectedCellId, onSelectCell, onOpenRegion,
 }) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
@@ -45,7 +46,16 @@ function SouthPoleMap({
   const [chosenLayerId, setChosenLayerId] = useState(defaultLayerId)
   const [, setFractionsDone] = useState(0) // bumped when a worker result lands in fractionsCache
   const [fractionsError, setFractionsError] = useState(null)
+  const [hoveredCell, setHoveredCell] = useState(null)
   const regionCode = activeRegion?.code ?? null
+
+  useEffect(() => {
+    if (!hoveredCell) return
+    // WCAG 1.4.13: content shown on hover can be dismissed without moving the pointer.
+    const dismissOnEscape = (event) => event.key === 'Escape' && setHoveredCell(null)
+    window.addEventListener('keydown', dismissOnEscape)
+    return () => window.removeEventListener('keydown', dismissOnEscape)
+  }, [hoveredCell])
 
   useEffect(() => {
     const svg = svgRef.current
@@ -209,7 +219,7 @@ function SouthPoleMap({
         <g transform={transform.toString()}>
           {southPoleImage && <MapImage entry={southPoleImage} />}
           {regionImage && <MapImage entry={regionImage} />}
-          {activeRegion && cells && <MapCells cells={cells} colors={colors} symbols={symbols} onSelectCell={onSelectCell} />}
+          {activeRegion && cells && <MapCells cells={cells} colors={colors} symbols={symbols} onSelectCell={onSelectCell} onHoverCell={setHoveredCell} />}
           <MapMarks regions={regions} activeRegionCode={regionCode} pinSites={pinSites} centres={centres} zoomScale={transform.k} onOpenRegion={onOpenRegion} />
           <g pointerEvents="none">
             {outlines.map(({ cell, color, width }) => (
@@ -228,6 +238,7 @@ function SouthPoleMap({
           </g>
         </g>
       </svg>
+      {hoveredCell && cells?.includes(hoveredCell) && <CellHoverCard cell={hoveredCell} ephemeris={ephemeris} hour={hour} stayDays={stayDays} />}
       {transform.k >= MINIMAP_MIN_ZOOM && (
         <MapMinimap regions={regions} activeRegionCode={regionCode} background={southPoleImage} viewBoundsM={viewBoundsM(transform)} />
       )}

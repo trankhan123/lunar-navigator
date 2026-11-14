@@ -340,7 +340,7 @@ export default function App() {
                     </label>
                   )}
                 </div>
-                <SouthPoleMap {...mapProps} hour={shownMapHour} hourRange={mapRange} defaultLayerId="sunNow" timeBar={mapTimeBar} />
+                <SouthPoleMap {...mapProps} hour={shownMapHour} hourRange={mapRange} stayDays={scenario.stayDays} defaultLayerId="sunNow" timeBar={mapTimeBar} />
               </section>
               <aside className="space-y-4">
                 {selectedCell && (
@@ -397,7 +397,7 @@ export default function App() {
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                     <div className="space-y-2">
                       {regionPicker}
-                      <SouthPoleMap {...mapProps} hour={resultsHour} hourRange={resultsRange} defaultLayerId="searchResult" />
+                      <SouthPoleMap {...mapProps} hour={resultsHour} hourRange={resultsRange} stayDays={search.scenario?.stayDays} defaultLayerId="searchResult" />
                     </div>
                     <div className="space-y-2">
                       {ranking.sortBy && (

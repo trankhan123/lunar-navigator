@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear, constantEphemeris, equatorCell } from './testHelpers.js'
-import { clampHour, computeSkyAtHour, computeVisibilityFractions, mapHourRange, nextPlayHour, regionCentreCells } from './mapSky.js'
+import { clampHour, computeSkyAtHour, computeVisibilityFractions, mapHourRange, nextPlayHour, regionCentreCells, stayPreview } from './mapSky.js'
 
 test('computeSkyAtHour: one Sun and Earth value per cell at that hour', () => {
   const ephemeris = { ...constantEphemeris({ hours: 3 }), sunSubLonDeg: [0, 180, 0] }
@@ -51,4 +51,16 @@ test('computeVisibilityFractions: share of hours with half the disk or more in v
   assert.ok(result.fractionSun instanceof Float32Array && result.fractionEarth instanceof Float32Array)
   assertNear(result.fractionSun[0], 0.25)
   assertNear(result.fractionEarth[0], 1)
+})
+
+test('stayPreview: stay-long tracks from the map hour, cut at the ephemeris end', () => {
+  const ephemeris = constantEphemeris({ hours: 30 })
+  const preview = stayPreview(equatorCell, ephemeris, 20, 1)
+  assert.equal(preview.hourCount, 10)
+  assert.equal(preview.sunDiskFraction.length, 10)
+  assertNear(preview.fractionSun, 1)
+  assertNear(preview.fractionEarth, 1)
+  assert.equal(stayPreview(equatorCell, ephemeris, 0, 1).hourCount, 24)
+  assert.equal(stayPreview(equatorCell, ephemeris, 20, null), null)
+  assert.equal(stayPreview(equatorCell, ephemeris, null, 1), null)
 })

@@ -25,6 +25,13 @@ export function viewBoundsM({ k, x, y }) {
   return [(-VIEW_HALF_WIDTH_M - x) / k, (y - VIEW_HALF_WIDTH_M) / k, (VIEW_HALF_WIDTH_M - x) / k, (y + VIEW_HALF_WIDTH_M) / k]
 }
 
+/** 0…1 values as an SVG path across widthPx (value 1 at the top), numbers rounded to 2 decimals; '' for no values. */
+export function sparklinePath(values, widthPx, heightPx) {
+  const step = values.length > 1 ? widthPx / (values.length - 1) : 0
+  const round = (number) => Number(number.toFixed(2))
+  return Array.from(values, (value, index) => `${index === 0 ? 'M' : 'L'}${round(index * step)},${round((1 - value) * heightPx)}`).join(' ')
+}
+
 /** True for finite map coordinates inside the ±304 km polar maps. */
 export function isOnPolarMap(xM, yM) {
   return Number.isFinite(xM) && Number.isFinite(yM) && Math.abs(xM) <= VIEW_HALF_WIDTH_M && Math.abs(yM) <= VIEW_HALF_WIDTH_M

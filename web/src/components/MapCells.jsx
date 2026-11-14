@@ -3,13 +3,23 @@ import { memo } from 'react'
 const CELL_DRAW_SIZE_M = 940 // a 1 km square with a 60 m gap
 
 // colors[i] / symbols[i] belong to cells[i]. One delegated click handler; d3-zoom's clickDistance drops clicks that end a drag.
-function MapCells({ cells, colors, symbols, onSelectCell }) {
-  function selectFromEvent(event) {
+function MapCells({ cells, colors, symbols, onSelectCell, onHoverCell }) {
+  function cellFromEvent(event) {
     const target = event.target.closest('[data-cell-index]')
-    if (target) onSelectCell(cells[Number(target.dataset.cellIndex)])
+    return target ? cells[Number(target.dataset.cellIndex)] : null
   }
+  function selectFromEvent(event) {
+    const cell = cellFromEvent(event)
+    if (cell) onSelectCell(cell)
+  }
+  // Hover is for mice only: on touch the tap opens the popup instead.
   return (
-    <g onClick={selectFromEvent} className="cursor-pointer">
+    <g
+      onClick={selectFromEvent}
+      onPointerOver={(event) => event.pointerType === 'mouse' && onHoverCell?.(cellFromEvent(event))}
+      onPointerLeave={(event) => event.pointerType === 'mouse' && onHoverCell?.(null)}
+      className="cursor-pointer"
+    >
       {cells.map((cell, index) => {
         const x = cell.xM - CELL_DRAW_SIZE_M / 2
         const y = -cell.yM - CELL_DRAW_SIZE_M / 2

@@ -69,6 +69,24 @@ export function computeVisibilityFractions(cells, ephemeris, firstHour, hourCoun
   return { fractionSun, fractionEarth }
 }
 
+/**
+ * Sun and Earth over a stay starting at the map hour, for the hover card: min(stayDays × 24, hours left) hours.
+ * @returns {{hourCount: number, sunDiskFraction: Float32Array, earthDiskFraction: Float32Array, fractionSun: number, fractionEarth: number}|null}
+ */
+export function stayPreview(cell, ephemeris, hour, stayDays) {
+  if (hour === null || hour === undefined || !(stayDays > 0)) return null
+  const hourCount = Math.min(stayDays * 24, ephemeris.hours - hour)
+  const sunDiskFraction = computeSunTrack(cell, ephemeris, hour, hourCount).diskFraction
+  const earthDiskFraction = computeEarthTrack(cell, ephemeris, hour, hourCount).diskFraction
+  return {
+    hourCount,
+    sunDiskFraction,
+    earthDiskFraction,
+    fractionSun: fractionAtLeast(sunDiskFraction, VISIBLE_THRESHOLD, 0, hourCount),
+    fractionEarth: fractionAtLeast(earthDiskFraction, VISIBLE_THRESHOLD, 0, hourCount),
+  }
+}
+
 /** One pseudo-cell per region whose centre site exists (the 9 centre sites carry D4 horizons). */
 export function regionCentreCells(regions, sites) {
   return regions
