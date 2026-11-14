@@ -1,29 +1,40 @@
+import { useI18n } from '../i18n/index.jsx'
+
 const percent = (fraction) => `${Math.round(fraction * 100)}`
-const STATUS_TEXT = { pass: '✓ Pass', marginal: '! Low battery', fail: '✕ Fail' }
 const STATUS_CLASS = { pass: 'text-emerald-300', marginal: 'text-amber-300', fail: 'text-red-300' }
-const COLUMNS = [
-  { key: 'distanceKm', label: 'Distance (km)', show: (row) => row.distanceKm.toFixed(1) },
-  { key: 'minBatteryFraction', label: 'Lowest battery (%)', show: (row) => percent(row.minBatteryFraction) },
-  { key: 'longestDarkHours', label: 'Longest dark (h)', show: (row) => row.longestDarkHours },
-  { key: 'longestCommLossHours', label: 'Longest comm loss (h)', show: (row) => row.longestCommLossHours },
-  { key: 'fractionSun', label: 'Sun (%)', show: (row) => percent(row.fractionSun), expert: true },
-  { key: 'fractionEarth', label: 'Earth (%)', show: (row) => percent(row.fractionEarth), expert: true },
-  { key: 'meanSunElevationDeg', label: 'Mean Sun elevation (°)', show: (row) => row.meanSunElevationDeg?.toFixed(2) ?? '—', expert: true },
-  { key: 'rechargeHours', label: 'Recharge (h)', show: (row) => row.rechargeHours ?? '—', expert: true },
-]
 
 export default function RankingTable({ rows, sortBy, direction, onSort, onSelectRow, currentCellId, mode }) {
-  const columns = COLUMNS.filter((column) => mode === 'expert' || !column.expert)
+  const { t } = useI18n()
+
+  const statusText = {
+    pass: t('status.passBadge'),
+    marginal: t('status.marginalBadge'),
+    fail: t('status.failBadge'),
+  }
+
+  const columnsDef = [
+    { key: 'distanceKm', label: t('columns.distance'), show: (row) => row.distanceKm.toFixed(1) },
+    { key: 'minBatteryFraction', label: t('columns.minBattery'), show: (row) => percent(row.minBatteryFraction) },
+    { key: 'longestDarkHours', label: t('columns.longestDark'), show: (row) => row.longestDarkHours },
+    { key: 'longestCommLossHours', label: t('columns.longestCommLoss'), show: (row) => row.longestCommLossHours },
+    { key: 'fractionSun', label: t('columns.fractionSun'), show: (row) => percent(row.fractionSun), expert: true },
+    { key: 'fractionEarth', label: t('columns.fractionEarth'), show: (row) => percent(row.fractionEarth), expert: true },
+    { key: 'meanSunElevationDeg', label: t('columns.meanSunElevation'), show: (row) => row.meanSunElevationDeg?.toFixed(2) ?? '—', expert: true },
+    { key: 'rechargeHours', label: t('columns.recharge'), show: (row) => row.rechargeHours ?? '—', expert: true },
+  ]
+  const columns = columnsDef.filter((column) => mode === 'expert' || !column.expert)
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm tabular-nums">
         <caption className="mb-2 text-left text-xs text-slate-400">
-          Top {rows.length} cells at this landing time. {sortBy ? 'Click a heading again to reverse.' : 'Default order: pass first, then higher lowest battery, more Sun + Earth together, nearer, shorter comm loss.'}
+          {t('results.rankingCaption', { count: rows.length })}{' '}
+          {sortBy ? t('results.rankingReversePrompt') : t('results.rankingDefaultOrder')}
         </caption>
         <thead className="text-xs text-slate-400">
           <tr>
-            <th scope="col" className="py-1 pr-2 font-normal">#</th>
-            <th scope="col" className="py-1 pr-2 font-normal">Cell</th>
+            <th scope="col" className="py-1 pr-2 font-normal">{t('columns.rank')}</th>
+            <th scope="col" className="py-1 pr-2 font-normal">{t('columns.cell')}</th>
             {columns.map((column) => (
               <th
                 key={column.key}
@@ -37,7 +48,7 @@ export default function RankingTable({ rows, sortBy, direction, onSort, onSelect
                 </button>
               </th>
             ))}
-            <th scope="col" className="py-1 font-normal">Status</th>
+            <th scope="col" className="py-1 font-normal">{t('columns.status')}</th>
           </tr>
         </thead>
         <tbody>
@@ -53,7 +64,7 @@ export default function RankingTable({ rows, sortBy, direction, onSort, onSelect
               {columns.map((column) => (
                 <td key={column.key} className="py-1.5 pr-2">{column.show(row)}</td>
               ))}
-              <td className={`py-1.5 ${STATUS_CLASS[row.status]}`}>{STATUS_TEXT[row.status]}</td>
+              <td className={`py-1.5 ${STATUS_CLASS[row.status]}`}>{statusText[row.status]}</td>
             </tr>
           ))}
         </tbody>
