@@ -98,7 +98,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D5 | WF5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | trankhan123 (Claude Code) | done (9 regions; MMP trimmed to 900 cells, see region table) |
 | D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | chubin271-blip | todo |
 | D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | todo |
-| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade; Sun-visibility overlay not done) |
+| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade, PGDA 69 Sun/Earth and PSR overlays) |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
 | C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | Quoc_Bao | done |
 | C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | chubin271-blip | done |
@@ -248,9 +248,12 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 { "maps": [{ "id": "south_pole", "kind": "hillshade", "image": "/maps/south_pole.png", "boundsM": [0, 0, 0, 0], "metersPerPixel": 400 }] }
 ```
 
-- `id` is `south_pole` or a region code.
-- `kind` is `hillshade` or `sun-visibility`.
-- Each PNG is ≤ 1 MB.
+- `id` is `south_pole` or a region code; one entry per (`id`, `kind`); hillshades are listed first.
+- `kind` is one of:
+  - `hillshade`: grey PGDA 90 relief, `south_pole` at 500 m/px and each region at its native 80 m;
+  - `sun-visibility` / `earth-visibility`: PGDA 69 value × 4e-05 (share of time the Sun / Earth is in view), RGBA with the ramp `#440154 → #3b528b → #21918c → #5ec962 → #fde725` for 0 → 1, transparent where there is no data; only for regions that overlap the ±151.74 km square (about 85°S to the pole), with `boundsM` clipped to it (CAB has none, NR2 and MMP are partly covered);
+  - `psr`: PGDA 90 LPSR 20 m, `#cc79a7` on permanent shadow, transparent elsewhere; one entry per region.
+- Each PNG is ≤ 1 MB; `python pipeline/check_web_data.py` also checks `maps.json` (kinds, duplicates, files, sizes, `boundsM`).
 
 ### Pipeline intermediate files (`pipeline/out/`, committed so others can build without raw data)
 
@@ -746,8 +749,8 @@ File: `validate.py`.
 
 File: `export_map_background.py`.
 
-- **Input:** the hillshade `LDEM_80S_80MPP_ADJ_HILL.TIF`, the PGDA 69 Sun visibility raster and `regions.json`.
-- **Output:** `web/public/maps/*.png` and `maps.json`.
+- **Input:** the hillshade `LDEM_80S_80MPP_ADJ_HILL.TIF`, the PGDA 69 Sun and Earth visibility rasters (`AVGVISIB_85S_060M_201608.TIF`, `…_EARTH.TIF`), the PGDA 90 permanent-shadow raster `LPSR_80S_20MPP_ADJ.TIF` and `regions.json`.
+- **Output:** `web/public/maps/south_pole.png`, `<CODE>.png`, `<CODE>_sun.png`, `<CODE>_earth.png`, `<CODE>_psr.png` and `maps.json` (35 entries today).
 - **Rules:**
   - write the PNGs with rasterio (GDAL PNG driver), no new library;
   - each image is ≤ 1 MB.

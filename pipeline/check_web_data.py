@@ -1,7 +1,7 @@
 """Check that a data folder follows the README data contract. Real and mock data must both pass.
 
-Run: python pipeline/check_web_data.py                       (web/public/data)
-     python pipeline/check_web_data.py web/public/data/mock  (mock data: every file must say "mock": true)
+Run: python pipeline/check_web_data.py                       (web/public/data, plus web/public/maps/maps.json)
+     python pipeline/check_web_data.py web/public/data/mock  (mock data: every file must say "mock": true; no maps)
 Exit code 1 and a list of problems when something is wrong.
 """
 import json
@@ -17,6 +17,8 @@ from common import (EPHEMERIS_START, EPHEMERIS_STOP, MOON_LONLAT_CRS, PGDA_CRS, 
                     SLOPE_LIMIT_DEG, WEB_DATA_FOLDER)
 
 MAX_FILE_BYTES = 2_000_000
+MAX_IMAGE_BYTES = 1_000_000
+MAP_KINDS = {"hillshade", "sun-visibility", "earth-visibility", "psr"}
 MAX_POSITION_ERROR_M = 100
 CELL_HALF_SIZE_M = 500  # boundsM must contain whole 1 km squares, not only their centres
 ISO_HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00Z$")
@@ -199,6 +201,29 @@ def check_validation(data, expect_mock):
         problem("validation.json", "needs pgda69 (list), horizons (object) and quickmap (list)")
 
 
+def check_maps(data, maps_folder):
+    seen = set()
+    for entry in data["maps"]:
+        map_id, kind, image, bounds = entry.get("id"), entry.get("kind"), str(entry.get("image")), entry.get("boundsM")
+        if map_id != "south_pole" and map_id not in REGION_CODES:
+            problem("maps.json", f"{map_id}: id must be south_pole or a region code")
+        if kind not in MAP_KINDS:
+            problem("maps.json", f"{map_id}: unknown kind {kind}")
+        if (map_id, kind) in seen:
+            problem("maps.json", f"{map_id}: duplicate {kind}")
+        seen.add((map_id, kind))
+        path = maps_folder / image.removeprefix("/maps/")
+        if not image.startswith("/maps/"):
+            problem("maps.json", f"{image}: image must start with /maps/")
+        elif not path.is_file():
+            problem("maps.json", f"{image}: missing")
+        elif path.stat().st_size > MAX_IMAGE_BYTES:
+            problem("maps.json", f"{image}: {path.stat().st_size / 1e6:.1f} MB, limit is 1 MB")
+        if not (isinstance(bounds, list) and len(bounds) == 4 and all(is_number(v) for v in bounds)
+                and bounds[0] < bounds[2] and bounds[1] < bounds[3]):
+            problem("maps.json", f"{map_id} {kind}: boundsM must be 4 numbers [xMin, yMin, xMax, yMax] with min < max")
+
+
 def run_check(file_name, check, *arguments):
     """Malformed input becomes a listed problem instead of a traceback, so the other files are still checked."""
     try:
@@ -218,6 +243,10 @@ def main():
     regions = load(folder, "regions.json", expect_mock)
     if regions is not None:
         run_check("regions.json", check_regions, regions, folder, expect_mock)
+    if not expect_mock:  # mock mode has no map images
+        maps = load(folder.parent / "maps", "maps.json", False, required=False)
+        if maps is not None:
+            run_check("maps.json", check_maps, maps, folder.parent / "maps")
     for path in sorted(folder.glob("*.json")):  # files nothing references still obey size and mock rules
         if path.name not in loaded_files:
             load(folder, path.name, expect_mock)
