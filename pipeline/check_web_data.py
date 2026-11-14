@@ -18,6 +18,7 @@ from common import (EPHEMERIS_START, EPHEMERIS_STOP, MOON_LONLAT_CRS, PGDA_CRS, 
 
 MAX_FILE_BYTES = 2_000_000
 MAX_POSITION_ERROR_M = 100
+CELL_HALF_SIZE_M = 500  # boundsM must contain whole 1 km squares, not only their centres
 ISO_HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00Z$")
 EPHEMERIS_START_TIME = f"{EPHEMERIS_START}T00:00Z"
 EPHEMERIS_HOURS = ((date.fromisoformat(EPHEMERIS_STOP) - date.fromisoformat(EPHEMERIS_START)).days + 1) * 24
@@ -148,6 +149,8 @@ def check_regions(data, folder, expect_mock):
         if code not in REGION_CODES:
             problem("regions.json", f"unknown region code {code}")
             continue
+        if not (isinstance(region.get("name"), str) and region["name"].strip()):
+            problem("regions.json", f"{code}: name must be a non-empty string")
         bounds = region.get("boundsM")
         if not (isinstance(bounds, list) and len(bounds) == 4 and all(is_number(v) for v in bounds)):
             problem("regions.json", f"{code}: boundsM must be 4 numbers [xMin, yMin, xMax, yMax]")
@@ -161,8 +164,9 @@ def check_regions(data, folder, expect_mock):
         counts, positions = check_cells(cells, region["cellsFile"], code)
         if counts != (region.get("cellCount"), region.get("feasibleCount")):
             problem("regions.json", f"{code}: cellCount/feasibleCount {region.get('cellCount')}/{region.get('feasibleCount')} but file has {counts}")
-        if bounds and positions and not all(bounds[0] <= x <= bounds[2] and bounds[1] <= y <= bounds[3] for x, y in positions):
-            problem("regions.json", f"{code}: boundsM does not contain every cell centre")
+        half = CELL_HALF_SIZE_M
+        if bounds and positions and not all(bounds[0] <= x - half and x + half <= bounds[2] and bounds[1] <= y - half and y + half <= bounds[3] for x, y in positions):
+            problem("regions.json", f"{code}: boundsM must contain the outer edges of every cell (centre ± 500 m)")
 
 
 def check_sites(data, expect_mock):
