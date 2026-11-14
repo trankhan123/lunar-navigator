@@ -75,7 +75,7 @@ LGRS shapefiles cannot be downloaded by script (ScienceBase returns 403). See [D
    - If the contract has to change, agree with the team first. Then update this README, the contract test and `pipeline/check_web_data.py` in the same commit.
 4. **Implement:**
    - remove the `eslint-disable` stub line at the top of the JS file;
-   - replace `throw notImplemented(...)` or `raise NotImplementedError` with real code.
+   - replace `raise NotImplementedError` (Python stubs) with real code.
 5. **Done** means all of these are true:
    - the module's *Done when* list holds;
    - its contract test passes (`cd web && node --test src/core/<file>.test.js`);
@@ -108,7 +108,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
 | W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `CellHoverCard`, `DirectionCard`, `MapSearch`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js` | W1, D8 | L | trankhan123 | done (map v2) |
 | W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
-| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | done |
+| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestWindowsTable.jsx` | C5 | L | trankhan123 | done |
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
 | W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | doing (texture done; Sun/Earth arrows left) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
@@ -236,7 +236,8 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 
 ```json
 {
-  "pgda69": [{ "cellId": "MAL-…", "pgdaSunFraction": 0, "pgdaEarthFraction": 0, "ourSunFraction": 0, "ourEarthFraction": 0 }],
+  "pgda69": [{ "cellId": "MAL-…", "region": "MAL", "pgdaSunFraction": 0, "pgdaEarthFraction": 0, "pgdaSunCentreFraction": 0, "pgdaEarthCentreFraction": 0, "ourSunHalfDiskFraction": 0, "ourSunAnyPartFraction": 0, "ourSunMeanDiskFraction": 0, "ourEarthHalfDiskFraction": 0, "ourEarthAnyPartFraction": 0, "ourEarthMeanDiskFraction": 0 }],
+  "pgda69Stats": [{ "region": "MAL", "sun": { "halfDisk": { "n": 0, "meanOurs": 0, "meanPgda": 0, "meanDifference": 0, "rmse": 0, "pearsonR": 0 }, "anyPart": {}, "meanDisk": {} }, "earth": {} }],
   "horizons": { "pointCount": 30, "maxAzimuthErrorDeg": 0, "maxElevationErrorDeg": 0, "checkedAt": "2026-11-15" },
   "quickmap": [{ "cellId": "MAL-…", "image": "/validation/quickmap_MAL.png", "note": "" }]
 }
@@ -439,7 +440,7 @@ Files: `optimizer.js`. The Web Worker files `windowSearchWorker.js` and `startWi
 | `runWindowSearch(cells, ephemeris, scenario, onProgress)` | `WindowResults` |
 | `metricsAt(results, cellIndex, landingIndex)` | `WindowMetrics` + `{cellIndex, cellId, landingIndex, landingTime, distanceKm}` |
 | `rankCells(results, landingIndex, {sortBy, direction, limit = 10})` | rows of `metricsAt` + `rank` |
-| `rankBestPairs(results, {limit = 10})` | best (cell, landing time) pairs over the whole range |
+| `rankBestWindows(results, {limit = 10})` | one row per cell (its best landing window), see "Best windows" below |
 | `summarizeCurrentPoint(results, landingIndex)` | `{metrics, nearestPassingLanding: {landingIndex, landingTime, offsetHours} \| null, nearestPassingCell: {cellIndex, cellId, distanceKm} \| null}` |
 | `startWindowSearch({cells, ephemeris, scenario, onProgress})` | `{promise (resolves WindowResults), cancel}` |
 
@@ -484,6 +485,10 @@ Rules:
   - main → worker: `{type:'run', requestId, cells, ephemeris, scenario}`;
   - worker → main: `{type:'progress', requestId, doneCells, totalCells}`, then `{type:'done', requestId, results}` (typed array buffers are transferred) or `{type:'error', requestId, message}`.
   - the same worker also answers the W2 map's `{type:'fractions', requestId, cells, ephemeris, firstHour, hourCount}` with `{type:'done', requestId, results: {fractionSun, fractionEarth}}` (Float32Array per cell, buffers transferred; no progress messages). `startWindowSearch.js` exports `startVisibilityFractions` next to `startWindowSearch`.
+- **Best windows:** the worker only returns `WindowResults`; `App.jsx` ranks them on the main thread (about 13 ms for 906 cells × 728 landings).
+  - a window is a run of consecutive landing times (6 h step) of one cell whose status is not `fail` (pass or marginal); `slipHours = 6 × (last − first)`, so 0 for a single time;
+  - the best landing inside a window and the best window of a cell use the default order (pass, higher lowest battery, higher % Sun and Earth, nearer, shorter comm loss, shorter dark), then the longer window; cells that never pass are left out;
+  - `rankBestWindows` rows are `metricsAt` of the best landing + `{rank, windowStartTime, windowEndTime, slipHours}`; `landingTime` is the best landing.
 - **Speed:** region scope (about 225 cells × 730 landings × 144 h) in under 3 s on a laptop.
 
 ## Web UI modules (`web/src/components/`, one component per file)
@@ -565,7 +570,7 @@ Files: `ScenarioForm.jsx`, `core/scenario.js`.
 
 **Logic (pure, tested):** `currentPointSentence(summary, scenario)` in `core/format.js` turns `summarizeCurrentPoint` into the card's plain-English verdict (full wording in its JSDoc). The map colours come from `results.status[cellIndex × landingCount + landingIndex]`.
 
-Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx`.
+Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestWindowsTable.jsx`.
 
 - **`LandingTimeSlider`** `{landingTimes, value, onChange(index)}`: steps of 6 h, its own Play/Pause (one step every 300 ms), shows the UTC time.
 - **`RankingTable`** `{rows, sortBy, direction, onSort(key), onSelectRow(row), currentCellId, mode}`:
@@ -574,7 +579,7 @@ Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `Cur
   - the first click on a heading sorts better-first, the next click reverses (`aria-sort` set); "Back to the default order" resets.
 - **`CurrentPointCard`** `{summary, scenario, onSelectLanding(index), onOpenCell(cellId)}`: the `currentPointSentence` verdict, plus buttons "Details of my point", "Go to <nearest passing time>" and "Open <nearest passing cell>".
 - **`CurrentPointStrip`** `{statuses, value, onSelectLanding(index)}`: SVG strip of cell 0 over all landing times (`results.status.subarray(0, landingCount)`), consecutive equal statuses drawn as one rectangle; click jumps.
-- **`BestPairsTable`** `{rows, onSelectRow(row)}`: the output of `rankBestPairs`.
+- **`BestWindowsTable`** `{rows, onSelectRow(row)}`: the output of `rankBestWindows`; a row click opens the cell at `row.landingTime`.
 - **Map:** the Results screen reuses `SouthPoleMap` with `statusByCellId` at the selected landing time (✓ ! ✕ symbols).
 - **While the worker runs:** a progress bar fed by `onProgress`.
 - **Done when:** dragging the slider updates the map colours and the table in under 100 ms for region scope.
@@ -609,13 +614,16 @@ Files: `DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.
 
 File: `MoonGlobe.jsx`.
 
-- **Props:** `{sites, regions, selectedSiteId, sunDirection, earthDirection, onSelectSite(site), onOpenSouthPoleMap()}`. `sunDirection` and `earthDirection` are `{azimuthDeg, elevationDeg}` or `null`.
+- **Props:** `{sites, regions, ephemeris, hour, selectedSiteId, onSelectSite(site), onOpenRegion(code)}`. `hour` is an ephemeris hour index (App passes the map's current hour, else hour 0). The card for the Sun and Earth is computed inside from `bodyDirections` (`core/mapSky.js`).
 - **Content:**
-  - texture `/textures/lroc_color_2k.jpg` (NASA SVS 4720);
-  - pins for the sites and the 9 regions;
-  - arrows toward the Sun and Earth from the selected site.
-- **Interaction:** a click at lat < −80° opens the map screen.
-- **Lifecycle:** keep `new Globe(container)`, the `_destructor()` cleanup and stable callbacks.
+  - texture `/textures/lroc_color_4k.jpg` (`lroc_color_2k.jpg` below 768 px) plus the LOLA elevation `/textures/ldem_bump_1440.png` as `bumpImageUrl` (NASA SVS 4720);
+  - real light: a directional light at the sub-solar point of `hour` plus a dim ambient light, so the terminator is real; the text "Sunlight at <UTC time>" states the time;
+  - HTML pins for the sites (small, coloured by group, hover title with name, group, lat/lon), the selected site named and highlighted, a colour legend, rings on the 9 Artemis III regions;
+  - labelled markers at the sub-solar and sub-Earth points (`core/globeSky.js` `subBodyPoints`, ephemeris columns of C0) and ground-track arcs from the selected site to each (Sun `#e69f00`, Earth `#56b4e9`);
+  - a card with azimuth, elevation and in view / hidden for the Sun and Earth ("terrain not included" for sites without a horizon);
+  - camera buttons South pole (default view), Near side, Far side.
+- **Interaction:** a click on a region centre site or inside its ring (`regionAtPoint`, 2.5°) calls `onOpenRegion(code)` and App opens the 2D map with that region; a click on any other site selects it as the current point.
+- **Lifecycle:** keep `new Globe(container)`, the `_destructor()` cleanup, the `ResizeObserver` and stable callbacks (kept in a ref).
 
 ### W7 Learn mode
 
@@ -743,19 +751,26 @@ File: `pipeline/sites.json`.
 
 ### D7 Validation
 
-File: `validate.py`.
+Files: `compute_our_visibility.mjs` and `validate.py`. Re-run in this order (about 6 s for the node script, then a few seconds of raster reads):
+
+```bash
+node pipeline/compute_our_visibility.mjs   # -> pipeline/out/our_visibility.json
+python pipeline/validate.py                # -> web/public/data/validation.json, prints the statistics
+```
 
 - **Input:**
-  - PGDA 69 `AVGVISIB_85S_060M_201608*.TIF`: pixel × 4e-05 = fraction of time visible, an 18.6-year average;
-  - `pipeline/out/our_visibility.json`, written by a small node script that imports `sunlight.js` and `communication.js` and runs over the whole ephemeris.
-- **Output:** `validation.json`.
+  - PGDA 69 `AVGVISIB_85S_060M_201608*.TIF`: int16, pixel × 4e-05, nodata −32768, 60 m, ±151,740 m square, an hourly 18.6-year (nutation cycle) average. NASA's page says the Earth counts as visible if any part of its disc is unobscured; the products are "average illumination", not a share of hours with at least half a disc;
+  - `pipeline/out/our_visibility.json`: the node script imports `sunlight.js`, `communication.js` and `timeSeries.js`, takes 30 evenly spaced cells per region (MAL, HAW, MMO, NR1, DGR, SLP, NR2, MMP; only cells whose 1 km square lies inside the PGDA square) and runs the whole ephemeris (2027-01 → 2029-01, hourly). Per body it stores three readings: `halfDisk` (share of hours with diskFraction ≥ 0.5, the app's rule), `anyPart` (share with diskFraction > 0) and `meanDisk` (mean disk fraction).
+- **Matching:** the PGDA value of a cell is the mean of the 60 m pixels whose centre lies inside the 1 km square around `xM, yM` (cells with under half valid pixels are dropped). The centre-pixel value is kept as `pgda*CentreFraction`.
+- **Output:** `validation.json` gets `pgda69` (one row per cell) and `pgda69Stats` (per region and `ALL`, for Sun and Earth and each reading: `n, meanOurs, meanPgda, meanDifference` = ours − NASA, `rmse, pearsonR`). The About screen shows the `halfDisk` reading.
 - **Rules:**
-  - PGDA 69 covers 85–90°S only, so CAB, MMP and NR2 have no PGDA value;
-  - expect the same trend, not equality (2 years against 18.6 years).
+  - PGDA 69 covers 85–90°S only: CAB has no value, MMP and NR2 only in the covered part;
+  - expect the same pattern, not equal means: PGDA 69 is an 18.6-year average with its own disk and height assumptions, ours is 2027–2028;
+  - nothing is tuned: the numbers are reported as computed.
 - **Done when:**
   - `validation.json` is written;
   - the comparison is shown on the About screen and in the README;
-  - one QuickMap "Compute Visibility" screenshot is saved for the slides.
+  - one QuickMap "Compute Visibility" screenshot is saved for the slides (**not done yet**, `quickmap` is still empty).
 
 ### D8 Map background
 
@@ -766,6 +781,20 @@ File: `export_map_background.py`.
 - **Rules:**
   - write the PNGs with rasterio (GDAL PNG driver), no new library;
   - each image is ≤ 1 MB.
+
+### D9 — Whole-cap 2 km grid (CAP)
+
+File: `build_cap_grid.py` (tests: `test_build_cap_grid.py`; checker: `check_cap` in `check_web_data.py`). Data only: the web app does not read it yet.
+
+- **Grid:** square 2000 m cells in `PGDA_CRS`; centres at `x = (i + 0.5) × 2000`, `y = (j + 0.5) × 2000`. A cell is kept when its centre is at or south of 85°S (projected distance from the pole ≤ that of 85°S, 151.7 km).
+- **Exclusion:** a cell is dropped when its centre lies inside the `boundsM` of any of the 9 regions in `regions.json` (they already have 1 km LGRS cells). `excludedRegionCodes` in `index.json` lists them.
+- **Id:** `CAP-r<row>c<col>`, `row = j − jMin`, `col = i − iMin` (minimum over the kept cells), each zero-padded to 3 digits; `label` is the part after `CAP-`.
+- **Cell:** exactly the `cells_<CODE>.json` cell (`id, label, lat, lon, xM, yM, heightM, slopeDeg, psrFraction, feasible, infeasibleReason, horizon`). Feasibility is D3 on the 2 km square (slope median from `LDSM` 80 m, PSR share from `LPSR` 20 m, same limits and reasons). Horizon is D4 with its defaults (360 rays, 100 m to 150 km, 2 m mast, near DEM 80 m, far DEM 240 m). Cells are assembled by D5's `build_cell`.
+- **Files:**
+  - `pipeline/out/grid_CAP.json` (list), `feasibility_CAP.json` and `horizon_CAP.json` (objects keyed by id), same shapes as the region files;
+  - `web/public/data/cap/index.json` = `{cellSizeM: 2000, tileSizeM: 40000, southOfLatDeg: -85, excludedRegionCodes, cellCount, feasibleCount, tiles: [{id: "cap_<tx>_<ty>", boundsM: [xMin, yMin, xMax, yMax], cellCount, feasibleCount}]}`;
+  - `web/public/data/cap/cap_<tx>_<ty>.json` = `{tileId, cells: [...]}`; tiles are 40 km squares aligned to multiples of 40000 m (`tx = floor(xM / 40000)`, can be negative), only non-empty tiles are written, each < 2 MB.
+- **Re-run:** `python pipeline/build_cap_grid.py` (needs the raw rasters; horizons use all CPU cores, `--jobs N` to limit; `--limit 200` is a dry timing run that writes nothing), then `python pipeline/check_web_data.py`. The checker runs `check_cap` only when `cap/index.json` exists.
 
 ## Site coordinates
 

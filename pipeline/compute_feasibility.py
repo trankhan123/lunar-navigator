@@ -25,24 +25,24 @@ DEM_FILE = RAW_FOLDER / "LDEM_80S_80MPP_ADJ.TIF"
 SQUARE_HALF_SIZE_M = 500 / 0.994
 
 
-def read_region(path, cells):
+def read_region(path, cells, margin_m=1000):
     """Read only the part of a raster around the region (the PSR raster is 3.7 GB in full)."""
     xs = [cell["xM"] for cell in cells]
     ys = [cell["yM"] for cell in cells]
     with rasterio.open(path) as source:
-        window = from_bounds(min(xs) - 1000, min(ys) - 1000, max(xs) + 1000, max(ys) + 1000, source.transform)
+        window = from_bounds(min(xs) - margin_m, min(ys) - margin_m, max(xs) + margin_m, max(ys) + margin_m, source.transform)
         window = window.round_offsets().round_lengths()
         return source.read(1, window=window), source.window_transform(window)
 
 
-def pixels_in_square(raster, x, y):
-    """Pixels whose centres lie inside the square of half size SQUARE_HALF_SIZE_M around (x, y)."""
+def pixels_in_square(raster, x, y, half_size_m=SQUARE_HALF_SIZE_M):
+    """Pixels whose centres lie inside the square of half size half_size_m around (x, y)."""
     values, transform = raster
     size = transform.a  # north-up rasters: pixel width = height = a, top edge = f
-    first_column = math.ceil((x - SQUARE_HALF_SIZE_M - transform.c) / size - 0.5)
-    last_column = math.floor((x + SQUARE_HALF_SIZE_M - transform.c) / size - 0.5)
-    first_row = math.ceil((transform.f - (y + SQUARE_HALF_SIZE_M)) / size - 0.5)
-    last_row = math.floor((transform.f - (y - SQUARE_HALF_SIZE_M)) / size - 0.5)
+    first_column = math.ceil((x - half_size_m - transform.c) / size - 0.5)
+    last_column = math.floor((x + half_size_m - transform.c) / size - 0.5)
+    first_row = math.ceil((transform.f - (y + half_size_m)) / size - 0.5)
+    last_row = math.floor((transform.f - (y - half_size_m)) / size - 0.5)
     return values[first_row:last_row + 1, first_column:last_column + 1]
 
 
@@ -57,9 +57,9 @@ def bilinear(raster, x, y):
             + block[1, 0] * (1 - dx) * dy + block[1, 1] * dx * dy)
 
 
-def compute_cell_feasibility(cell, slope_raster, psr_raster, dem_raster):
-    slopes = pixels_in_square(slope_raster, cell["xM"], cell["yM"])
-    shadow = pixels_in_square(psr_raster, cell["xM"], cell["yM"])
+def compute_cell_feasibility(cell, slope_raster, psr_raster, dem_raster, half_size_m=SQUARE_HALF_SIZE_M):
+    slopes = pixels_in_square(slope_raster, cell["xM"], cell["yM"], half_size_m)
+    shadow = pixels_in_square(psr_raster, cell["xM"], cell["yM"], half_size_m)
     height = bilinear(dem_raster, cell["xM"], cell["yM"])
     if slopes.size == 0 or shadow.size == 0 or np.isnan(slopes).all() or np.isnan(height):
         raise ValueError(f"{cell['id']}: no raster data in the square")

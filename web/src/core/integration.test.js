@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { assertNear } from './testHelpers.js'
 import { hourIndexOf, resolveCurrentCell, timeAtHour } from './data.js'
 import { DEFAULT_SCENARIO, countDays, validateScenario } from './scenario.js'
-import { STATUS, metricsAt, rankBestPairs, rankCells, runWindowSearch, selectSearchCells, summarizeCurrentPoint } from './optimizer.js'
+import { STATUS, metricsAt, rankBestWindows, rankCells, runWindowSearch, selectSearchCells, summarizeCurrentPoint } from './optimizer.js'
 import { buildDetail, pathForChart, summarySentence, toCsv } from './detail.js'
 import { currentPointSentence, formatUtc } from './format.js'
 
@@ -88,7 +88,7 @@ test('runWindowSearch on the real ephemeris: landing times and result arrays', (
   assert.deepEqual(progress.at(-1), [cells.length, cells.length])
 })
 
-test('rankCells and rankBestPairs follow the README default order', () => {
+test('rankCells and rankBestWindows follow the README default order', () => {
   const { results } = runSearch()
   for (let k = 0; k < results.landingCount; k++) {
     const rows = rankCells(results, k)
@@ -101,11 +101,12 @@ test('rankCells and rankBestPairs follow the README default order', () => {
       if (!shown.has(c)) assert.ok(compareDefault(rows.at(-1), metricsAt(results, c, k)) <= 0, `landing ${k}, cell ${c} left out`)
     }
   }
-  const pairs = rankBestPairs(results)
-  assert.equal(pairs.length, 10)
-  assertSorted(pairs, 'best pairs')
+  const windows = rankBestWindows(results)
+  assert.equal(windows.length, 10)
+  assertSorted(windows, 'best windows')
+  assert.equal(new Set(windows.map((row) => row.cellId)).size, 10, 'one window per cell')
   for (let k = 0; k < results.landingCount; k++) {
-    assert.ok(compareDefault(pairs[0], rankCells(results, k, { limit: 1 })[0]) <= 0, `best pair vs best cell at landing ${k}`)
+    assert.ok(compareDefault(windows[0], rankCells(results, k, { limit: 1 })[0]) <= 0, `best window vs best cell at landing ${k}`)
   }
 })
 
@@ -189,10 +190,10 @@ test('learn mode (W7) explains a real search: one row per metric, and a darker-f
   const { results } = runSearch()
   const cellsById = new Map(grid.cells.map((cell) => [cell.id, cell]))
   assert.equal(metricSentences(metricsAt(results, 0, 0)).length, 11)
-  const lessons = results.landingTimes.map((_, landingIndex) => neighborLesson(results, cellsById, landingIndex)).filter(Boolean)
+  const lessons = results.landingTimes.map((_, landingIndex) => neighborLesson(results, cellsById, landingIndex, { ephemeris, scenario })).filter(Boolean)
   assert.ok(lessons.length > 0, 'some landing time has two neighbours with different dark periods')
   for (const lesson of lessons) {
     assert.ok(lesson.darkerHours > lesson.lighterHours && lesson.distanceKm <= 1.5)
-    assert.match(lesson.sentence, /^Moving .* km to .* cuts the longest dark period/)
+    assert.match(lesson.sentence, /^(From your current point .*: moving .* km to |Elsewhere in this region, ).*dark period/)
   }
 })

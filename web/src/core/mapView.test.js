@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear } from './testHelpers.js'
-import { MAX_ZOOM_SCALE, cellLabelsVisible, fitTransform, isOnPolarMap, mapAngleDeg, sparklinePath, viewBoundsM } from './mapView.js'
+import { MAX_ZOOM_SCALE, cellLabelsVisible, fitTransform, isCellOnPolarMap, isOnPolarMap, mapAngleDeg, sparklinePath, viewBoundsM } from './mapView.js'
 
 function assertTransform(actual, expected) {
   for (const key of ['k', 'x', 'y']) assertNear(actual[key], expected[key], 1e-6)
@@ -49,4 +49,10 @@ test('cellLabelsVisible once a 1 km cell is at least 40 px wide', () => {
   assert.equal(cellLabelsVisible(40, 600), false) // 39.5 px
   assert.equal(cellLabelsVisible(41, 600), true) // 40.5 px
   assert.equal(cellLabelsVisible(300, 0), false) // map not laid out yet
+})
+
+test('isCellOnPolarMap: a point outside the polar map (null or far xM/yM) is not on it', () => {
+  assert.equal(isCellOnPolarMap({ xM: 1000, yM: -2000 }), true)
+  assert.equal(isCellOnPolarMap({ xM: null, yM: null }), false)
+  assert.equal(isCellOnPolarMap({ xM: 900000, yM: 0 }), false)
 })

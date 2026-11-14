@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AboutView from './components/AboutView.jsx'
-import BestPairsTable from './components/BestPairsTable.jsx'
+import BestWindowsTable from './components/BestWindowsTable.jsx'
 import CellPopup from './components/CellPopup.jsx'
 import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
@@ -12,9 +12,11 @@ import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
+import { cellDisplayName } from './core/format.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
-import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
+import { isCellOnPolarMap } from './core/mapView.js'
+import { rankBestWindows, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
 import { startWindowSearch } from './core/startWindowSearch.js'
@@ -195,7 +197,7 @@ export default function App() {
     [results, landingIndex],
   )
   const rankedRows = useMemo(() => results && rankCells(results, landingIndex, { ...ranking, limit: 10 }), [results, landingIndex, ranking])
-  const bestPairs = useMemo(() => results && rankBestPairs(results, { limit: 10 }), [results])
+  const bestWindows = useMemo(() => results && rankBestWindows(results, { limit: 10 }), [results])
   const currentPointSummary = useMemo(() => results && summarizeCurrentPoint(results, landingIndex), [results, landingIndex])
 
   const selectCell = useCallback((cell) => setSelectedCellId(cell.id), [])
@@ -239,6 +241,14 @@ export default function App() {
     () => (search.status === 'done' ? mapHourRange(data.ephemeris, search.scenario.startDate, search.scenario.endDate) : null),
     [data, search],
   )
+  // The point that was searched (not the form's live one), to name it and to decide whether the polar map and cell table apply.
+  const searchedPoint = useMemo(() => {
+    try {
+      return search.status === 'done' ? resolveCurrentCell(search.scenario.currentPoint, cellsByRegion, data.sites) : null
+    } catch {
+      return null
+    }
+  }, [data, search, cellsByRegion])
   const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
   const currentCell = useMemo(() => {
     try {
@@ -415,11 +425,17 @@ export default function App() {
                   <CurrentPointCard
                     summary={currentPointSummary}
                     scenario={search.scenario}
+                    point={searchedPoint}
                     onSelectLanding={selectLanding}
                     onOpenCell={(cellId) => openDetail(cellId, results.landingTimes[landingIndex])}
                   />
                   <LandingTimeSlider landingTimes={results.landingTimes} value={landingIndex} onChange={selectLanding} />
                   <CurrentPointStrip statuses={results.status.subarray(0, results.landingCount)} value={landingIndex} onSelectLanding={selectLanding} />
+                  {searchedPoint && !isCellOnPolarMap(searchedPoint) ? (
+                    <p className="rounded border border-slate-700 p-3 text-slate-300">
+                      {t('currentPoint.searchedOnly')}
+                    </p>
+                  ) : (
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                     <div className="space-y-2">
                       {regionPicker}
@@ -438,11 +454,13 @@ export default function App() {
                         onSort={sortRanking}
                         onSelectRow={(row) => openDetail(row.cellId, row.landingTime)}
                         currentCellId={results.cellIds[0]}
+                        currentPointName={searchedPoint && cellDisplayName(searchedPoint)}
                         mode={mode}
                       />
                     </div>
                   </div>
-                  <BestPairsTable rows={bestPairs} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
+                  )}
+                  <BestWindowsTable rows={bestWindows} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
                 </>
               )}
             </section>
@@ -469,16 +487,26 @@ export default function App() {
 
           {data && screen === 'globe' && (
             <section className="space-y-2">
-              <Suspense fallback={<p className="text-slate-400">Loading globe…</p>}>
-                <MoonGlobe sites={data.sites} onSelectSite={selectSite} />
+              <Suspense fallback={<p className="text-slate-400">{t('globe.loading')}</p>}>
+                <MoonGlobe
+                  sites={data.sites}
+                  regions={data.regions}
+                  ephemeris={data.ephemeris}
+                  hour={shownMapHour ?? 0}
+                  selectedSiteId={scenario.currentPoint?.type === 'site' ? scenario.currentPoint.siteId : null}
+                  onSelectSite={selectSite}
+                  onOpenRegion={(code) => {
+                    openRegion(code)
+                    setScreen('map')
+                  }}
+                />
               </Suspense>
-              <p className="text-xs text-slate-400">Click a site to use it as the current point.</p>
             </section>
           )}
 
           {data && screen === 'learn' && (
             <Suspense fallback={<p className="text-slate-400">Loading learn mode…</p>}>
-              <LearnView results={results} cellsById={cellsById} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
+              <LearnView results={results} cellsById={cellsById} ephemeris={data.ephemeris} scenario={search.scenario} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
             </Suspense>
           )}
 

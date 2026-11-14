@@ -200,6 +200,14 @@ def check_sites(data, expect_mock):
 def check_validation(data, expect_mock):
     if not (isinstance(data.get("pgda69"), list) and isinstance(data.get("horizons"), dict) and isinstance(data.get("quickmap"), list)):
         problem("validation.json", "needs pgda69 (list), horizons (object) and quickmap (list)")
+    stats = data.get("pgda69Stats", [])
+    if data.get("pgda69") and not (stats and stats[-1].get("region") == "ALL"):
+        problem("validation.json", "pgda69 rows need pgda69Stats ending with region ALL")
+    for entry in stats:
+        for body in ("sun", "earth"):
+            for key in ("halfDisk", "anyPart", "meanDisk"):
+                if set(entry.get(body, {}).get(key, {})) != {"n", "meanOurs", "meanPgda", "meanDifference", "rmse", "pearsonR"}:
+                    problem("validation.json", f"pgda69Stats {entry.get('region')} {body} {key}: wrong fields")
 
 
 def check_maps(data, maps_folder):
@@ -241,6 +249,45 @@ def check_relief(data, relief_folder):
                 problem("relief/index.json", f"{z}/{name}.jpg: {path.stat().st_size / 1e3:.0f} kB, limit is 300 kB")
 
 
+CAP_ID = re.compile(r"^CAP-r\d{3}c\d{3}$")
+
+
+def check_cap(folder):
+    """Whole-cap 2 km grid (README D9): <folder>/cap/index.json plus its tile files."""
+    cap_folder = Path(folder) / "cap"
+    index = load(cap_folder, "index.json", False)
+    if index is None:
+        return
+    regions = json.loads((Path(folder) / "regions.json").read_text(encoding="utf-8"))["regions"]
+    region_bounds = [region["boundsM"] for region in regions]
+    seen_ids, total, feasible_total = set(), 0, 0
+    for tile in index.get("tiles", []):
+        name = f"cap/{tile['id']}.json"
+        data = load(cap_folder, f"{tile['id']}.json", False)
+        if data is None:
+            continue
+        x_min, y_min, x_max, y_max = tile["boundsM"]
+        cells = data.get("cells", [])
+        feasible_count = sum(cell.get("feasible") is True for cell in cells)
+        if data.get("tileId") != tile["id"]:
+            problem(name, "tileId must equal the tile id in index.json")
+        if (len(cells), feasible_count) != (tile["cellCount"], tile["feasibleCount"]):
+            problem(name, "index cellCount/feasibleCount do not match the tile contents")
+        total, feasible_total = total + len(cells), feasible_total + feasible_count
+        for cell in cells:
+            if check_cell(name, "CAP", cell) is None:
+                continue
+            if not CAP_ID.match(cell["id"]) or cell["id"] in seen_ids:
+                problem(name, f"{cell['id']}: id must match CAP-r###c### and be unique")
+            seen_ids.add(cell["id"])
+            if not (x_min <= cell["xM"] < x_max and y_min <= cell["yM"] < y_max):
+                problem(name, f"{cell['id']}: centre outside its tile bounds")
+            if any(b[0] <= cell["xM"] <= b[2] and b[1] <= cell["yM"] <= b[3] for b in region_bounds):
+                problem(name, f"{cell['id']}: centre inside a region's boundsM")
+    if (total, feasible_total) != (index.get("cellCount"), index.get("feasibleCount")):
+        problem("cap/index.json", f"cellCount/feasibleCount {index.get('cellCount')}/{index.get('feasibleCount')} but tiles hold {total}/{feasible_total}")
+
+
 def run_check(file_name, check, *arguments):
     """Malformed input becomes a listed problem instead of a traceback, so the other files are still checked."""
     try:
@@ -270,6 +317,8 @@ def main():
     for path in sorted(folder.glob("*.json")):  # files nothing references still obey size and mock rules
         if path.name not in loaded_files:
             load(folder, path.name, expect_mock)
+    if not expect_mock and (folder / "cap" / "index.json").exists():  # mock data has no cap grid
+        run_check("cap", check_cap, folder)
     print(f"checked {folder}")
     for line in problems:
         print("  problem:", line)

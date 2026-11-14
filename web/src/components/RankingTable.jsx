@@ -3,7 +3,7 @@ import { useI18n } from '../i18n/index.jsx'
 const percent = (fraction) => `${Math.round(fraction * 100)}`
 const STATUS_CLASS = { pass: 'text-emerald-300', marginal: 'text-amber-300', fail: 'text-red-300' }
 
-export default function RankingTable({ rows, sortBy, direction, onSort, onSelectRow, currentCellId, mode }) {
+export default function RankingTable({ rows, sortBy, direction, onSort, onSelectRow, currentCellId, currentPointName, mode }) {
   const { t } = useI18n()
 
   const statusText = {
@@ -57,7 +57,7 @@ export default function RankingTable({ rows, sortBy, direction, onSort, onSelect
               <td className="py-1.5 pr-2 text-slate-400">{row.rank}</td>
               <td className="py-1.5 pr-2">
                 <button type="button" onClick={() => onSelectRow(row)} className="font-mono text-sky-300 underline-offset-2 hover:underline">
-                  {row.cellId}
+                  {row.cellId === currentCellId && currentPointName ? currentPointName : row.cellId}
                 </button>
                 {row.cellId === currentCellId && <span className="ml-1 text-xs text-amber-300">(you)</span>}
               </td>
