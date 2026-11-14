@@ -1,3 +1,5 @@
+import { useI18n } from '../i18n/index.jsx'
+
 const LIMITATIONS = [
   'Ephemeris and simulation run in 1-hour steps; countdowns interpolate between hours, so they can be off by minutes up to about an hour.',
   'The visible part of the Sun or Earth disk is a linear approximation.',
@@ -17,10 +19,11 @@ const SOURCES = [
 ]
 
 export default function AboutView() {
+  const { t } = useI18n()
   return (
     <article className="max-w-3xl space-y-6 text-sm leading-relaxed text-slate-300">
       <section>
-        <h2 className="mb-2 text-base font-semibold text-slate-100">What this tool does</h2>
+        <h2 className="mb-2 text-base font-semibold text-slate-100">{t('about.whatTitle')}</h2>
         <p>
           Enter your planned landing point at the lunar south pole and your mission limits. The tool simulates the Sun, the
           Earth and your battery hour by hour for every nearby 1 km cell and every landing time, then ranks the best cells and
@@ -29,7 +32,7 @@ export default function AboutView() {
         </p>
       </section>
       <section>
-        <h2 className="mb-2 text-base font-semibold text-slate-100">Data</h2>
+        <h2 className="mb-2 text-base font-semibold text-slate-100">{t('about.dataTitle')}</h2>
         <dl className="space-y-1">
           {SOURCES.map(([name, use]) => (
             <div key={name}>
@@ -40,7 +43,7 @@ export default function AboutView() {
         </dl>
       </section>
       <section>
-        <h2 className="mb-2 text-base font-semibold text-slate-100">Validation</h2>
+        <h2 className="mb-2 text-base font-semibold text-slate-100">{t('about.validationTitle')}</h2>
         <p>
           Sun and Earth directions computed in your browser match JPL Horizons topocentric positions within 0.015° in azimuth
           and 0.010° in elevation (30 checks at Malapert Massif, Haworth and Apollo 11). Comparison with NASA PGDA average
@@ -48,7 +51,7 @@ export default function AboutView() {
         </p>
       </section>
       <section>
-        <h2 className="mb-2 text-base font-semibold text-slate-100">Known limitations</h2>
+        <h2 className="mb-2 text-base font-semibold text-slate-100">{t('about.limitationsTitle')}</h2>
         <ul className="list-disc space-y-1 pl-5">
           {LIMITATIONS.map((limitation) => (
             <li key={limitation}>{limitation}</li>

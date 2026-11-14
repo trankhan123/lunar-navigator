@@ -5,6 +5,7 @@ import CellPopup from './components/CellPopup.jsx'
 import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
 import LandingTimeSlider from './components/LandingTimeSlider.jsx'
+import LanguageSwitcher from './components/LanguageSwitcher.jsx'
 import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
@@ -14,6 +15,7 @@ import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } fr
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
 import { startWindowSearch } from './core/startWindowSearch.js'
+import { useI18n } from './i18n/index.jsx'
 
 // The globe pulls in three.js and the detail screen pulls in ECharts (most of the bundle): load each when first opened.
 const MoonGlobe = lazy(() => import('./components/MoonGlobe.jsx'))
@@ -21,12 +23,12 @@ const DetailView = lazy(() => import('./components/DetailView.jsx'))
 const LearnView = lazy(() => import('./components/LearnView.jsx'))
 
 const SCREENS = [
-  ['map', 'Map & scenario'],
-  ['results', 'Results'],
-  ['detail', 'Cell detail'],
-  ['globe', 'Globe'],
-  ['learn', 'Learn'],
-  ['about', 'About'],
+  ['map', 'nav.map', 'Map & scenario'],
+  ['results', 'nav.results', 'Results'],
+  ['detail', 'nav.detail', 'Cell detail'],
+  ['globe', 'nav.globe', 'Globe'],
+  ['learn', 'nav.learn', 'Learn'],
+  ['about', 'nav.about', 'About'],
 ]
 const forceMock = new URLSearchParams(window.location.search).get('mock') === '1'
 const initialState = decodeShareQuery(window.location.search.slice(1))
@@ -61,6 +63,7 @@ function regionCodesForSearch(scenario, regions, sites) {
 }
 
 export default function App() {
+  const { t } = useI18n()
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [cellsByRegion, setCellsByRegion] = useState({})
@@ -221,7 +224,7 @@ export default function App() {
 
   const regionPicker = data && (
     <label className="text-sm text-slate-300">
-      Region{' '}
+      {t('picker.region')}{' '}
       <select
         value={activeRegion?.code ?? ''}
         onChange={(event) => {
@@ -248,7 +251,7 @@ export default function App() {
       onSelectCell={selectCell}
     />
   ) : (
-    <p className="text-slate-400">Loading cells…</p>
+    <p className="text-slate-400">{t('picker.loadingCells')}</p>
   )
 
   return (
@@ -256,29 +259,32 @@ export default function App() {
       <header className="border-b border-slate-800 px-4 pt-3">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2">
           <div className="mr-auto">
-            <h1 className="text-lg font-semibold">Lunar Landing Site Navigator</h1>
-            <p className="text-xs text-slate-400">Tell us your landing spot and your mission's limits. We find the best nearby sites and dates.</p>
+            <h1 className="text-lg font-semibold">{t('header.title')}</h1>
+            <p className="text-xs text-slate-400">{t('header.subtitle')}</p>
           </div>
-          {data?.useMock && <span className="rounded bg-amber-500 px-2 py-0.5 text-xs font-bold text-slate-950">MOCK DATA</span>}
-          <div className="flex rounded-md border border-slate-500 p-0.5 text-sm" role="group" aria-label="Detail level">
-            {[
-              ['simple', 'Simple'],
-              ['expert', 'Expert'],
-            ].map(([option, label]) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={mode === option}
-                onClick={() => setMode(option)}
-                className={`rounded px-3 py-1.5 transition-colors ${mode === option ? 'bg-slate-100 text-slate-900' : 'text-slate-300 hover:bg-slate-800'}`}
-              >
-                {label}
-              </button>
-            ))}
+          {data?.useMock && <span className="rounded bg-amber-500 px-2 py-0.5 text-xs font-bold text-slate-950">{t('header.mockBadge')}</span>}
+          <div className="flex flex-wrap items-center gap-2">
+            <LanguageSwitcher />
+            <div className="flex rounded-md border border-slate-500 p-0.5 text-sm" role="group" aria-label={t('header.detailLevel')}>
+              {[
+                ['simple', t('header.simple')],
+                ['expert', t('header.expert')],
+              ].map(([option, label]) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={mode === option}
+                  onClick={() => setMode(option)}
+                  className={`rounded px-3 py-1.5 transition-colors ${mode === option ? 'bg-slate-100 text-slate-900' : 'text-slate-300 hover:bg-slate-800'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <nav className="mx-auto mt-2 flex max-w-7xl gap-1 overflow-x-auto" aria-label="Screens">
-          {SCREENS.map(([id, label]) => (
+          {SCREENS.map(([id, labelKey, defaultLabel]) => (
             <button
               key={id}
               type="button"
@@ -286,7 +292,7 @@ export default function App() {
               onClick={() => setScreen(id)}
               className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${screen === id ? 'border-amber-400 text-slate-100' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
             >
-              {label}
+              {t(labelKey) || defaultLabel}
             </button>
           ))}
         </nav>
@@ -294,7 +300,7 @@ export default function App() {
 
       <main className="mx-auto w-full max-w-7xl flex-1 p-4">
         {loadError && <p role="alert" className="mb-4 text-red-400">Could not load data: {loadError}</p>}
-        {!data && !loadError && <p className="text-slate-400">Loading data…</p>}
+        {!data && !loadError && <p className="text-slate-400">{t('picker.loadingData')}</p>}
 
         <ScreenErrorBoundary key={screen}>
           {data && screen === 'map' && (
@@ -304,13 +310,13 @@ export default function App() {
                   <h2 id="map-title" className="font-medium">South pole landing cells</h2>
                   {regionPicker}
                   <label className="text-sm text-slate-300">
-                    Cell{' '}
+                    {t('picker.cell')}{' '}
                     <select value={selectedCell ? selectedCellId : ''} onChange={(event) => setSelectedCellId(event.target.value || null)} className={`${selectClass} font-mono`}>
-                      <option value="">Choose…</option>
+                      <option value="">{t('picker.choose')}</option>
                       {cells?.map((cell) => (
                         <option key={cell.id} value={cell.id}>
                           {cell.id}
-                          {cell.feasible ? '' : ' (not feasible)'}
+                          {cell.feasible ? '' : ` ${t('picker.notFeasible')}`}
                         </option>
                       ))}
                     </select>
@@ -347,20 +353,20 @@ export default function App() {
           {data && screen === 'results' && (
             <section aria-labelledby="results-title" aria-busy={search.status === 'running'} className="space-y-4 text-sm">
               <h2 id="results-title" ref={resultsHeading} tabIndex={-1} className="text-base font-medium focus:outline-none">
-                Results
+                {t('results.title')}
               </h2>
-              {search.status === 'idle' && <p className="text-slate-400">Choose a current point and press "Find landing windows" on the Map screen.</p>}
+              {search.status === 'idle' && <p className="text-slate-400">{t('results.idlePrompt')}</p>}
               {search.status === 'running' && (
                 <label className="block max-w-md tabular-nums">
-                  {search.totalCells ? `Evaluating cells ${search.doneCells} / ${search.totalCells}` : 'Loading cells…'}
+                  {search.totalCells ? t('results.evaluating', { done: search.doneCells, total: search.totalCells }) : t('results.loadingCells')}
                   <progress value={search.doneCells} max={search.totalCells || 1} className="mt-1 block w-full" />
                 </label>
               )}
-              {search.status === 'error' && <p role="alert" className="text-red-400">Search could not run: {search.message}</p>}
+              {search.status === 'error' && <p role="alert" className="text-red-400">{t('results.errorPrefix', { message: search.message })}</p>}
               {results && (
                 <>
                   <p className="text-slate-400">
-                    {results.cellCount} cells × {results.landingCount} landing times, staying {search.scenario.stayDays} days each.
+                    {t('results.summary', { count: results.cellCount, steps: results.landingCount, days: search.scenario.stayDays })}
                   </p>
                   <CurrentPointCard
                     summary={currentPointSummary}
@@ -378,7 +384,7 @@ export default function App() {
                     <div className="space-y-2">
                       {ranking.sortBy && (
                         <button type="button" onClick={() => setRanking({ sortBy: undefined, direction: undefined })} className="text-xs text-sky-300 hover:underline">
-                          Back to the default order
+                          {t('results.defaultOrderReset')}
                         </button>
                       )}
                       <RankingTable

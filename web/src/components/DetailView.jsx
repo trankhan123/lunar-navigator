@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { timeAtHour } from '../core/data.js'
 import { buildDetail, pathForChart, summarySentence, toCsv } from '../core/detail.js'
 import { formatUtc } from '../core/format.js'
+import { useI18n } from '../i18n/index.jsx'
 import BatteryChart from './BatteryChart.jsx'
 import CompareView from './CompareView.jsx'
 import CountdownCard from './CountdownCard.jsx'
@@ -20,6 +21,7 @@ function downloadCsv(text, fileName) {
 
 // App renders this with key = cell id + landing time, so the hour cursor starts at 0 for every new detail.
 export default function DetailView({ cell, currentCell, ephemeris, scenario, landingTime, mode, onLandingTimeChange, onBack }) {
+  const { t } = useI18n()
   const [cursor, setCursor] = useState(0)
   const [playing, setPlaying] = useState(false)
   const headingRef = useRef(null)
@@ -51,13 +53,13 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
   const header = (
     <div className="flex flex-wrap items-center gap-3">
       <button type="button" onClick={onBack} className="rounded border border-slate-500 px-3 py-1.5 text-sm transition-colors hover:bg-slate-800">
-        ← Back
+        {t('detail.back')}
       </button>
       <h2 ref={headingRef} tabIndex={-1} className="font-mono text-lg font-semibold focus:outline-none">
         {cell.id}
       </h2>
       <label className="text-sm text-slate-300">
-        Landing (UTC){' '}
+        {t('detail.landingUtc')}{' '}
         <input
           type="datetime-local"
           step={3600}
@@ -68,7 +70,7 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
           className="rounded border border-slate-500 bg-slate-950 px-2 py-1 tabular-nums"
         />
       </label>
-      <span className="text-sm text-slate-400">Stay: {scenario.stayDays} days</span>
+      <span className="text-sm text-slate-400">{t('detail.stayDays', { days: scenario.stayDays })}</span>
     </div>
   )
   if (!detail) {
@@ -86,15 +88,15 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
   const cursorTime = timeAtHour(ephemeris, detail.landingHour + cursor)
   const sentence = summarySentence(detail, cell.id, cursor)
   const metrics = [
-    ['Longest dark period', `${sunSummary.longestDarkHours} h`],
-    ['Time in sunlight', percent(sunSummary.fractionSun)],
-    ['Mean Sun elevation when lit', sunSummary.meanSunElevationDeg === null ? '—' : `${sunSummary.meanSunElevationDeg.toFixed(2)}°`],
-    ['Longest comm loss', `${earthSummary.longestCommLossHours} h`],
-    ['Earth in view', percent(earthSummary.fractionEarth)],
-    ['Lowest battery', percent(battery.minBatteryFraction)],
-    ['Battery empty after', battery.deadAtHour === null ? 'never' : `${battery.deadAtHour} h`],
-    ['Recharged after the low point', battery.rechargeHours === null ? 'not within the stay' : `${battery.rechargeHours} h`],
-    ['Battery needed for the stay', `${(energy.minimumCapacityWh / 1000).toFixed(1)} kWh`],
+    [t('detail.longestDark'), `${sunSummary.longestDarkHours} h`],
+    [t('detail.timeSunlight'), percent(sunSummary.fractionSun)],
+    [t('detail.meanSunElevation'), sunSummary.meanSunElevationDeg === null ? '—' : `${sunSummary.meanSunElevationDeg.toFixed(2)}°`],
+    [t('detail.longestCommLoss'), `${earthSummary.longestCommLossHours} h`],
+    [t('detail.earthInView'), percent(earthSummary.fractionEarth)],
+    [t('detail.lowestBattery'), percent(battery.minBatteryFraction)],
+    [t('detail.batteryEmptyAfter'), battery.deadAtHour === null ? t('detail.never') : `${battery.deadAtHour} h`],
+    [t('detail.rechargedAfter'), battery.rechargeHours === null ? t('detail.notWithinStay') : `${battery.rechargeHours} h`],
+    [t('detail.batteryNeeded'), `${(energy.minimumCapacityWh / 1000).toFixed(1)} kWh`],
   ]
 
   return (
@@ -102,7 +104,9 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
       {header}
       <p className="text-base text-slate-100">{sentence}</p>
       {detail.stayHours < scenario.stayDays * 24 && (
-        <p className="text-sm text-amber-300">The data ends on {formatUtc(lastTime)}, so only {detail.stayHours} hours of the stay are shown.</p>
+        <p className="text-sm text-amber-300">
+          {t('detail.stayTruncated', { lastTime: formatUtc(lastTime), hours: detail.stayHours })}
+        </p>
       )}
       <CountdownCard sunTrack={sun} earthTrack={earth} atIndex={cursor} trackHours={detail.trackHours} />
 
@@ -113,10 +117,10 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
           onClick={() => setPlaying(!playing)}
           className="w-20 rounded bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-900 transition-colors hover:bg-white"
         >
-          {playing ? 'Pause' : 'Play'}
+          {playing ? t('detail.pause') : t('detail.play')}
         </button>
         <label className="flex-1 text-sm text-slate-300">
-          Hour {cursor} of the stay · <span className="tabular-nums text-slate-100">{formatUtc(cursorTime)}</span>
+          {t('detail.hourOfStay', { hour: cursor })} <span className="tabular-nums text-slate-100">{formatUtc(cursorTime)}</span>
           <input
             type="range"
             min={0}
@@ -155,13 +159,13 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
       {mode === 'expert' && (
         <section aria-labelledby="metrics-title" className="rounded-lg border border-slate-800 bg-slate-900 p-4 text-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h3 id="metrics-title" className="font-medium">Numbers for the whole stay</h3>
+            <h3 id="metrics-title" className="font-medium">{t('detail.numbersTitle')}</h3>
             <button
               type="button"
               onClick={() => downloadCsv(toCsv(detail, ephemeris), `${cell.id}_${landingTime.replace(/:/g, '')}.csv`)}
               className="rounded border border-slate-500 px-3 py-1.5 transition-colors hover:bg-slate-800"
             >
-              Download CSV
+              {t('detail.downloadCsv')}
             </button>
           </div>
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
