@@ -544,6 +544,8 @@ Files: `ScenarioForm.jsx`, `core/scenario.js`.
 
 ### W4 Results
 
+**Logic (pure, tested):** `currentPointSentence(summary, scenario)` in `core/format.js` turns `summarizeCurrentPoint` into the card's plain-English verdict (full wording in its JSDoc). The map colours come from `results.status[cellIndex × landingCount + landingIndex]`.
+
 Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx`.
 
 - **`LandingTimeSlider`** `{landingTimes, value, onChange, playing, onTogglePlay}`:

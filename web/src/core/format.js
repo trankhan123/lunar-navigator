@@ -35,3 +35,22 @@ export function formatUtc(isoTime) {
 export function countdownText(body, event, isVisibleNow, hoursLeft) {
   throw new Error('Not implemented yet: W5 countdownText (see README)')
 }
+
+/**
+ * Plain-English verdict for the "Your current point" card (W4, Simple mode).
+ * @param {Object} summary  summarizeCurrentPoint(results, landingIndex) from C5
+ * @param {Object} scenario  uses maxDarkHours, maxCommLossHours
+ * @returns {string} first sentence by summary.metrics.status (time = formatUtc(metrics.landingTime)):
+ *   pass:     '<cellId> meets all limits for a landing at <time>.'
+ *   marginal: '<cellId> meets the limits for a landing at <time>, but the battery drops to <round(minBatteryFraction × 100)> %.'
+ *   fail:     '<cellId> fails for a landing at <time>: <reasons joined with "; ">.' with, in failReasons order,
+ *             dark → 'longest dark period <h> h (limit <maxDarkHours> h)',
+ *             commLoss → 'longest comm loss <h> h (limit <maxCommLossHours> h)',
+ *             battery → 'battery runs out after <deadAtHour> h'
+ *   only when fail, two more sentences:
+ *     ' Nearest passing landing time: <formatDuration(|offsetHours|)> later|earlier (<time>).' or ' No passing landing time in this date range.'
+ *     ' Nearest passing cell: <cellId>, <distanceKm, 1 decimal> km away.' or ' No passing cell at this landing time.'
+ */
+export function currentPointSentence(summary, scenario) {
+  throw new Error('Not implemented yet: W4 currentPointSentence (see README)')
+}
