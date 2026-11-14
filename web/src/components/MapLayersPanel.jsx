@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { MAP_LAYERS, MAP_OVERLAYS } from '../core/mapLayers.js'
 
 const UNAVAILABLE_HINTS = { hour: 'needs dates inside the ephemeris', dates: 'fix the dates first', search: 'run a search first' }
@@ -5,8 +6,15 @@ const UNAVAILABLE_HINTS = { hour: 'needs dates inside the ephemeris', dates: 'fi
 // availability: {hour, dates, search} booleans; a layer whose `needs` is unmet stays visible but disabled, with the reason.
 // overlays: {[kind]: {enabled, opacity}}; overlayKinds: the image layers this data set has.
 export default function MapLayersPanel({ layerId, onLayerChange, availability, overlays, overlayKinds, onOverlayChange }) {
+  // Open beside the map on laptops, folded under it on phones (spec §5.1).
+  const [open, setOpen] = useState(() => window.matchMedia('(min-width: 768px)').matches)
+  const activeLabel = MAP_LAYERS.find((layer) => layer.id === layerId).label
   return (
-    <div className="h-fit space-y-3">
+    <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="h-fit">
+    <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 text-sm">
+      Layers <span className="text-slate-400">· {activeLabel}</span>
+    </summary>
+    <div className="mt-2 space-y-3">
     <fieldset className="rounded-lg border border-slate-800 bg-slate-900 p-3 text-sm">
       <legend className="px-1 text-slate-300">Colour cells by</legend>
       {MAP_LAYERS.map((layer) => {
@@ -65,5 +73,6 @@ export default function MapLayersPanel({ layerId, onLayerChange, availability, o
       })}
     </fieldset>
     </div>
+    </details>
   )
 }
