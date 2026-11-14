@@ -5,18 +5,18 @@ import { metricsAt } from '../core/optimizer.js'
 import { useI18n } from '../i18n/index.jsx'
 import HorizonChart from './HorizonChart.jsx'
 
-const cardClass = 'rounded-lg border border-slate-800 bg-slate-900 p-4'
+const cardClass = 'min-w-0 break-words rounded-lg border border-slate-800 bg-slate-900 p-4'
 const toDegrees = (horizon) => horizon.map((tenths) => tenths / 10)
 
 // README W7. Before a search only the Moon facts are shown; onStartSearch opens the Map & scenario screen.
-export default function LearnView({ results, cellsById, landingIndex, onStartSearch }) {
+export default function LearnView({ results, cellsById, ephemeris, scenario, landingIndex, onStartSearch }) {
   const { t } = useI18n()
   const metrics = useMemo(() => (results ? metricsAt(results, 0, landingIndex) : null), [results, landingIndex])
   // O(cells²) neighbour scan (WF3): fine for one region, so compute it once per landing time.
-  const lesson = useMemo(() => (results ? neighborLesson(results, cellsById, landingIndex) : null), [results, cellsById, landingIndex])
+  const lesson = useMemo(() => (results ? neighborLesson(results, cellsById, landingIndex, { ephemeris, scenario }) : null), [results, cellsById, ephemeris, scenario, landingIndex])
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
       <section aria-labelledby="learn-metrics" className={`${cardClass} lg:row-span-2`}>
         <h2 id="learn-metrics" className="mb-1 text-lg font-semibold">{t('learn.metricsTitle')}</h2>
         {metrics ? (
@@ -27,8 +27,8 @@ export default function LearnView({ results, cellsById, landingIndex, onStartSea
             <dl className="space-y-3">
               {metricSentences(metrics).map(({ label, value, sentence }) => (
                 <div key={label}>
-                  <dt className="flex justify-between gap-3 font-medium">
-                    {label} <span className="tabular-nums text-amber-300">{value}</span>
+                  <dt className="flex flex-wrap justify-between gap-x-3 font-medium">
+                    {label} <span className="min-w-0 text-right tabular-nums text-amber-300">{value}</span>
                   </dt>
                   <dd className="text-sm text-slate-300">{sentence}</dd>
                 </div>

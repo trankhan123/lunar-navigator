@@ -51,27 +51,54 @@ test('metricSentences: zero and missing values get their own wording', () => {
   assert.equal(valuesOf(metricSentences({ ...quiet, status: 'marginal' }))['Result'], 'Meets limits, battery low')
 })
 
-// Two cells 1 km apart; the darker one has a ridge 2° higher to the south. A third cell is 6 km away.
+// SYNTHETIC lesson data. The Sun is fixed on the equator at longitude 0, so a cell at -85.9° sees it due north,
+// 4.1° high: a 1° north ridge leaves it lit, a 5° north ridge hides it. Cells are 1 km apart unless noted.
 const KM_IN_LATITUDE_DEG = 180 / (Math.PI * 1737.4)
-const ridge = (tenths) => Array.from({ length: 360 }, (_, azimuth) => (azimuth >= 170 && azimuth <= 190 ? tenths : 0))
-const lightCell = { id: 'MAL-light', lat: -85.9, lon: 0, horizon: ridge(10) }
-const darkCell = { id: 'MAL-dark', lat: -85.9 + KM_IN_LATITUDE_DEG, lon: 0, horizon: ridge(30) }
-const farCell = { id: 'MAL-far', lat: -85.9 + 6 * KM_IN_LATITUDE_DEG, lon: 0, horizon: ridge(0) }
-const cellsById = new Map([lightCell, darkCell, farCell].map((cell) => [cell.id, cell]))
-const neighbourResults = (darkHours) => ({ cellCount: 3, landingCount: 1, cellIds: ['MAL-light', 'MAL-dark', 'MAL-far'], longestDarkHours: new Float32Array(darkHours) })
+const northRidge = (tenths) => Array.from({ length: 360 }, (_, azimuth) => (azimuth >= 350 || azimuth <= 10 ? tenths : 0))
+const makeCell = (id, kmNorth, ridgeTenths) => ({ id, lat: -85.9 + kmNorth * KM_IN_LATITUDE_DEG, lon: 0, heightM: 0, horizon: northRidge(ridgeTenths) })
+const lightCell = makeCell('MAL-light', 0, 10)
+const darkCell = makeCell('MAL-dark', 1, 50)
+const farCell = makeCell('MAL-far', 6, 0)
+const farLight = makeCell('MAL-farlight', 12, 10)
+const farDark = makeCell('MAL-fardark', 13, 50)
+const cellsById = new Map([lightCell, darkCell, farCell, farLight, farDark].map((cell) => [cell.id, cell]))
+const hours = 48
+const ephemeris = {
+  startTime: '2028-01-01T00:00Z', hours, sunDistanceAu: new Float64Array(hours).fill(1),
+  sunSubLonDeg: new Float64Array(hours), sunSubLatDeg: new Float64Array(hours),
+}
+const context = { ephemeris, scenario: { stayDays: 1, panelMode: 'auto' } }
+const lessonResults = (cellIds, darkHours) => ({
+  cellCount: cellIds.length, landingCount: 1, cellIds, landingTimes: ['2028-01-01T00:00Z'], longestDarkHours: new Float32Array(darkHours),
+})
 
-test('neighborLesson: the darker neighbour comes first, with the ridge that explains it', () => {
-  const lesson = neighborLesson(neighbourResults([12, 90, 0]), cellsById, 0)
+test('neighborLesson: prefers a pair with the current point, names both cells and the ridge where the Sun is', () => {
+  // Cell 0 is the current point. The far pair differs more (200 h vs 0 h) but does not contain it.
+  const results = lessonResults(['MAL-light', 'MAL-dark', 'MAL-farlight', 'MAL-fardark'], [12, 90, 0, 200])
+  const lesson = neighborLesson(results, cellsById, 0, context)
+  assert.equal(lesson.scope, 'current')
   assert.equal(lesson.darkerCell, darkCell)
   assert.equal(lesson.lighterCell, lightCell)
   assert.deepEqual([lesson.darkerHours, lesson.lighterHours], [90, 12])
   assert.ok(Math.abs(lesson.distanceKm - 1) < 0.01)
-  assert.equal(lesson.sentence, 'Moving 1 km to MAL-light cuts the longest dark period from 90 h to 12 h because the southern ridge is 2° lower.')
+  assert.equal(
+    lesson.sentence,
+    'From your current point MAL-light: moving 1 km to MAL-dark increases the longest dark period from 12 h to 90 h, because the northern ridge is 4° higher there, right where the Sun is in those hours.',
+  )
 })
 
-test('neighborLesson: nothing to explain without a pair or without a difference', () => {
-  assert.equal(neighborLesson({ ...neighbourResults([12]), cellCount: 1, cellIds: ['MAL-light'] }, cellsById, 0), null)
-  assert.equal(neighborLesson(neighbourResults([40, 40, 0]), cellsById, 0), null)
+test('neighborLesson: says "Elsewhere in this region" when the current point has no different neighbour', () => {
+  const results = lessonResults(['MAL-far', 'MAL-light', 'MAL-dark'], [0, 12, 90])
+  const lesson = neighborLesson(results, cellsById, 0, context)
+  assert.equal(lesson.scope, 'elsewhere')
+  assert.match(lesson.sentence, /^Elsewhere in this region, MAL-dark and MAL-light are 1\.0 km apart, yet MAL-dark has a 90 h dark period and MAL-light has a 12 h dark period, because the northern ridge is 4° higher at MAL-dark/)
+})
+
+test('neighborLesson: a zero dark period reads "no dark period", and nothing to explain gives null', () => {
+  const lesson = neighborLesson(lessonResults(['MAL-far', 'MAL-light', 'MAL-dark'], [0, 0, 90]), cellsById, 0, context)
+  assert.match(lesson.sentence, /MAL-light has no dark period/)
+  assert.equal(neighborLesson(lessonResults(['MAL-far', 'MAL-light', 'MAL-dark'], [0, 40, 40]), cellsById, 0, context), null)
+  assert.equal(neighborLesson({ ...lessonResults(['MAL-light'], [12]) }, cellsById, 0, context), null)
 })
 
 test('moonFacts: four facts, and the Sun fact uses the current point when it has a mean Sun height', () => {
