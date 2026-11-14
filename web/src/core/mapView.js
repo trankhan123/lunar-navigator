@@ -1,0 +1,31 @@
+// W2 map v2 — where things are on screen. Map point (xM, yM) in PGDA metres is drawn at SVG (xM, −yM).
+export const VIEW_HALF_WIDTH_M = 304000
+export const VIEW_SIZE_M = 2 * VIEW_HALF_WIDTH_M
+export const VIEW_BOX = `${-VIEW_HALF_WIDTH_M} ${-VIEW_HALF_WIDTH_M} ${VIEW_SIZE_M} ${VIEW_SIZE_M}`
+export const WHOLE_MAP_BOUNDS_M = [-VIEW_HALF_WIDTH_M, -VIEW_HALF_WIDTH_M, VIEW_HALF_WIDTH_M, VIEW_HALF_WIDTH_M]
+export const MAX_ZOOM_SCALE = 300
+
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value))
+
+/**
+ * Zoom transform (SVG user units, for zoomIdentity.translate(x, y).scale(k)) that centres boundsM and fits its wider side.
+ * @param {number[]} boundsM  [xMin, yMin, xMax, yMax] in PGDA metres
+ * @param {number} paddingFraction  share of the view left empty around the bounds
+ * @returns {{k: number, x: number, y: number}}
+ */
+export function fitTransform([xMin, yMin, xMax, yMax], paddingFraction) {
+  const fitScale = Math.min(VIEW_SIZE_M / (xMax - xMin), VIEW_SIZE_M / (yMax - yMin)) * (1 - paddingFraction)
+  const k = clamp(fitScale, 1, MAX_ZOOM_SCALE)
+  // The bounds' centre, in SVG units, goes to the viewBox centre (0, 0).
+  return { k, x: -k * ((xMin + xMax) / 2), y: k * ((yMin + yMax) / 2) }
+}
+
+/** The map area [xMin, yMin, xMax, yMax] (PGDA metres) that a zoom transform shows. */
+export function viewBoundsM({ k, x, y }) {
+  return [(-VIEW_HALF_WIDTH_M - x) / k, (y - VIEW_HALF_WIDTH_M) / k, (VIEW_HALF_WIDTH_M - x) / k, (y + VIEW_HALF_WIDTH_M) / k]
+}
+
+/** True for finite map coordinates inside the ±304 km polar maps. */
+export function isOnPolarMap(xM, yM) {
+  return Number.isFinite(xM) && Number.isFinite(yM) && Math.abs(xM) <= VIEW_HALF_WIDTH_M && Math.abs(yM) <= VIEW_HALF_WIDTH_M
+}
