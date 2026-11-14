@@ -42,7 +42,9 @@ NASA chỉ công bố tên và bản đồ của 9 vùng Artemis III, không cô
 | NASA NTRS 20250009323 — Artemis overview for Space Apps 2025 (HLS: ngưỡng độ dốc, chiếu sáng, liên lạc) | https://ntrs.nasa.gov/api/citations/20250009323/downloads/ArtemisOverview2025IntSPAPPSChallenge.pdf | Ngưỡng độ dốc 20° của module D3 |
 | MoonSnag Mission Watch site registry (tâm ô vuông USGS) | https://moonsnag.com/coordination | Toạ độ 9 vùng, `verified: false` |
 | realestateonthemoon.com (trích NASA Lunar Surface Data Book) | https://realestateonthemoon.com/lunar-south-pole/ | Chỉ để đối chiếu |
-| NASA NSSDCA Apollo Landing Site Coordinates (Wagner et al. 2017) | https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html | Apollo 11, 15, 17, `verified: true` |
+| NASA NSSDCA Apollo Landing Site Coordinates (Wagner et al. 2017) | https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html | Apollo 11, 12, 14, 15, 16, 17, `verified: true` |
+| NASA NSSDCA Table of Anthropogenic Impacts and Spacecraft on the Moon | https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html | IM-1, IM-2, Blue Ghost 1, Chang'e 3–6, Chandrayaan-3, SLIM, `verified: true` |
+| NASA Science Activation — NASA Sees Interns Tackle Real-World Challenges in Lunar Exploration | https://science.nasa.gov/learning-resources/science-activation/nasa-sees-interns-tackle-real-world-challenges-in-lunar-exploration/ | IM-3 (sứ mệnh dự kiến tới Reiner Gamma, chưa có toạ độ xác nhận) |
 
 ## 4. Thư viện
 
