@@ -1,23 +1,58 @@
-// C4 — Charging (battery simulation). Contract: README "C4 Charging".
-/* eslint-disable no-unused-vars -- stub parameters; delete this line when you implement the module */
-import { notImplemented } from './notImplemented.js'
+import { VISIBLE_THRESHOLD } from './geometry.js'
 
-/**
- * Hourly battery: starts full, battery[h+1] = clamp(battery[h] + panelMaxW × powerFactor − loadW, 0, capacity).
- * @param {Float32Array|number[]} powerFactor  SunTrack.powerFactor
- * @param {{panelMaxW:number, loadW:number, batteryCapacityWh:number}} lander
- * @returns {{batteryWh:Float32Array, minBatteryWh:number, minBatteryFraction:number,
- *            deadAtHour:number|null, rechargeHours:number|null, chargingMask:Uint8Array}}
- *   batteryWh has lengthHours + 1 values; chargingMask has lengthHours values (1 = generation > load)
- */
-export function simulateBattery(powerFactor, startIndex, lengthHours, lander) {
-  throw notImplemented('C4', 'simulateBattery')
+export function simulateBattery(powerFactor, startIndex, lengthHours, { panelMaxW, loadW, batteryCapacityWh }) {
+  const batteryWh = new Float32Array(lengthHours + 1)
+  const chargingMask = new Uint8Array(lengthHours)
+  batteryWh[0] = batteryCapacityWh
+  let deadAtHour = null
+
+  for (let h = 0; h < lengthHours; h++) {
+    const generatedW = panelMaxW * powerFactor[startIndex + h]
+    const raw = batteryWh[h] + generatedW - loadW
+    if (raw <= 0 && deadAtHour === null) deadAtHour = h + 1
+    batteryWh[h + 1] = Math.min(Math.max(raw, 0), batteryCapacityWh)
+    chargingMask[h] = generatedW > loadW ? 1 : 0
+  }
+
+  let minIndex = 0
+  for (let h = 1; h <= lengthHours; h++) {
+    if (batteryWh[h] < batteryWh[minIndex]) minIndex = h
+  }
+  const minBatteryWh = batteryWh[minIndex]
+  const fullWh = batteryCapacityWh * (1 - 1e-6)
+
+  let rechargeHours = null
+  if (minBatteryWh >= fullWh) {
+    rechargeHours = 0
+  } else {
+    for (let h = minIndex + 1; h <= lengthHours; h++) {
+      if (batteryWh[h] >= fullWh) {
+        rechargeHours = h - minIndex
+        break
+      }
+    }
+  }
+
+  return {
+    batteryWh,
+    minBatteryWh,
+    minBatteryFraction: minBatteryWh / batteryCapacityWh,
+    deadAtHour,
+    rechargeHours,
+    chargingMask,
+  }
 }
 
-/**
- * One entry per sunset (sunlit → dark) inside the window.
- * @returns {{sunsetOffset:number, batteryAtSunsetFraction:number, fullBeforeSunset:boolean}[]}
- */
 export function findFullChargeWindows(batteryWh, sunDiskFraction, startIndex, batteryCapacityWh) {
-  throw notImplemented('C4', 'findFullChargeWindows')
+  const lengthHours = batteryWh.length - 1
+  const windows = []
+  for (let h = 1; h <= lengthHours; h++) {
+    const wasLit = sunDiskFraction[startIndex + h - 1] >= VISIBLE_THRESHOLD
+    const nowDark = sunDiskFraction[startIndex + h] < VISIBLE_THRESHOLD
+    if (wasLit && nowDark) {
+      const fraction = batteryWh[h] / batteryCapacityWh
+      windows.push({ sunsetOffset: h, batteryAtSunsetFraction: fraction, fullBeforeSunset: fraction >= 0.999 })
+    }
+  }
+  return windows
 }
