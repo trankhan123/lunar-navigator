@@ -340,6 +340,10 @@ export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
  * ensuring the nominal landing target resides at index 0.
  */
 export function selectSearchCells(scenario, currentCell, cellsByRegion) {
+  if (!currentCell || currentCell.lat == null || currentCell.lon == null) {
+    return []
+  }
+
   const scope = scenario?.searchScope || 'region'
   const allCells = Array.isArray(cellsByRegion)
     ? cellsByRegion
@@ -348,10 +352,6 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion) {
   let candidates = []
 
   if (scope === 'region') {
-    if (!currentCell || currentCell.lat == null || currentCell.lon == null || allCells.length === 0) {
-      return []
-    }
-
     let closestCell = null
     let minDist = Infinity
     let closestRegionKey = null
@@ -382,18 +382,28 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion) {
     }
 
     if (!closestCell || minDist > 1) {
-      return []
-    }
-
-    const targetRegion = closestCell.region || closestCell.regionId || closestRegionKey || (closestCell.id ? closestCell.id.split('-')[0] : null)
-    if (cellsByRegion && !Array.isArray(cellsByRegion) && targetRegion && cellsByRegion[targetRegion]) {
-      candidates = cellsByRegion[targetRegion]
+      candidates = []
     } else {
-      candidates = allCells.filter(
-        (c) => (c.region && c.region === targetRegion) ||
-               (c.regionId && c.regionId === targetRegion) ||
-               (targetRegion && c.id?.startsWith(targetRegion + '-')),
-      )
+      const targetRegion =
+        closestCell.region ||
+        closestCell.regionId ||
+        closestRegionKey ||
+        (closestCell.id ? closestCell.id.split('-')[0] : null)
+      if (
+        cellsByRegion &&
+        !Array.isArray(cellsByRegion) &&
+        targetRegion &&
+        cellsByRegion[targetRegion]
+      ) {
+        candidates = cellsByRegion[targetRegion]
+      } else {
+        candidates = allCells.filter(
+          (c) =>
+            (c.region && c.region === targetRegion) ||
+            (c.regionId && c.regionId === targetRegion) ||
+            (targetRegion && c.id?.startsWith(targetRegion + '-')),
+        )
+      }
     }
   } else if (scope === 'radius') {
     const radius = scenario?.searchRadiusKm ?? 10
@@ -420,7 +430,6 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion) {
 
   return result
 }
-
 /**
  * Executes high-performance sliding window mission simulation over all candidate cells
  * across the specified mission timeframe.
