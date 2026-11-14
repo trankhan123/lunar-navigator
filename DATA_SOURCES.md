@@ -12,10 +12,10 @@ Link `https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/` (thư mục) trả 404, nhưn
 | LDEM_80S_80MPP_ADJ.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ.TIF | pipeline/raw | 180 MB | DEM LOLA 80 m/px, 80–90°S (PGDA 90) → tính đường chân trời |
 | LDEM_80S_80MPP_ADJ_HILL.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ_HILL.TIF | pipeline/raw | 84 MB | Hillshade (PGDA 90) → ảnh nền bản đồ cực Nam 2D |
 | LDSM_80S_80MPP_ADJ.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_80S_80MPP_ADJ.TIF | pipeline/raw | 231 MB | Độ dốc 80 m/px, 80–90°S (PGDA 90) → module D3 ô khả thi (ngưỡng 20°) |
-| LPSR_80S_20MPP_ADJ.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ.TIF | pipeline/raw | 148 MB | Vùng tối vĩnh cửu 20 m/px, 80–90°S (PGDA 90) → module D3 |
+| LPSR_80S_20MPP_ADJ.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ.TIF | pipeline/raw | 148 MB | Vùng tối vĩnh cửu 20 m/px, 80–90°S (PGDA 90) → module D3 + lớp phủ bản đồ (D8) |
 | LDEM_60S_240MPP_ADJ.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_240MPP_ADJ.TIF | pipeline/raw | 210 MB | DEM 240 m/px, 60–90°S (PGDA 90) → module D4 phần chân trời xa ngoài 80°S, site như Chandrayaan-3 |
 | AVGVISIB_85S_060M_201608.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF | pipeline/raw | 32 MB | % thời gian thấy Mặt Trời, 85–90°S (PGDA 69) → kiểm chứng + lớp phủ bản đồ |
-| AVGVISIB_85S_060M_201608_EARTH.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF | pipeline/raw | 24 MB | % thời gian thấy Trái Đất (PGDA 69) → kiểm chứng |
+| AVGVISIB_85S_060M_201608_EARTH.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF | pipeline/raw | 24 MB | % thời gian thấy Trái Đất (PGDA 69) → kiểm chứng + lớp phủ bản đồ (D8) |
 | LPSR_85S_060M_201608.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_85S_060M_201608.TIF | pipeline/raw | 0.6 MB | Vùng tối vĩnh cửu (PGDA 69) → tính năng phụ "viền vùng tối vĩnh cửu" |
 | lroc_color_2k.jpg | https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg | web/public/textures | 0.4 MB | Texture Mặt Trăng cho globe.gl (NASA SVS 4720, CGI Moon Kit) |
 
@@ -63,6 +63,7 @@ NASA chỉ công bố tên và bản đồ của 9 vùng Artemis III, không cô
 | react, react-dom | 19.3.x | web |
 | tailwindcss, @tailwindcss/vite | 4.3.5 | web |
 | globe.gl | 2.46.2 | web |
+| d3-zoom, d3-selection (every d3 package, globe.gl's included, pinned with `overrides` in web/package.json to its release before 2026-11-03) | 3.0.0 | web (components/SouthPoleMap.jsx) |
 | echarts | 6.1.0 | web |
 | echarts-for-react | 3.0.6 | web |
 | astronomy-engine | 2.1.19 | web (`src/astronomy.js`) |

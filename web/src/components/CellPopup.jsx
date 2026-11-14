@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { computeEarthTrack, nextEarthEvent } from '../core/communication.js'
 import { timeAtHour } from '../core/data.js'
-import { formatDuration, formatUtc } from '../core/format.js'
+import { INFEASIBLE_REASON_TEXT, formatDuration, formatUtc } from '../core/format.js'
 import { computeSunTrack, nextSunEvent } from '../core/sunlight.js'
 
 const LOOK_AHEAD_HOURS = 30 * 24
 const EVENT_WORDS = { sunset: 'sets', sunrise: 'rises', earthset: 'sets', earthrise: 'rises' }
-const REASON_TEXT = { slope: 'slope above the limit', psr: 'mostly in permanent shadow' }
 
 function skyAt(cell, ephemeris, hour) {
   if (hour === null) return null
@@ -53,7 +52,7 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
         <div>
           <h2 id="cell-title" className="font-mono text-base font-semibold">{cell.id}</h2>
           <p className={cell.feasible ? 'text-sky-300' : 'text-slate-300'}>
-            {cell.feasible ? 'Feasible landing cell' : `Not feasible: ${REASON_TEXT[cell.infeasibleReason]}`}
+            {cell.feasible ? 'Feasible landing cell' : `Not feasible: ${INFEASIBLE_REASON_TEXT[cell.infeasibleReason]}`}
           </p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close cell details" className="-mr-2 -mt-2 grid size-10 place-items-center rounded text-xl text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100">

@@ -1,6 +1,9 @@
 // Plain-English formatting shared by the UI (countdowns, popups).
 
 /** 0.5 → '30 min', 3.33 → '3 h 20 min', 76 → '3 d 4 h'. */
+/** Why a cell is not feasible, in the UI's words (cell popup and map hover card). */
+export const INFEASIBLE_REASON_TEXT = { slope: 'slope above the limit', psr: 'mostly in permanent shadow' }
+
 export function formatDuration(hours) {
   if (!Number.isFinite(hours) || hours < 0) return '—'
   const minutes = Math.round(hours * 60)
