@@ -106,7 +106,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
 | C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
-| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js` | W1 (D8 optional) | L | trankhan123 | doing (map v2, docs/superpowers/plans/2026-11-14-polar-map.md) |
+| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `CellHoverCard`, `DirectionCard`, `MapSearch`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js` | W1, D8 | L | trankhan123 | done (map v2) |
 | W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
 | W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | done |
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
@@ -509,7 +509,7 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
 
 ### W2 South-pole map
 
-Files: `SouthPoleMap.jsx` (+ `MapCells.jsx`, `MapMarks.jsx`, `MapLegend.jsx`), `CellPopup.jsx`; pure logic in `core/mapView.js`, `core/mapLayers.js` and `core/mapSky.js`. Map v2 is being built from `docs/superpowers/plans/2026-11-14-polar-map.md` (spec: `docs/superpowers/specs/2026-11-14-polar-map-design.md`).
+Files: `SouthPoleMap.jsx` (+ `MapCells.jsx`, `MapMarks.jsx`, `MapLegend.jsx`, `MapLayersPanel.jsx`, `MapTimeBar.jsx`, `MapMinimap.jsx`, `CellHoverCard.jsx`, `DirectionCard.jsx`, `MapSearch.jsx`), `CellPopup.jsx`; pure logic in `core/mapView.js`, `core/mapLayers.js`, `core/mapSky.js` and `core/mapSearch.js`, all tested. Map v2 was built from `docs/superpowers/plans/2026-11-14-polar-map.md` (spec: `docs/superpowers/specs/2026-11-14-polar-map-design.md`).
 
 - **`SouthPoleMap` props:** `{regions, activeRegion, maps, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell(cell), onOpenRegion(code|null)}`.
   - `activeRegion` is `null` at the overview: the whole south pole (`south_pole` image, the 9 region frames, pins of the other sites). With a region, its hillshade image and its 1 km cells are drawn. A link with a cell opens that cell's region.

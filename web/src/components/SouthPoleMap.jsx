@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
 import { timeAtHour, toPolarXY } from '../core/data.js'
@@ -159,6 +159,14 @@ function SouthPoleMap({
       ),
     [cells, layerId, statusByCellId, sky, fractions],
   )
+  // Paint fills straight into the cell rects (before the browser paints), touching only the cells whose colour changed.
+  const cellsGroupRef = useRef(null)
+  useLayoutEffect(() => {
+    cellsGroupRef.current?.querySelectorAll('rect[data-cell-index]').forEach((rect, index) => {
+      if (rect.getAttribute('fill') !== colors[index]) rect.setAttribute('fill', colors[index])
+    })
+  }, [colors])
+
   const dateRangeText = hourRange ? `${timeAtHour(ephemeris, hourRange.firstHour).slice(0, 10)} to ${timeAtHour(ephemeris, hourRange.lastHour).slice(0, 10)}` : ''
   const statusText = !activeRegion
     ? ''
@@ -273,7 +281,7 @@ function SouthPoleMap({
           {activeRegion && cells && (
             <MapCells
               cells={cells}
-              colors={colors}
+              groupRef={cellsGroupRef}
               symbols={symbols}
               onSelectCell={onSelectCell}
               onHoverCell={setHoveredCell}

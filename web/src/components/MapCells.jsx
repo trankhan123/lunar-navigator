@@ -2,10 +2,11 @@ import { memo } from 'react'
 
 const CELL_DRAW_SIZE_M = 940 // a 1 km square with a 60 m gap
 
-// colors[i] / symbols[i] belong to cells[i]. One delegated click handler; d3-zoom's clickDistance drops clicks that end a drag.
 const LABEL_STYLE = { fill: '#f8fafc', stroke: '#020617', strokeWidth: 40, paintOrder: 'stroke', pointerEvents: 'none' }
 
-function MapCells({ cells, colors, symbols, onSelectCell, onHoverCell, showLabels = false }) {
+// symbols[i] belongs to cells[i]. Fills are not rendered here: SouthPoleMap paints them through groupRef, so an hour change does
+// not re-render ~930 cells (Task 16 timing fallback). One delegated click handler; d3-zoom's clickDistance drops drag-end clicks.
+function MapCells({ cells, symbols, onSelectCell, onHoverCell, showLabels = false, groupRef }) {
   function cellFromEvent(event) {
     const target = event.target.closest('[data-cell-index]')
     return target ? cells[Number(target.dataset.cellIndex)] : null
@@ -17,6 +18,7 @@ function MapCells({ cells, colors, symbols, onSelectCell, onHoverCell, showLabel
   // Hover is for mice only: on touch the tap opens the popup instead.
   return (
     <g
+      ref={groupRef}
       onClick={selectFromEvent}
       onPointerOver={(event) => event.pointerType === 'mouse' && onHoverCell?.(cellFromEvent(event))}
       onPointerLeave={(event) => event.pointerType === 'mouse' && onHoverCell?.(null)}
@@ -27,7 +29,7 @@ function MapCells({ cells, colors, symbols, onSelectCell, onHoverCell, showLabel
         const y = -cell.yM - CELL_DRAW_SIZE_M / 2
         return (
           <g key={cell.id}>
-            <rect x={x} y={y} width={CELL_DRAW_SIZE_M} height={CELL_DRAW_SIZE_M} fill={colors[index]} fillOpacity={0.8} data-cell-index={index}>
+            <rect x={x} y={y} width={CELL_DRAW_SIZE_M} height={CELL_DRAW_SIZE_M} fillOpacity={0.8} data-cell-index={index}>
               <title>{cell.feasible ? cell.id : `${cell.id} (not feasible: ${cell.infeasibleReason})`}</title>
             </rect>
             {!cell.feasible && (
