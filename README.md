@@ -453,9 +453,9 @@ Rules:
 - **Status:** `fail` if there is any fail reason, otherwise `marginal` if `minBatteryFraction < 0.2`, otherwise `pass`. Codes: `STATUS = {fail: 0, marginal: 1, pass: 2}`; `failReasonBits` = dark 1 | commLoss 2 | battery 4.
 - **`selectSearchCells`:**
   - `region` = feasible cells of the current point's region;
-  - `radius` = feasible cells of all loaded regions within `searchRadiusKm`;
-  - `all` = feasible cells of all 9 regions;
-  - for a site or typed coordinates, "its region" is the region of the nearest grid cell within 1 km; if there is none, only the current point is searched;
+  - `radius` = feasible LGRS cells of the loaded regions plus feasible CAP cells (D9) within `searchRadiusKm`; CAP leaves out the region interiors, so there are no duplicates;
+  - `all` = feasible cells of all 9 regions (no CAP cell);
+  - for a site or typed coordinates, "its region" is the region of the nearest grid cell within 1 km; if there is none, the feasible CAP cells within 15 km (`CAP_REGION_SEARCH_KM`) are searched, and if no CAP tile is loaded only the current point;
   - the current point is always index 0, even when it is infeasible or custom, and there are no duplicate ids.
 - **Default ranking order:**
   1. pass or marginal before fail;
@@ -508,7 +508,8 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
   - a link opened on the Results screen (`screen=results`) with a current point runs the search on open;
   - untrusted values in the link (empty, not a number, unknown option, malformed point) fall back to the defaults.
 - **Keyboard path to the map:** a Cell list next to the Region list selects any cell without a mouse.
-- **Search:** before starting the worker, load the cells of every region the search needs (all regions for `radius` and `all`).
+- **Search:** before starting the worker, load what the search needs (`capSearch.js`): the regions touching the circle (`radius`; all regions while the point's position is unknown, and for `all`) and the CAP tiles the circle touches (`radius`), or within 15 km of a point outside the regions (`region`). The point's own CAP tile is always loaded, so a typed point on the cap gets the real horizon of its 2 km cell. The worker and the ranking are unchanged: CAP cells have the cell schema.
+- **CAP on the map (D9):** `SouthPoleMap` draws the loaded CAP cells as one 152 × 152 px raster (`MapCapLayer.jsx`, one pixel per 2 km cell, `image-rendering: pixelated`) coloured by the active layer, or by the search result; region cells keep their 1 km rects on top. Click and hover work as for a cell. Wide screens (≥ 768 px) load all tiles in the background after the first paint; phones load the tiles in view once zoomed in. The form's cell field and the map find box accept `CAP-r075c112`; a point (site or coordinates) outside the regions and inside a CAP cell uses that cell's horizon and shows "2 km cap grid". Without `cap/index.json` (mock data) none of this appears.
 - **About screen:** known limitations (window-finder.md §7), data sources and AI usage.
 - **Done when:** `shareLink.test.js` passes; the mock flow map → form → results → detail works; `npm run build` passes.
 
@@ -772,7 +773,7 @@ File: `export_map_background.py`.
 
 ### D9 — Whole-cap 2 km grid (CAP)
 
-File: `build_cap_grid.py` (tests: `test_build_cap_grid.py`; checker: `check_cap` in `check_web_data.py`). Data only: the web app does not read it yet.
+File: `build_cap_grid.py` (tests: `test_build_cap_grid.py`; checker: `check_cap` in `check_web_data.py`). The web app reads it through `loadCapIndex` / `loadCapTiles` (`data.js`) and the helpers in `capGrid.js` (W1/W2/C5).
 
 - **Grid:** square 2000 m cells in `PGDA_CRS`; centres at `x = (i + 0.5) × 2000`, `y = (j + 0.5) × 2000`. A cell is kept when its centre is at or south of 85°S (projected distance from the pole ≤ that of 85°S, 151.7 km).
 - **Exclusion:** a cell is dropped when its centre lies inside the `boundsM` of any of the 9 regions in `regions.json` (they already have 1 km LGRS cells). `excludedRegionCodes` in `index.json` lists them.

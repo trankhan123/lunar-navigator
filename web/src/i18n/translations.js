@@ -92,6 +92,7 @@ export const TRANSLATIONS = {
     'scenario.scopes.all': 'All 9 regions',
     'scenario.scopeTime': '(about {seconds} s)',
     'scenario.scopeTimeNote': 'Search times measured on a laptop for 6 months and a 6-day stay; they grow with the date range and stay length.',
+    'scenario.scopeCapNote': 'For a point outside the 9 regions, "Same region" searches the nearby cap grid (2 km cells within 15 km).',
     'scenario.panels.auto': 'Automatic',
     'scenario.panels.vertical': 'Vertical, Sun-tracking',
     'scenario.panels.horizontal': 'Horizontal',
@@ -146,6 +147,7 @@ export const TRANSLATIONS = {
     'currentPoint.goToTime': 'Go to {time}',
     'currentPoint.openCell': 'Open {cellId}',
     'currentPoint.noTerrain': 'Smooth-sphere horizon: terrain not included',
+    'currentPoint.capGrid': 'Terrain from the 2 km cap grid (coarser than the 1 km LGRS cells)',
     'currentPoint.searchedOnly': 'Only this point was searched: it is outside the south polar terrain grid.',
 
     // Detail View
@@ -280,6 +282,7 @@ export const TRANSLATIONS = {
     'scenario.scopes.all': 'Toàn bộ 9 vùng',
     'scenario.scopeTime': '(khoảng {seconds} giây)',
     'scenario.scopeTimeNote': 'Thời gian đo trên laptop với 6 tháng và lưu trú 6 ngày; tăng theo dải ngày và thời gian lưu trú.',
+    'scenario.scopeCapNote': 'Với điểm nằm ngoài 9 vùng, "Cùng vùng hạ cánh" tìm trong lưới mũ cực lân cận (ô 2 km trong vòng 15 km).',
     'scenario.panels.auto': 'Tự động',
     'scenario.panels.vertical': 'Thẳng đứng (bám Mặt Trời)',
     'scenario.panels.horizontal': 'Nằm ngang',
@@ -334,6 +337,7 @@ export const TRANSLATIONS = {
     'currentPoint.goToTime': 'Đến lúc {time}',
     'currentPoint.openCell': 'Mở ô {cellId}',
     'currentPoint.noTerrain': 'Đường chân trời là mặt cầu nhẵn: chưa tính địa hình',
+    'currentPoint.capGrid': 'Địa hình lấy từ lưới mũ cực 2 km (thô hơn ô LGRS 1 km)',
     'currentPoint.searchedOnly': 'Chỉ tìm kiếm điểm này: nó nằm ngoài lưới địa hình cực Nam.',
 
     // Detail View

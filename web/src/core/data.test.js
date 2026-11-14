@@ -36,3 +36,15 @@ test('resolveCurrentCell: grid cell, site and typed coordinates', () => {
   assert.equal(custom.horizon, null)
   assertNear(custom.yM, 151713, 1)
 })
+
+test('resolveCurrentCell: CAP cell id, and a point on the cap takes the horizon of its 2 km CAP cell (synthetic cells)', () => {
+  const capCell = { id: 'CAP-r076c076', lat: -89.95, lon: 45, xM: 1000, yM: 1000, horizon: [7, 8] }
+  assert.equal(resolveCurrentCell({ type: 'cell', cellId: 'CAP-r076c076' }, {}, [], [capCell]), capCell)
+  const typed = resolveCurrentCell({ type: 'coordinates', lat: -89.97, lon: 45 }, {}, [], [capCell])
+  assert.deepEqual([typed.id, typed.horizon, typed.horizonSource], ['CUSTOM', [7, 8], 'cap'])
+  assert.equal(resolveCurrentCell({ type: 'coordinates', lat: -80, lon: 45 }, {}, [], [capCell]).horizon, null) // off the cap
+  const lgrsCell = { id: 'MAL-x', xM: 1400, yM: 1000 } // within 1 km: the LGRS rule comes first
+  assert.equal(resolveCurrentCell({ type: 'coordinates', lat: -89.97, lon: 45 }, { MAL: [lgrsCell] }, [], [capCell]).horizon, null)
+  const site = { id: 's', name: 'S', lat: -89.97, lon: 45, horizon: [1] }
+  assert.deepEqual(resolveCurrentCell({ type: 'site', siteId: 's' }, {}, [site], [capCell]).horizon, [1]) // a site's own horizon stays
+})

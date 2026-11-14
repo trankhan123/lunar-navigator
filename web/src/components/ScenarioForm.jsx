@@ -212,7 +212,7 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
             </select>,
           )}
           {value.searchScope === 'radius' && numberField(t('scenario.searchRadius'), 'searchRadiusKm', 'km')}
-          <p className="col-span-2 text-xs text-slate-400">{t('scenario.scopeTimeNote')}</p>
+          <p className="col-span-2 text-xs text-slate-400">{t('scenario.scopeTimeNote')} {t('scenario.scopeCapNote')}</p>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import { Suspense, lazy, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
+import { capTileIdsInCircle } from '../core/capGrid.js'
 import { timeAtHour, toPolarXY } from '../core/data.js'
 import { MAP_LAYERS, MAP_OVERLAYS, STATUS_SYMBOLS, cellColor, cellLevel, nasaCoverageNote } from '../core/mapLayers.js'
 import { bodyDirections, computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
@@ -10,6 +11,7 @@ import {
 import { startVisibilityFractions } from '../core/startWindowSearch.js'
 import CellHoverCard from './CellHoverCard.jsx'
 import DirectionCard from './DirectionCard.jsx'
+import MapCapLayer from './MapCapLayer.jsx'
 import MapCells from './MapCells.jsx'
 import MapLayersPanel from './MapLayersPanel.jsx'
 import MapLegend from './MapLegend.jsx'
@@ -31,7 +33,7 @@ const FRACTIONS_WAIT_MS = 400 // typing a date must not start one worker job per
 const fractionsCache = new Map()
 
 const ZOOM_STEP = 1.6
-const OUTLINE_SIZE_M = 940
+const outlineSizeM = (cell) => (cell.id.startsWith('CAP-') ? 1880 : 940) // a CAP cell is 2 km, an LGRS cell 1 km
 const toolbarButton = 'grid size-9 place-items-center rounded border border-slate-600 text-lg leading-none transition-colors hover:bg-slate-800'
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -54,7 +56,7 @@ function MapImage({ entry, opacity = 1 }) {
  */
 function SouthPoleMap({
   regions, activeRegion, maps, cells, sites, ephemeris, hour, hourRange = null, stayDays = null, defaultLayerId, timeBar = null, statusByCellId, currentCellId,
-  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells,
+  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells, capIndex = null, capCells = [], onNeedCapTiles,
 }) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
@@ -66,6 +68,7 @@ function SouthPoleMap({
   const [hoveredCell, setHoveredCell] = useState(null)
   const [view3d, setView3d] = useState(false)
   const [overlays, setOverlays] = useState(initialOverlays)
+  const [capStatus, setCapStatus] = useState('') // from the cap raster, e.g. while its % layer is computing
   const [labelsFit, setLabelsFit] = useState(false) // a 1 km cell is wide enough on screen for its LGRS label
   const regionCode = activeRegion?.code ?? null
   const changeOverlay = (kind, changes) => setOverlays((current) => ({ ...current, [kind]: { ...current[kind], ...changes } }))
@@ -172,14 +175,14 @@ function SouthPoleMap({
 
   const dateRangeText = hourRange ? `${timeAtHour(ephemeris, hourRange.firstHour).slice(0, 10)} to ${timeAtHour(ephemeris, hourRange.lastHour).slice(0, 10)}` : ''
   const statusText = !activeRegion
-    ? ''
+    ? capStatus
     : !cells
       ? `Loading ${activeRegion.name} cells…`
       : layerNeedsDates && fractionsError
         ? `Could not compute the % layer: ${fractionsError}`
         : layerNeedsDates && !fractions
           ? 'Computing the % of hours for your dates…'
-          : ''
+          : capStatus
   // Region-centre dots (their sites carry D4 horizons) show the Sun/Earth at the map hour at every zoom.
   const dotLayerId = layerNeedsHour ? layerId : 'sunEarthNow'
   const centreCells = useMemo(() => regionCentreCells(regions, sites), [regions, sites])
@@ -233,7 +236,7 @@ function SouthPoleMap({
     )
   const coverageNote = [...new Set(coverageNotes.filter(Boolean))].join(' ')
   const outlines = [[currentCellId, '#fbbf24', 3], [selectedCellId, '#f8fafc', 2]]
-    .map(([cellId, color, width]) => ({ cell: cells?.find((cell) => cell.id === cellId), color, width }))
+    .map(([cellId, color, width]) => ({ cell: cells?.find((cell) => cell.id === cellId) ?? capCells.find((cell) => cell.id === cellId), color, width }))
     .filter(({ cell }) => cell)
   const ariaLabel = activeRegion
     ? `Map of ${activeRegion.name}: ${cells?.length ?? 0} cells of 1 km, ${cells?.filter((cell) => cell.feasible).length ?? 0} feasible. Use the Cell list above the map to select a cell with the keyboard.`
@@ -258,7 +261,7 @@ function SouthPoleMap({
             </>
           )}
         </nav>
-        <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} onNeedRegionCells={onNeedRegionCells} onPick={pickSearchMatch} />
+        <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} capCells={capIndex ? capCells : null} onNeedRegionCells={onNeedRegionCells} onNeedCapPoint={(point) => onNeedCapTiles(capTileIdsInCircle(capIndex, point.xM, point.yM, 0))} onPick={pickSearchMatch} />
         <span className="ml-auto text-xs text-slate-400">{show3d ? 'Drag to rotate, scroll or pinch to zoom' : 'Click the map, then scroll to zoom'}</span>
         {activeRegion && (
           <button type="button" aria-pressed={view3d} onClick={() => setView3d(!view3d)} className="h-9 rounded border border-slate-600 px-3 transition-colors hover:bg-slate-800 aria-pressed:bg-slate-700">
@@ -297,6 +300,22 @@ function SouthPoleMap({
         <g transform={transform.toString()}>
           {overlays.relief.enabled && southPoleImage && <MapImage entry={southPoleImage} opacity={overlays.relief.opacity} />}
           {overlays.relief.enabled && regionImage && <MapImage entry={regionImage} opacity={overlays.relief.opacity} />}
+          {capIndex && (
+            <MapCapLayer
+              capCells={capCells}
+              capIndex={capIndex}
+              layerId={layerId}
+              ephemeris={ephemeris}
+              hour={hour}
+              hourRange={hourRange}
+              statusByCellId={statusByCellId}
+              transform={transform}
+              onSelectCell={onSelectCell}
+              onHoverCell={setHoveredCell}
+              onNeedCapTiles={onNeedCapTiles}
+              onStatusChange={setCapStatus}
+            />
+          )}
           {activeRegion && cells && (
             <MapCells
               cells={cells}
@@ -315,10 +334,10 @@ function SouthPoleMap({
             {outlines.map(({ cell, color, width }) => (
               <rect
                 key={color}
-                x={cell.xM - OUTLINE_SIZE_M / 2}
-                y={-cell.yM - OUTLINE_SIZE_M / 2}
-                width={OUTLINE_SIZE_M}
-                height={OUTLINE_SIZE_M}
+                x={cell.xM - outlineSizeM(cell) / 2}
+                y={-cell.yM - outlineSizeM(cell) / 2}
+                width={outlineSizeM(cell)}
+                height={outlineSizeM(cell)}
                 fill="none"
                 stroke={color}
                 strokeWidth={width}
@@ -349,7 +368,7 @@ function SouthPoleMap({
         )}
       </svg>
       {directions && <DirectionCard directions={directions} placeLabel={placeLabel} />}
-      {hoveredCell && cells?.includes(hoveredCell) && <CellHoverCard cell={hoveredCell} ephemeris={ephemeris} hour={hour} stayDays={stayDays} />}
+      {hoveredCell && (cells?.includes(hoveredCell) || capCells.includes(hoveredCell)) && <CellHoverCard cell={hoveredCell} ephemeris={ephemeris} hour={hour} stayDays={stayDays} />}
       {transform.k >= MINIMAP_MIN_ZOOM && (
         <MapMinimap regions={regions} activeRegionCode={regionCode} background={southPoleImage} viewBoundsM={viewBoundsM(transform)} />
       )}

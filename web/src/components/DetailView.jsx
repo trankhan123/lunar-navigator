@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { timeAtHour } from '../core/data.js'
 import { buildDetail, pathForChart, summarySentence, toCsv } from '../core/detail.js'
-import { cellDisplayName, formatUtc, hasNoTerrain } from '../core/format.js'
+import { cellDisplayName, formatUtc, hasNoTerrain, usesCapGrid } from '../core/format.js'
 import { useI18n } from '../i18n/index.jsx'
 import BatteryChart from './BatteryChart.jsx'
 import CompareView from './CompareView.jsx'
@@ -59,6 +59,7 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
         {cellDisplayName(cell)}
       </h2>
       {hasNoTerrain(cell) && <p className="text-xs text-slate-400">{t('currentPoint.noTerrain')}</p>}
+      {usesCapGrid(cell) && <p className="text-xs text-slate-400">{t('currentPoint.capGrid')}</p>}
       <label className="text-sm text-slate-300">
         {t('detail.landingUtc')}{' '}
         <input

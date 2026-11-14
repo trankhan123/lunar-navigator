@@ -9,6 +9,9 @@ import { simulateBattery } from './charging.js'
 // Landing times are tried every 6 hours.
 export const LANDING_STEP_HOURS = 6
 
+// "Same region" for a point outside the 9 regions: the 2 km CAP cells within this distance.
+export const CAP_REGION_SEARCH_KM = 15
+
 // Minimum battery state-of-charge below which a window is flagged marginal.
 export const MARGINAL_BATTERY_FRACTION = 0.2
 
@@ -158,7 +161,7 @@ export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
  * Filters feasible lunar surface cells within target search boundary,
  * ensuring the nominal landing target resides at index 0.
  */
-export function selectSearchCells(scenario, currentCell, cellsByRegion) {
+export function selectSearchCells(scenario, currentCell, cellsByRegion, capCells = []) {
   if (!currentCell || currentCell.lat == null || currentCell.lon == null) {
     return []
   }
@@ -167,6 +170,7 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion) {
   const allCells = Array.isArray(cellsByRegion)
     ? cellsByRegion
     : Object.values(cellsByRegion || {}).flat()
+  const withinKm = (cells, radiusKm) => cells.filter((cell) => cell.feasible === true && distanceKm(currentCell, cell) <= radiusKm)
 
   let candidates = []
 
@@ -201,7 +205,8 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion) {
     }
 
     if (!closestCell || minDist > 1) {
-      candidates = []
+      // Not on any LGRS cell: search the 2 km CAP cells around the point (README D9); none loaded = nothing to search.
+      candidates = withinKm(capCells, CAP_REGION_SEARCH_KM)
     } else {
       const targetRegion =
         closestCell.region ||
@@ -226,10 +231,7 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion) {
     }
   } else if (scope === 'radius') {
     const radius = scenario?.searchRadiusKm ?? 10
-    candidates = allCells.filter((cell) => {
-      if (cell.feasible !== true) return false
-      return distanceKm(currentCell, cell) <= radius
-    })
+    candidates = withinKm([...allCells, ...capCells], radius) // CAP leaves out the region interiors: no duplicates
   } else if (scope === 'all') {
     candidates = allCells
   }
