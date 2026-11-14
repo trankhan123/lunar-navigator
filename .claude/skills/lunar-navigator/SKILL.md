@@ -71,7 +71,7 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - `DetailView` và globe tải lười.
   - WF3 (PR #5, #6) đã sửa `rankBestPairs` (quét một lượt giữ top 10: 138 ms ở 225 ô × 728 lần hạ cánh) và chiều câu `explainDifference`.
   - Lỗi trắng trang Apollo (`selectSearchCells` trả `[]` khi không có ô nào trong 1 km) đã được Quoc_Bao sửa trên nhánh `PathAndFuel` (f939da2), merge vào `main` ở 66fdf5d ngày 15/11.
-  - Vercel production deploy lại lúc 02:25 ngày 15/11 từ 66fdf5d, gồm dữ liệu thật 9 vùng, W7 và bản sửa Apollo; đã kiểm tra trên link công khai.
+  - Vercel production deploy lại lúc 04:01 ngày 15/11 từ efc1beb (`main` = `web`, có bản đồ v2), thay cho bản 02:25 từ 66fdf5d. Đã kiểm tra link công khai không đăng nhập: dữ liệu thật, đủ 35 ảnh lớp phủ, lớp "% sunlight" ở MAL tính trong 2 s, giao diện 1280 px và 390 px, console 0 lỗi.
 - **WF5 (14/11 tối, Claude Code làm theo yêu cầu của trankhan123):** dữ liệu thật đã có cho 8 vùng.
   - Chạy lại toàn bộ theo thứ tự: `build_grid.py` → `compute_feasibility.py` (12 s) → `compute_horizon.py --region ALL --sites` (của WF1, ~10 phút) → `build_site_data.py` → `export_map_background.py` → `check_web_data.py`.
   - Shapefile đọc thẳng từ zip trong `pipeline/raw/lgrs/`, không cần giải nén. Nhãn là thuộc tính `LGRS_ACC`, luôn 5 ký tự; khoảng 10 % nhãn có `-` (ví dụ `AYR--`), nên chỉ lấy phần trước dấu `-` đầu tiên làm mã vùng.
