@@ -106,7 +106,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
 | C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
-| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | trankhan123 | done |
+| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js` | W1 (D8 optional) | L | trankhan123 | doing (map v2, docs/superpowers/plans/2026-11-14-polar-map.md) |
 | W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
 | W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | done |
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
@@ -505,15 +505,18 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
 
 ### W2 South-pole map
 
-Files: `SouthPoleMap.jsx`, `CellPopup.jsx`.
+Files: `SouthPoleMap.jsx` (+ `MapCells.jsx`, `MapMarks.jsx`, `MapLegend.jsx`), `CellPopup.jsx`; pure logic in `core/mapView.js`, `core/mapLayers.js` and `core/mapSky.js`. Map v2 is being built from `docs/superpowers/plans/2026-11-14-polar-map.md` (spec: `docs/superpowers/specs/2026-11-14-polar-map-design.md`).
 
-- **`SouthPoleMap` props:** `{region, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell(cell)}`, one region at a time. A `mapBackground` prop (the region's entry in `maps.json`) is added when D8 lands.
+- **`SouthPoleMap` props:** `{regions, activeRegion, maps, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell(cell), onOpenRegion(code|null)}`.
+  - `activeRegion` is `null` at the overview: the whole south pole (`south_pole` image, the 9 region frames, pins of the other sites). With a region, its hillshade image and its 1 km cells are drawn. A link with a cell opens that cell's region.
+  - `cells` is `null` while the region's file loads.
   - `statusByCellId` is a `Map<cellId, 0|1|2>` at the current landing time, or `null` before Submit;
   - every status also shows a symbol (✓ ! ✕) so it does not rely on colour alone.
 - **Drawing:**
   - draw in `xM/yM`, with x to the right and y up (the 0° meridian points up);
   - square cells 1 km wide;
-  - use ECharts or SVG; no new library.
+  - one SVG in PGDA metres, viewBox ±304 km, SVG y = −yM; pan and zoom with d3-zoom 3.0.0, the only map library. Every d3 package, globe.gl's included, is pinned with `overrides` in `web/package.json`;
+  - the wheel zooms only once the map has focus (click it) or with Ctrl/⌘, so page scrolling is never captured; region frames take clicks at the overview only.
 - **Colours:**
   - before Submit: feasible cells blue, infeasible cells grey (the tooltip gives the reason);
   - after Submit: green pass, yellow marginal, red fail, grey infeasible.

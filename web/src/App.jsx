@@ -101,7 +101,8 @@ export default function App() {
     [data],
   )
 
-  const activeRegion = data?.regions.find((region) => region.code === regionCode) ?? data?.regions[0] ?? null
+  // null = the south-pole overview (README W2); a link with a cell opens that cell's region.
+  const activeRegion = data?.regions.find((region) => region.code === regionCode) ?? null
   useEffect(() => {
     if (activeRegion) loadRegionCells(activeRegion).catch((error) => setLoadError(error.message))
   }, [activeRegion, loadRegionCells])
@@ -135,6 +136,8 @@ export default function App() {
     setSearch({ status: 'running', doneCells: 0, totalCells: 0 })
     try {
       const codes = regionCodesForSearch(searchScenario, data.regions, data.sites)
+      // From the overview, open the searched region so the Results map shows its ✓ ! ✕ colours.
+      if (!activeRegion) setRegionCode(regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites)[0] ?? null)
       const neededRegions = data.regions.filter((region) => codes.includes(region.code))
       const loadedLists = await Promise.all(neededRegions.map(async (region) => [region.code, await loadRegionCells(region)]))
       if (!isLatest()) return
@@ -181,6 +184,10 @@ export default function App() {
   const currentPointSummary = useMemo(() => results && summarizeCurrentPoint(results, landingIndex), [results, landingIndex])
 
   const selectCell = useCallback((cell) => setSelectedCellId(cell.id), [])
+  const openRegion = useCallback((code, { cellId = null } = {}) => {
+    setRegionCode(code)
+    setSelectedCellId(cellId)
+  }, [])
   const selectSite = useCallback((site) => setScenario((current) => ({ ...current, currentPoint: { type: 'site', siteId: site.id } })), [])
   const errors = useMemo(() => (data ? validateScenario(scenario, data.ephemeris) : []), [data, scenario])
   const viewHour = useMemo(() => {
@@ -212,7 +219,7 @@ export default function App() {
     setScreen('detail')
   }
 
-  const cells = activeRegion ? cellsByRegion[activeRegion.code] : null
+  const cells = activeRegion ? (cellsByRegion[activeRegion.code] ?? null) : null
   const selectedCell = cells?.find((cell) => cell.id === selectedCellId) ?? null
   const detailCell = cellsById.get(selectedCellId) ?? (currentCell?.id === selectedCellId ? currentCell : null)
   const detailScenario = search.status === 'done' ? search.scenario : scenario
@@ -222,33 +229,27 @@ export default function App() {
   const regionPicker = data && (
     <label className="text-sm text-slate-300">
       Region{' '}
-      <select
-        value={activeRegion?.code ?? ''}
-        onChange={(event) => {
-          setRegionCode(event.target.value)
-          setSelectedCellId(null)
-        }}
-        className={selectClass}
-      >
+      <select value={activeRegion?.code ?? ''} onChange={(event) => openRegion(event.target.value || null)} className={selectClass}>
+        <option value="">South pole (all regions)</option>
         {data.regions.map((region) => (
           <option key={region.code} value={region.code}>{region.name}</option>
         ))}
       </select>
     </label>
   )
-  const map = cells ? (
+  const map = data && (
     <SouthPoleMap
-      region={activeRegion}
-      background={data.maps.find((background) => background.id === activeRegion.code)}
+      regions={data.regions}
+      activeRegion={activeRegion}
+      maps={data.maps}
       cells={cells}
       sites={data.sites}
       statusByCellId={statusByCellId}
       currentCellId={currentCellId}
       selectedCellId={selectedCellId}
       onSelectCell={selectCell}
+      onOpenRegion={openRegion}
     />
-  ) : (
-    <p className="text-slate-400">Loading cells…</p>
   )
 
   return (
@@ -303,18 +304,20 @@ export default function App() {
                 <div className="mb-2 flex flex-wrap items-center gap-3">
                   <h2 id="map-title" className="font-medium">South pole landing cells</h2>
                   {regionPicker}
-                  <label className="text-sm text-slate-300">
-                    Cell{' '}
-                    <select value={selectedCell ? selectedCellId : ''} onChange={(event) => setSelectedCellId(event.target.value || null)} className={`${selectClass} font-mono`}>
-                      <option value="">Choose…</option>
-                      {cells?.map((cell) => (
-                        <option key={cell.id} value={cell.id}>
-                          {cell.id}
-                          {cell.feasible ? '' : ' (not feasible)'}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {activeRegion && (
+                    <label className="text-sm text-slate-300">
+                      Cell{' '}
+                      <select value={selectedCell ? selectedCellId : ''} onChange={(event) => setSelectedCellId(event.target.value || null)} className={`${selectClass} font-mono`}>
+                        <option value="">Choose…</option>
+                        {cells?.map((cell) => (
+                          <option key={cell.id} value={cell.id}>
+                            {cell.id}
+                            {cell.feasible ? '' : ' (not feasible)'}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                 </div>
                 {map}
               </section>

@@ -191,7 +191,7 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 | Web | Vite + React (**JavaScript, không dùng TypeScript**) |
 | Tính toán trong trình duyệt | JS thuần trong `web/src/core/`, chạy tìm kiếm trong **Web Worker** |
 | Test | `node --test` có sẵn trong Node (không thêm thư viện test) và `pipeline/check_web_data.py` |
-| Bản đồ 2D cực Nam | ECharts hoặc SVG, ảnh nền hillshade PNG |
+| Bản đồ 2D cực Nam | SVG + d3-zoom 3.0.0 (kéo/phóng; cả chuỗi d3 ghim bằng overrides trong web/package.json), ảnh nền hillshade PNG |
 | Quả cầu 3D | `globe.gl` (không dùng three.js thuần) |
 | Biểu đồ | ECharts (`echarts` + `echarts-for-react`) |
 | CSS | Tailwind |

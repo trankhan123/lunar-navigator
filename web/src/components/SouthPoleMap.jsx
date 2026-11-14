@@ -1,116 +1,153 @@
-import { memo } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { select } from 'd3-selection'
+import { zoom, zoomIdentity } from 'd3-zoom'
 import { toPolarXY } from '../core/data.js'
+import { STATUS_SYMBOLS, cellColor } from '../core/mapLayers.js'
+import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap } from '../core/mapView.js'
+import MapCells from './MapCells.jsx'
+import MapLegend from './MapLegend.jsx'
+import MapMarks from './MapMarks.jsx'
 
-const CELL_SIZE_M = 1000
-const CELL_GAP_M = 60
-// Index = STATUS code from core/optimizer.js: fail, marginal, pass. Symbols keep the status readable without colour.
-const STATUS_COLORS = ['#ef4444', '#f59e0b', '#10b981']
-const STATUS_SYMBOLS = ['✕', '!', '✓']
-const STATUS_WORDS = ['fails a limit', 'meets limits, battery below 20 %', 'meets all limits']
-const FEASIBLE_COLOR = '#0ea5e9'
-const INFEASIBLE_COLOR = '#334155'
-const NOT_SEARCHED_COLOR = '#64748b'
+const ZOOM_STEP = 1.6
+const OUTLINE_SIZE_M = 940
+const toolbarButton = 'grid size-9 place-items-center rounded border border-slate-600 text-lg leading-none transition-colors hover:bg-slate-800'
 
-function cellTitle(cell, status) {
-  if (!cell.feasible) return `${cell.id} (not feasible: ${cell.infeasibleReason})`
-  return status === undefined ? cell.id : `${cell.id}: ${STATUS_WORDS[status]}`
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function MapImage({ entry }) {
+  const [xMin, yMin, xMax, yMax] = entry.boundsM
+  return <image href={entry.image} x={xMin} y={-yMax} width={xMax - xMin} height={yMax - yMin} preserveAspectRatio="none" pointerEvents="none" />
 }
 
-function legendItem(color, label, symbol = '') {
-  return (
-    <span key={label} className="inline-flex items-center gap-1.5">
-      <span className="inline-grid size-3.5 place-items-center rounded-sm text-[9px] font-bold text-slate-950" style={{ backgroundColor: color }} aria-hidden="true">
-        {symbol}
-      </span>
-      {label}
-    </span>
+/**
+ * README W2: one SVG of the whole south pole in PGDA metres (SVG y = −yM), panned and zoomed by d3-zoom.
+ * activeRegion null = the overview; otherwise that region's cells are drawn.
+ */
+function SouthPoleMap({ regions, activeRegion, maps, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell, onOpenRegion }) {
+  const svgRef = useRef(null)
+  const behaviorRef = useRef(null)
+  const isFirstFit = useRef(true)
+  const [transform, setTransform] = useState(zoomIdentity)
+  const regionCode = activeRegion?.code ?? null
+
+  useEffect(() => {
+    const svg = svgRef.current
+    const behavior = zoom()
+      .scaleExtent([1, MAX_ZOOM_SCALE])
+      .translateExtent([[-VIEW_HALF_WIDTH_M, -VIEW_HALF_WIDTH_M], [VIEW_HALF_WIDTH_M, VIEW_HALF_WIDTH_M]])
+      .clickDistance(4)
+      // The wheel zooms only once the map has focus (or with Ctrl/⌘ and trackpad pinch), so page scrolling is never caught.
+      .filter((event) => !event.button && (event.type !== 'wheel' || event.ctrlKey || event.metaKey || document.activeElement === svg))
+      .on('zoom', (event) => setTransform(event.transform))
+    behaviorRef.current = behavior
+    select(svg).call(behavior)
+    return () => select(svg).on('.zoom', null)
+  }, [])
+
+  useEffect(() => {
+    const { k, x, y } = fitTransform(activeRegion?.boundsM ?? WHOLE_MAP_BOUNDS_M, 0.08)
+    const target = zoomIdentity.translate(x, y).scale(k)
+    const svg = select(svgRef.current)
+    if (isFirstFit.current || prefersReducedMotion()) svg.call(behaviorRef.current.transform, target)
+    else svg.transition().duration(600).call(behaviorRef.current.transform, target)
+    isFirstFit.current = false
+  }, [regionCode]) // eslint-disable-line react-hooks/exhaustive-deps -- refit only when the region changes, not on every new regions array
+
+  function zoomBy(factor) {
+    behaviorRef.current.scaleBy(select(svgRef.current).transition().duration(prefersReducedMotion() ? 0 : 250), factor)
+  }
+
+  const layerId = statusByCellId ? 'searchResult' : 'feasibility'
+  const colors = useMemo(
+    () => (cells ?? []).map((cell) => cellColor(layerId, { feasible: cell.feasible, status: statusByCellId?.get(cell.id) })),
+    [cells, layerId, statusByCellId],
   )
-}
+  const symbols = useMemo(() => {
+    if (!cells || layerId !== 'searchResult') return null
+    return cells.map((cell) => {
+      const status = statusByCellId.get(cell.id)
+      return cell.feasible && status !== undefined ? STATUS_SYMBOLS[status] : null
+    })
+  }, [cells, layerId, statusByCellId])
+  const pinSites = useMemo(
+    () => sites.filter((site) => site.region === null).map((site) => ({ ...site, ...toPolarXY(site.lat, site.lon) })).filter((site) => isOnPolarMap(site.xM, site.yM)),
+    [sites],
+  )
 
-// background: optional README D8 map entry {image, boundsM} drawn under the cells.
-function SouthPoleMap({ region, background, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell }) {
-  const [xMin, yMin, xMax, yMax] = region.boundsM
-  const widthM = xMax - xMin
-  const heightM = yMax - yMin
-  // Map y grows north (towards lon 0°); SVG y grows down.
-  const toSvg = (xM, yM) => [xM - xMin, yMax - yM]
-  const sitesInView = sites
-    .map((site) => ({ ...site, ...toPolarXY(site.lat, site.lon) }))
-    .filter((site) => site.xM !== null && site.xM >= xMin && site.xM <= xMax && site.yM >= yMin && site.yM <= yMax)
-  const pinRadiusM = widthM / 140
-  const feasibleCount = cells.filter((cell) => cell.feasible).length
+  const southPoleImage = maps.find((entry) => entry.id === 'south_pole' && entry.kind === 'hillshade')
+  const regionImage = activeRegion && maps.find((entry) => entry.id === activeRegion.code && entry.kind === 'hillshade')
+  const outlines = [[currentCellId, '#fbbf24', 3], [selectedCellId, '#f8fafc', 2]]
+    .map(([cellId, color, width]) => ({ cell: cells?.find((cell) => cell.id === cellId), color, width }))
+    .filter(({ cell }) => cell)
+  const ariaLabel = activeRegion
+    ? `Map of ${activeRegion.name}: ${cells?.length ?? 0} cells of 1 km, ${cells?.filter((cell) => cell.feasible).length ?? 0} feasible. Use the Cell list above the map to select a cell with the keyboard.`
+    : 'Map of the lunar south pole with the Artemis III regions. Use the Region list to open one.'
 
   return (
     <figure>
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+        <nav aria-label="Map level" className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onOpenRegion(null)}
+            aria-current={activeRegion ? undefined : 'page'}
+            className="rounded px-2 py-1 text-sky-300 transition-colors hover:bg-slate-800 aria-[current=page]:text-slate-200"
+          >
+            South pole
+          </button>
+          {activeRegion && (
+            <>
+              <span aria-hidden="true" className="text-slate-500">›</span>
+              <span className="font-medium">{activeRegion.name}</span>
+            </>
+          )}
+        </nav>
+        <span className="ml-auto text-xs text-slate-400">Click the map, then scroll to zoom</span>
+        <button type="button" aria-label="Zoom in" onClick={() => zoomBy(ZOOM_STEP)} className={toolbarButton}>+</button>
+        <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)} className={toolbarButton}>−</button>
+      </div>
       <svg
-        viewBox={`0 0 ${widthM} ${heightM}`}
-        className="max-h-[70vh] w-full rounded-lg bg-slate-900"
+        ref={svgRef}
+        viewBox={VIEW_BOX}
         role="img"
-        aria-label={`Map of ${region.name}: ${cells.length} cells of 1 km, ${feasibleCount} feasible. Use the Cell list above the map to select one with the keyboard.`}
+        aria-label={ariaLabel}
+        tabIndex={0}
+        className="mx-auto block aspect-square w-full max-w-[75vh] touch-none select-none rounded-lg bg-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
       >
-        {background && (
-          <image
-            href={background.image}
-            x={background.boundsM[0] - xMin}
-            y={yMax - background.boundsM[3]}
-            width={background.boundsM[2] - background.boundsM[0]}
-            height={background.boundsM[3] - background.boundsM[1]}
-            preserveAspectRatio="none"
-          />
-        )}
-        {cells.map((cell) => {
-          const [x, y] = toSvg(cell.xM, cell.yM)
-          const status = statusByCellId?.get(cell.id)
-          const fill = !cell.feasible ? INFEASIBLE_COLOR : !statusByCellId ? FEASIBLE_COLOR : (STATUS_COLORS[status] ?? NOT_SEARCHED_COLOR)
-          const isCurrent = cell.id === currentCellId
-          const isSelected = cell.id === selectedCellId
-          return (
-            <g key={cell.id} className="cursor-pointer" onClick={() => onSelectCell(cell)}>
+        <defs>
+          <pattern id="infeasible-hatch" patternUnits="userSpaceOnUse" width={200} height={200} patternTransform="rotate(45)">
+            <line x1={0} y1={0} x2={0} y2={200} stroke="#94a3b8" strokeWidth={40} />
+          </pattern>
+        </defs>
+        <g transform={transform.toString()}>
+          {southPoleImage && <MapImage entry={southPoleImage} />}
+          {regionImage && <MapImage entry={regionImage} />}
+          {activeRegion && cells && <MapCells cells={cells} colors={colors} symbols={symbols} onSelectCell={onSelectCell} />}
+          <MapMarks regions={regions} activeRegionCode={regionCode} pinSites={pinSites} zoomScale={transform.k} onOpenRegion={onOpenRegion} />
+          <g pointerEvents="none">
+            {outlines.map(({ cell, color, width }) => (
               <rect
-                x={x - CELL_SIZE_M / 2 + CELL_GAP_M / 2}
-                y={y - CELL_SIZE_M / 2 + CELL_GAP_M / 2}
-                width={CELL_SIZE_M - CELL_GAP_M}
-                height={CELL_SIZE_M - CELL_GAP_M}
-                fill={fill}
-                fillOpacity={(cell.feasible ? 0.75 : 1) * (background ? 0.7 : 1)}
-                stroke={isCurrent ? '#fbbf24' : isSelected ? '#f8fafc' : 'none'}
-                strokeWidth={isCurrent ? 3 : 2}
+                key={color}
+                x={cell.xM - OUTLINE_SIZE_M / 2}
+                y={-cell.yM - OUTLINE_SIZE_M / 2}
+                width={OUTLINE_SIZE_M}
+                height={OUTLINE_SIZE_M}
+                fill="none"
+                stroke={color}
+                strokeWidth={width}
                 vectorEffect="non-scaling-stroke"
-                className="transition-[fill-opacity] hover:[fill-opacity:1]"
-              >
-                <title>{cellTitle(cell, status)}</title>
-              </rect>
-              {cell.feasible && status !== undefined && (
-                <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fontSize={420} fontWeight="700" fill="#020617" pointerEvents="none">
-                  {STATUS_SYMBOLS[status]}
-                </text>
-              )}
-            </g>
-          )
-        })}
-        {sitesInView.map((site) => {
-          const [x, y] = toSvg(site.xM, site.yM)
-          return (
-            <g key={site.id} pointerEvents="none">
-              <circle cx={x} cy={y} r={pinRadiusM} fill="#f8fafc" stroke="#020617" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-              <text x={x + pinRadiusM * 1.6} y={y + pinRadiusM * 0.6} fontSize={pinRadiusM * 2.6} fill="#f8fafc" stroke="#020617" strokeWidth={pinRadiusM * 0.6} paintOrder="stroke">
-                {site.name}
-              </text>
-            </g>
-          )
-        })}
+              />
+            ))}
+          </g>
+        </g>
       </svg>
-      <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
-        {statusByCellId
-          ? STATUS_WORDS.map((word, status) => legendItem(STATUS_COLORS[status], word[0].toUpperCase() + word.slice(1), STATUS_SYMBOLS[status])).reverse()
-          : legendItem(FEASIBLE_COLOR, 'Feasible cell')}
-        {legendItem(INFEASIBLE_COLOR, 'Too steep or in permanent shadow')}
-        <span>Amber outline: current point · white: selected</span>
-        <span>1 square = 1 km · up = towards 0° longitude (Earth-facing side)</span>
-      </figcaption>
+      <p aria-live="polite" className="mt-1 min-h-4 text-xs text-slate-400">
+        {activeRegion && !cells ? `Loading ${activeRegion.name} cells…` : ''}
+      </p>
+      <MapLegend layerId={layerId} />
     </figure>
   )
 }
 
-// Memo: the form re-renders App on every keystroke; ~2,000 cells should not re-render with it.
+// Memo: the form re-renders App on every keystroke; the map should not re-render with it.
 export default memo(SouthPoleMap)

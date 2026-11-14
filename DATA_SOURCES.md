@@ -59,6 +59,7 @@ NASA chỉ công bố tên và bản đồ của 9 vùng Artemis III, không cô
 | react, react-dom | 19.3.x | web |
 | tailwindcss, @tailwindcss/vite | 4.3.5 | web |
 | globe.gl | 2.46.2 | web |
+| d3-zoom, d3-selection (every d3 package, globe.gl's included, pinned with `overrides` in web/package.json to its release before 2026-11-03) | 3.0.0 | web (components/SouthPoleMap.jsx) |
 | echarts | 6.1.0 | web |
 | echarts-for-react | 3.0.6 | web |
 | astronomy-engine | 2.1.19 | web (`src/astronomy.js`) |
