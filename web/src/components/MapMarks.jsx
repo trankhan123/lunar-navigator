@@ -38,8 +38,21 @@ export default function MapMarks({ regions, activeRegionCode, pinSites, centres 
           </g>
         )
       })}
+      {/* A dot sits on its frame, so at the overview it opens the region too; inside a region it must not cover cells. */}
       {centres.map((centre) => (
-        <circle key={centre.regionCode} cx={centre.xM} cy={-centre.yM} r={centreRadius} fill={centre.color} stroke="#020617" strokeWidth={2} vectorEffect="non-scaling-stroke">
+        <circle
+          key={centre.regionCode}
+          cx={centre.xM}
+          cy={-centre.yM}
+          r={centreRadius}
+          fill={centre.color}
+          stroke="#020617"
+          strokeWidth={2}
+          vectorEffect="non-scaling-stroke"
+          pointerEvents={isOverview ? 'all' : 'none'}
+          className={isOverview ? 'cursor-pointer' : undefined}
+          onClick={isOverview ? () => onOpenRegion(centre.regionCode) : undefined}
+        >
           <title>{centre.title}</title>
         </circle>
       ))}

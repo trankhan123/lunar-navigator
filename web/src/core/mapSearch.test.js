@@ -1,7 +1,7 @@
 // W2 map v2 — find box (plan Task 11). Region bounds are rounded real values; the cells are synthetic.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { searchMap } from './mapSearch.js'
+import { nearestRegionCode, searchMap } from './mapSearch.js'
 
 const regions = [
   { code: 'MAL', name: 'Malapert Massif', boundsM: [-11063.4, 110667.0, 10057.3, 132793.8] },
@@ -30,4 +30,15 @@ test('searchMap: cell IDs by prefix, dashes included; asks for the region file f
   assert.deepEqual(searchMap(' HAW-AYR-- ', regions, sites, cellsByRegion).matches.map((match) => match.cell.id), ['HAW-AYR--'])
   assert.deepEqual(searchMap('mal-az', regions, sites, cellsByRegion), { matches: [], regionCodeToLoad: 'MAL' })
   assert.deepEqual(searchMap('xyz-ab', regions, sites, cellsByRegion), { matches: [], regionCodeToLoad: null })
+})
+
+test('nearestRegionCode: the region of the searched grid cell nearest the point (review finding 3)', () => {
+  const im2 = { lat: -84.7906, lon: 29.1957 }
+  const cells = [
+    { id: 'SITE-im-2', lat: -84.7906, lon: 29.1957 }, // the current point's pseudo-cell: not a region
+    { id: 'MAL-AZSPK', lat: -86.3187, lon: -5.4281 },
+    { id: 'MMP-BCS-T', lat: -84.79, lon: 29.3 },
+  ]
+  assert.equal(nearestRegionCode(im2, cells, regions), 'MMP')
+  assert.equal(nearestRegionCode(im2, [cells[0]], regions), null)
 })

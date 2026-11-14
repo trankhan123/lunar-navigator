@@ -83,3 +83,10 @@ test('directionText: one plain line per body', () => {
   assert.equal(directionText({ body: 'sun', azimuthDeg: 112.4, elevationDeg: 1.44, terrainDeg: 2.3, isVisible: false }), 'Sun 112° · 1.4° high · terrain 2.3° · hidden')
   assert.equal(directionText({ body: 'earth', azimuthDeg: 359.7, elevationDeg: 4.06, terrainDeg: null, isVisible: true }), 'Earth 0° · 4.1° high · terrain not included · in view')
 })
+
+test('stayPreview: a stay that is not a whole number of days gives no preview instead of throwing (review finding 1)', () => {
+  const ephemeris = constantEphemeris({ hours: 300 })
+  assert.equal(stayPreview(equatorCell, ephemeris, 0, 2.7), null)
+  assert.equal(stayPreview(equatorCell, ephemeris, 0, 0.1), null)
+  assert.equal(stayPreview(equatorCell, ephemeris, 0, 3).hourCount, 72)
+})

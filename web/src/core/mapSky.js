@@ -74,7 +74,8 @@ export function computeVisibilityFractions(cells, ephemeris, firstHour, hourCoun
  * @returns {{hourCount: number, sunDiskFraction: Float32Array, earthDiskFraction: Float32Array, fractionSun: number, fractionEarth: number}|null}
  */
 export function stayPreview(cell, ephemeris, hour, stayDays) {
-  if (hour === null || hour === undefined || !(stayDays > 0)) return null
+  // A half-typed or shared-link stay like 2.7 days is invalid in the form too: show no preview rather than a broken window.
+  if (hour === null || hour === undefined || !Number.isInteger(stayDays) || stayDays < 1) return null
   const hourCount = Math.min(stayDays * 24, ephemeris.hours - hour)
   const sunDiskFraction = computeSunTrack(cell, ephemeris, hour, hourCount).diskFraction
   const earthDiskFraction = computeEarthTrack(cell, ephemeris, hour, hourCount).diskFraction

@@ -11,6 +11,7 @@ import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
+import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
 import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
@@ -141,17 +142,20 @@ export default function App() {
     setSearch({ status: 'running', doneCells: 0, totalCells: 0 })
     try {
       const codes = regionCodesForSearch(searchScenario, data.regions, data.sites)
-      // From the overview, open the searched region so the Results map shows its ✓ ! ✕ colours.
-      if (!activeRegion) {
-        setRegionCode(regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites)[0] ?? null)
-        setMapFocus(null)
-      }
       const neededRegions = data.regions.filter((region) => codes.includes(region.code))
       const loadedLists = await Promise.all(neededRegions.map(async (region) => [region.code, await loadRegionCells(region)]))
       if (!isLatest()) return
       const loaded = { ...cellsByRegion, ...Object.fromEntries(loadedLists) }
       const currentCell = resolveCurrentCell(searchScenario.currentPoint, loaded, data.sites)
       const cells = selectSearchCells(searchScenario, currentCell, loaded)
+      // Open the searched region so the Results map shows its ✓ ! ✕ colours: the current point's own region, else the region of the
+      // nearest searched grid cell (a site with no region, coordinates outside every frame); otherwise keep the open one.
+      const ownRegion = regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites)[0]
+      const searchedRegion = ownRegion ?? nearestRegionCode(currentCell, cells, data.regions)
+      if (searchedRegion) {
+        setRegionCode(searchedRegion)
+        setMapFocus(null)
+      }
       const { promise, cancel } = startWindowSearch({
         cells,
         ephemeris: data.ephemeris,

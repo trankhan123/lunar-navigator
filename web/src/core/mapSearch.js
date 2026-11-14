@@ -1,11 +1,25 @@
 // W2 map v2 — the map's find box: regions, polar sites and cell IDs of this app (no named-feature search; spec §5.2).
 import { toPolarXY } from './data.js'
+import { distanceKm } from './geometry.js'
 import { isOnPolarMap } from './mapView.js'
 
 const MAX_MATCHES = 8
 const CELL_ID_START = /^[a-z0-9]{3}-/i
 
 const insideBounds = ({ xM, yM }, [xMin, yMin, xMax, yMax]) => xM >= xMin && xM <= xMax && yM >= yMin && yM <= yMax
+
+/** Region code of the searched grid cell nearest the point, so the Results map can open it; null when no grid cell was searched. */
+export function nearestRegionCode(point, cells, regions) {
+  const codes = new Set(regions.map((region) => region.code))
+  let nearest = null
+  for (const cell of cells) {
+    const code = cell.id.split('-')[0] // a region code, or SITE / CUSTOM for the current point's pseudo-cell
+    if (!codes.has(code)) continue
+    const distance = distanceKm(point, cell)
+    if (!nearest || distance < nearest.distance) nearest = { code, distance }
+  }
+  return nearest?.code ?? null
+}
 
 /**
  * Matches for the typed text (trimmed, any case). "<CODE>-…" with a known region code lists that region's cells by ID prefix,
