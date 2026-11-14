@@ -323,7 +323,7 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 
 ## 8. Giao diện (chi tiết: `docs/window-finder.md` §3)
 
-Tất cả chữ trên giao diện bằng **tiếng Anh**. Chạy tốt trên laptop, dùng được trên điện thoại.
+Chữ trên giao diện mặc định bằng **tiếng Anh**; có bộ chọn 7 ngôn ngữ (i18n, chữ mới dùng `t()`, xem §9). Chạy tốt trên laptop, dùng được trên điện thoại.
 
 1. **Bản đồ 2D cực Nam** (W2): tô ô khả thi, ô không khả thi để xám. Bấm ô sẽ mở popup có ID, độ dốc, Mặt Trời/Trái Đất và nút "Use as current point".
 2. **Form kịch bản** (W3): có chế độ Simple và Expert.
