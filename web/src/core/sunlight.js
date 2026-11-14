@@ -1,49 +1,104 @@
 // C1 — Sunlight. Contract: README "C1 Sunlight".
-/* eslint-disable no-unused-vars -- stub parameters; delete this line when you implement the module */
-import { notImplemented } from './notImplemented.js'
+import {
+  bodyAzimuthElevation,
+  horizonElevationAt,
+  visibleDiskFraction,
+  SUN_DISK_RADIUS_DEG,
+  AU_KM,
+  VISIBLE_THRESHOLD,
 
-/**
- * @typedef {Object} SunTrack  one value per hour; index i ↔ ephemeris hour firstHour + i
- * @property {number} firstHour
- * @property {'vertical'|'horizontal'} panelType
- * @property {Float32Array} azimuthDeg
- * @property {Float32Array} elevationDeg
- * @property {Float32Array} diskFraction  0..1 of the Sun disk above the terrain horizon
- * @property {Float32Array} powerFactor   (1 AU / D)² × diskFraction × panelFactor, 0..~1.04
- */
-
-/** 'auto' → 'vertical' when |lat| ≥ 60°, else 'horizontal'. @returns {'vertical'|'horizontal'} */
+} from './geometry.js';
+import {
+  firstIndexBelow,
+  fractionAtLeast,
+  longestRunBelow,
+  meanWhereAtLeast,
+  nextCrossing,
+} from './timeSeries.js';
+const DEG_TO_RAD = Math.PI / 180;
 export function resolvePanelType(panelMode, latDeg) {
-  throw notImplemented('C1', 'resolvePanelType')
+  if (panelMode === 'vertical' || panelMode === 'horizontal') {
+    return panelMode;
+  }
+  return Math.abs(latDeg) >= 60 ? 'vertical' : 'horizontal';
 }
 
-/** vertical: cos(el); horizontal: max(sin(el), 0). @returns {number} */
+// 2. Hệ số góc chiếu vào tấm pin: vertical = cos(el), horizontal = max(sin(el), 0)
 export function panelFactor(elevationDeg, panelType) {
-  throw notImplemented('C1', 'panelFactor')
+  const elRad = elevationDeg * DEG_TO_RAD;
+  if (panelType === 'vertical') {
+    return Math.max(0, Math.cos(elRad));
+  }
+  return Math.max(0, Math.sin(elRad));
 }
 
-/**
- * @param {import('./data.js').Cell} cell
- * @param {import('./data.js').Ephemeris} ephemeris
- * @param {number} firstHour  ephemeris hour index of track index 0
- * @param {number} hourCount
- * @param {'auto'|'vertical'|'horizontal'} panelMode
- * @returns {SunTrack}
- */
-export function computeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode) {
-  throw notImplemented('C1', 'computeSunTrack')
+// 3. Tính quỹ đạo Mặt Trời theo từng giờ (yêu cầu < 5ms cho 4.500 giờ)
+export function computeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode = 'auto') {
+  const panelType = resolvePanelType(panelMode, cell.lat);
+  const azimuthDeg = new Float32Array(hourCount);
+  const elevationDeg = new Float32Array(hourCount);
+  const diskFraction = new Float32Array(hourCount);
+  const powerFactor = new Float32Array(hourCount);
+
+  const { sunSubLonDeg, sunSubLatDeg, sunDistanceAu } = ephemeris;
+  const horizon = cell.horizon ?? null;
+
+  for (let i = 0; i < hourCount; i++) {
+    const h = firstHour + i;
+    const distAu = sunDistanceAu[h];
+    const pos = bodyAzimuthElevation(
+      cell,
+      sunSubLonDeg[h],
+      sunSubLatDeg[h],
+      distAu * AU_KM
+    );
+
+    const az = pos.azimuthDeg;
+    const el = pos.elevationDeg;
+    const horDeg = horizonElevationAt(horizon, az);
+    const diskFrac = visibleDiskFraction(el, horDeg, SUN_DISK_RADIUS_DEG);
+    const pFactor = panelFactor(el, panelType);
+    const invDist = 1 / distAu;
+
+    azimuthDeg[i] = az;
+    elevationDeg[i] = el;
+    diskFraction[i] = diskFrac;
+    powerFactor[i] = invDist * invDist * diskFrac * pFactor;
+  }
+
+  return {
+    firstHour,
+    panelType,
+    azimuthDeg,
+    elevationDeg,
+    diskFraction,
+    powerFactor,
+  };
 }
 
-/**
- * Dark hour = diskFraction < 0.5. Sunlit hour = diskFraction ≥ 0.5.
- * @returns {{longestDarkHours:number, fractionSun:number, meanSunElevationDeg:number|null, hoursToSunset:number|null}}
- *   meanSunElevationDeg: mean over sunlit hours (null if none); hoursToSunset: offset of the first dark hour (0 if dark at start, null if never)
- */
+// 4. Thống kê cửa sổ nắng trong khoảng (startIndex, lengthHours)
 export function summarizeSunWindow(sunTrack, startIndex, lengthHours) {
-  throw notImplemented('C1', 'summarizeSunWindow')
+  const { diskFraction, elevationDeg } = sunTrack;
+  return {
+    longestDarkHours: longestRunBelow(diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
+    fractionSun: fractionAtLeast(diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
+    meanSunElevationDeg: meanWhereAtLeast(
+      elevationDeg,
+      diskFraction,
+      VISIBLE_THRESHOLD,
+      startIndex,
+      lengthHours
+    ),
+    hoursToSunset: firstIndexBelow(diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
+  };
 }
 
-/** Countdown: @returns {{event:'sunset'|'sunrise', hoursFromNow:number}|null} */
+// 5. Tìm sự kiện Mặt Trời mọc / lặn tiếp theo từ thời điểm atIndex
 export function nextSunEvent(sunTrack, atIndex) {
-  throw notImplemented('C1', 'nextSunEvent')
+  const crossing = nextCrossing(sunTrack.diskFraction, VISIBLE_THRESHOLD, atIndex);
+  if (!crossing) return null;
+  return {
+    event: crossing.direction === 'down' ? 'sunset' : 'sunrise',
+    hoursFromNow: crossing.hoursFromNow,
+  };
 }
