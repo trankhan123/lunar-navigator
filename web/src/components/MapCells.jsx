@@ -3,7 +3,9 @@ import { memo } from 'react'
 const CELL_DRAW_SIZE_M = 940 // a 1 km square with a 60 m gap
 
 // colors[i] / symbols[i] belong to cells[i]. One delegated click handler; d3-zoom's clickDistance drops clicks that end a drag.
-function MapCells({ cells, colors, symbols, onSelectCell, onHoverCell }) {
+const LABEL_STYLE = { fill: '#f8fafc', stroke: '#020617', strokeWidth: 40, paintOrder: 'stroke', pointerEvents: 'none' }
+
+function MapCells({ cells, colors, symbols, onSelectCell, onHoverCell, showLabels = false }) {
   function cellFromEvent(event) {
     const target = event.target.closest('[data-cell-index]')
     return target ? cells[Number(target.dataset.cellIndex)] : null
@@ -34,6 +36,11 @@ function MapCells({ cells, colors, symbols, onSelectCell, onHoverCell }) {
             {symbols?.[index] && (
               <text x={cell.xM} y={-cell.yM} textAnchor="middle" dominantBaseline="central" fontSize={420} fontWeight="700" fill="#020617" pointerEvents="none">
                 {symbols[index]}
+              </text>
+            )}
+            {showLabels && (
+              <text x={cell.xM} y={-cell.yM - 280} textAnchor="middle" fontSize={190} style={LABEL_STYLE}>
+                {cell.label}
               </text>
             )}
           </g>

@@ -68,6 +68,7 @@ export const MAP_OVERLAYS = [
   { kind: 'sun-visibility', label: 'NASA % sunlight (PGDA 69, 60 m)', defaultEnabled: false, defaultOpacity: 0.7 },
   { kind: 'earth-visibility', label: 'NASA % Earth in view (PGDA 69, 60 m)', defaultEnabled: false, defaultOpacity: 0.7 },
   { kind: 'psr', label: 'Permanent shadow (PGDA 90, 20 m)', defaultEnabled: false, defaultOpacity: 0.8 },
+  { kind: 'labels', label: 'LGRS cell labels (when zoomed in)', defaultEnabled: true }, // text, no opacity
 ]
 
 const CELL_HALF_SIZE_M = 500

@@ -35,6 +35,11 @@ export function sparklinePath(values, widthPx, heightPx) {
   return Array.from(values, (value, index) => `${index === 0 ? 'M' : 'L'}${round(index * step)},${round((1 - value) * heightPx)}`).join(' ')
 }
 
+export const LABEL_MIN_CELL_PX = 40
+
+/** LGRS cell labels show once a 1 km cell is at least LABEL_MIN_CELL_PX wide on screen (mapSizePx = the map's drawn width). */
+export const cellLabelsVisible = (zoomScale, mapSizePx) => (zoomScale * mapSizePx * 1000) / VIEW_SIZE_M >= LABEL_MIN_CELL_PX
+
 /** True for finite map coordinates inside the ±304 km polar maps. */
 export function isOnPolarMap(xM, yM) {
   return Number.isFinite(xM) && Number.isFinite(yM) && Math.abs(xM) <= VIEW_HALF_WIDTH_M && Math.abs(yM) <= VIEW_HALF_WIDTH_M

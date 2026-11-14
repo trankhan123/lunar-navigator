@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear } from './testHelpers.js'
-import { MAX_ZOOM_SCALE, fitTransform, isOnPolarMap, mapAngleDeg, sparklinePath, viewBoundsM } from './mapView.js'
+import { MAX_ZOOM_SCALE, cellLabelsVisible, fitTransform, isOnPolarMap, mapAngleDeg, sparklinePath, viewBoundsM } from './mapView.js'
 
 function assertTransform(actual, expected) {
   for (const key of ['k', 'x', 'y']) assertNear(actual[key], expected[key], 1e-6)
@@ -42,4 +42,11 @@ test('mapAngleDeg: azimuth + longitude, clockwise from map up', () => {
   assert.equal(mapAngleDeg(350, 20), 10)
   assert.equal(mapAngleDeg(10, -30), 340)
   assert.equal(mapAngleDeg(180, -90), 90) // at lon −90° the pole lies towards +x
+})
+
+test('cellLabelsVisible once a 1 km cell is at least 40 px wide', () => {
+  assert.equal(cellLabelsVisible(1, 600), false)
+  assert.equal(cellLabelsVisible(40, 600), false) // 39.5 px
+  assert.equal(cellLabelsVisible(41, 600), true) // 40.5 px
+  assert.equal(cellLabelsVisible(300, 0), false) // map not laid out yet
 })

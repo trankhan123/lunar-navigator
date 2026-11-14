@@ -4,7 +4,9 @@ import { zoom, zoomIdentity } from 'd3-zoom'
 import { timeAtHour, toPolarXY } from '../core/data.js'
 import { MAP_LAYERS, MAP_OVERLAYS, STATUS_SYMBOLS, cellColor, cellLevel, nasaCoverageNote } from '../core/mapLayers.js'
 import { bodyDirections, computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
-import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, VIEW_SIZE_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap, mapAngleDeg, viewBoundsM } from '../core/mapView.js'
+import {
+  MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, VIEW_SIZE_M, WHOLE_MAP_BOUNDS_M, cellLabelsVisible, fitTransform, isOnPolarMap, mapAngleDeg, viewBoundsM,
+} from '../core/mapView.js'
 import { startVisibilityFractions } from '../core/startWindowSearch.js'
 import CellHoverCard from './CellHoverCard.jsx'
 import DirectionCard from './DirectionCard.jsx'
@@ -61,6 +63,7 @@ function SouthPoleMap({
   const [fractionsError, setFractionsError] = useState(null)
   const [hoveredCell, setHoveredCell] = useState(null)
   const [overlays, setOverlays] = useState(initialOverlays)
+  const [labelsFit, setLabelsFit] = useState(false) // a 1 km cell is wide enough on screen for its LGRS label
   const regionCode = activeRegion?.code ?? null
   const changeOverlay = (kind, changes) => setOverlays((current) => ({ ...current, [kind]: { ...current[kind], ...changes } }))
 
@@ -80,7 +83,10 @@ function SouthPoleMap({
       .clickDistance(4)
       // The wheel zooms only once the map has focus (or with Ctrl/⌘ and trackpad pinch), so page scrolling is never caught.
       .filter((event) => !event.button && (event.type !== 'wheel' || event.ctrlKey || event.metaKey || document.activeElement === svg))
-      .on('zoom', (event) => setTransform(event.transform))
+      .on('zoom', (event) => {
+        setTransform(event.transform)
+        setLabelsFit(cellLabelsVisible(event.transform.k, Math.min(svg.clientWidth, svg.clientHeight)))
+      })
     behaviorRef.current = behavior
     select(svg).call(behavior)
     return () => select(svg).on('.zoom', null)
@@ -201,7 +207,7 @@ function SouthPoleMap({
   const southPoleImage = maps.find((entry) => entry.id === 'south_pole' && entry.kind === 'hillshade')
   const regionImage = activeRegion && maps.find((entry) => entry.id === activeRegion.code && entry.kind === 'hillshade')
   // The panel lists relief always and each NASA kind only when this data set has it (mock mode has none).
-  const overlayKinds = ['relief', ...NASA_KINDS.filter((kind) => maps.some((entry) => entry.kind === kind))]
+  const overlayKinds = ['relief', ...NASA_KINDS.filter((kind) => maps.some((entry) => entry.kind === kind)), 'labels']
   const enabledNasaKinds = NASA_KINDS.filter((kind) => overlayKinds.includes(kind) && overlays[kind].enabled)
   const nasaImages = activeRegion
     ? enabledNasaKinds.map((kind) => ({ kind, entry: maps.find((entry) => entry.id === activeRegion.code && entry.kind === kind) })).filter(({ entry }) => entry)
@@ -264,7 +270,16 @@ function SouthPoleMap({
         <g transform={transform.toString()}>
           {overlays.relief.enabled && southPoleImage && <MapImage entry={southPoleImage} opacity={overlays.relief.opacity} />}
           {overlays.relief.enabled && regionImage && <MapImage entry={regionImage} opacity={overlays.relief.opacity} />}
-          {activeRegion && cells && <MapCells cells={cells} colors={colors} symbols={symbols} onSelectCell={onSelectCell} onHoverCell={setHoveredCell} />}
+          {activeRegion && cells && (
+            <MapCells
+              cells={cells}
+              colors={colors}
+              symbols={symbols}
+              onSelectCell={onSelectCell}
+              onHoverCell={setHoveredCell}
+              showLabels={overlays.labels.enabled && labelsFit}
+            />
+          )}
           {nasaImages.map(({ kind, entry }) => (
             <MapImage key={kind} entry={entry} opacity={overlays[kind].opacity} />
           ))}
