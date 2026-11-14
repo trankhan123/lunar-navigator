@@ -65,6 +65,7 @@ Thứ tự xếp mặc định:
 2. Pin thấp nhất cao hơn đứng trước.
 3. % thời gian vừa có nắng vừa thấy Trái Đất cao hơn đứng trước.
 4. Gần điểm hiện tại hơn đứng trước.
+5. Liên lạc liền mạch nhất.
 
 Bấm tiêu đề cột để đổi cách xếp. Không dùng điểm tổng có trọng số, để người dùng luôn hiểu vì sao một ô đứng trên ô khác.
 
