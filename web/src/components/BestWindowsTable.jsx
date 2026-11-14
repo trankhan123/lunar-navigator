@@ -1,15 +1,33 @@
 import { formatDuration, formatUtc } from '../core/format.js'
-
-const STATUS_TEXT = { pass: '✓ Pass', marginal: '! Low battery', fail: '✕ Fail' }
+import { useI18n } from '../i18n/index.jsx'
 
 export default function BestWindowsTable({ rows, onSelectRow }) {
+  const { t } = useI18n()
+
+  const statusText = {
+    pass: t('status.passBadge'),
+    marginal: t('status.marginalBadge'),
+    fail: t('status.failBadge'),
+  }
+
+  const headers = [
+    t('columns.rank'),
+    t('columns.cell'),
+    t('columns.windowUtc'),
+    t('columns.canSlip'),
+    t('columns.bestLanding'),
+    t('columns.minBattery'),
+    t('columns.longestDark'),
+    t('columns.status'),
+  ]
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm tabular-nums">
-        <caption className="mb-2 text-left text-xs text-slate-400">Best landing window of each cell. “Can slip” is how long the landing can be delayed and still meet every limit; the other columns are for the best landing in the window.</caption>
+        <caption className="mb-2 text-left text-xs text-slate-400">{t('results.bestWindowsCaption')}</caption>
         <thead className="text-xs text-slate-400">
           <tr>
-            {['#', 'Cell', 'Window (UTC)', 'Can slip', 'Best landing (UTC)', 'Lowest battery (%)', 'Longest dark (h)', 'Status'].map((label) => (
+            {headers.map((label) => (
               <th key={label} scope="col" className="py-1 pr-2 font-normal">{label}</th>
             ))}
           </tr>
@@ -24,11 +42,11 @@ export default function BestWindowsTable({ rows, onSelectRow }) {
                 </button>
               </td>
               <td className="py-1.5 pr-2">{formatUtc(row.windowStartTime)} → {formatUtc(row.windowEndTime)}</td>
-              <td className="py-1.5 pr-2">{row.slipHours === 0 ? 'no slack' : formatDuration(row.slipHours)}</td>
+              <td className="py-1.5 pr-2">{row.slipHours === 0 ? t('results.noSlack') : formatDuration(row.slipHours)}</td>
               <td className="py-1.5 pr-2">{formatUtc(row.landingTime)}</td>
               <td className="py-1.5 pr-2">{Math.round(row.minBatteryFraction * 100)}</td>
               <td className="py-1.5 pr-2">{row.longestDarkHours}</td>
-              <td className="py-1.5">{STATUS_TEXT[row.status]}</td>
+              <td className="py-1.5">{statusText[row.status] ?? row.status}</td>
             </tr>
           ))}
         </tbody>

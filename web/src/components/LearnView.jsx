@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { formatUtc } from '../core/format.js'
 import { metricSentences, moonFacts, neighborLesson } from '../core/learn.js'
 import { metricsAt } from '../core/optimizer.js'
+import { useI18n } from '../i18n/index.jsx'
 import HorizonChart from './HorizonChart.jsx'
 
 const cardClass = 'rounded-lg border border-slate-800 bg-slate-900 p-4'
@@ -9,6 +10,7 @@ const toDegrees = (horizon) => horizon.map((tenths) => tenths / 10)
 
 // README W7. Before a search only the Moon facts are shown; onStartSearch opens the Map & scenario screen.
 export default function LearnView({ results, cellsById, landingIndex, onStartSearch }) {
+  const { t } = useI18n()
   const metrics = useMemo(() => (results ? metricsAt(results, 0, landingIndex) : null), [results, landingIndex])
   // O(cells²) neighbour scan (WF3): fine for one region, so compute it once per landing time.
   const lesson = useMemo(() => (results ? neighborLesson(results, cellsById, landingIndex) : null), [results, cellsById, landingIndex])
@@ -16,11 +18,11 @@ export default function LearnView({ results, cellsById, landingIndex, onStartSea
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section aria-labelledby="learn-metrics" className={`${cardClass} lg:row-span-2`}>
-        <h2 id="learn-metrics" className="mb-1 text-lg font-semibold">What the numbers mean</h2>
+        <h2 id="learn-metrics" className="mb-1 text-lg font-semibold">{t('learn.metricsTitle')}</h2>
         {metrics ? (
           <>
             <p className="mb-3 text-sm text-slate-400">
-              Your current point <span className="font-mono">{metrics.cellId}</span>, landing {formatUtc(metrics.landingTime)}.
+              {t('learn.metricsSubtitle', { cellId: metrics.cellId, time: formatUtc(metrics.landingTime) })}
             </p>
             <dl className="space-y-3">
               {metricSentences(metrics).map(({ label, value, sentence }) => (
@@ -35,16 +37,16 @@ export default function LearnView({ results, cellsById, landingIndex, onStartSea
           </>
         ) : (
           <p className="text-sm text-slate-300">
-            Find landing windows first, and this card explains every number of your current point in plain words.{' '}
+            {t('learn.metricsPrompt')}{' '}
             <button type="button" onClick={onStartSearch} className="text-sky-300 underline underline-offset-2 hover:text-sky-200">
-              Go to Map and scenario
+              {t('learn.goToMap')}
             </button>
           </p>
         )}
       </section>
 
       <section aria-labelledby="learn-neighbours" className={cardClass}>
-        <h2 id="learn-neighbours" className="mb-1 text-lg font-semibold">Why moving 1 km matters</h2>
+        <h2 id="learn-neighbours" className="mb-1 text-lg font-semibold">{t('learn.neighborTitle')}</h2>
         {lesson ? (
           <>
             <p className="mb-2 text-sm text-slate-300">{lesson.sentence}</p>
@@ -60,14 +62,14 @@ export default function LearnView({ results, cellsById, landingIndex, onStartSea
         ) : (
           <p className="text-sm text-slate-300">
             {results
-              ? 'At this landing time no two neighbouring cells differ in their longest dark period.'
-              : 'After a search, this card finds the two neighbouring cells whose longest dark period differs most, and compares their horizons.'}
+              ? t('learn.neighborNoDiff')
+              : t('learn.neighborPrompt')}
           </p>
         )}
       </section>
 
       <section aria-labelledby="learn-moon" className={cardClass}>
-        <h2 id="learn-moon" className="mb-2 text-lg font-semibold">How the Moon differs from Earth</h2>
+        <h2 id="learn-moon" className="mb-2 text-lg font-semibold">{t('learn.moonTitle')}</h2>
         <ul className="space-y-2">
           {moonFacts(metrics).map(({ title, text }) => (
             <li key={title}>
