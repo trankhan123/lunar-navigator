@@ -1,15 +1,33 @@
 import { formatUtc } from '../core/format.js'
-
-const STATUS_TEXT = { pass: '✓ Pass', marginal: '! Low battery', fail: '✕ Fail' }
+import { useI18n } from '../i18n/index.jsx'
 
 export default function BestPairsTable({ rows, onSelectRow }) {
+  const { t } = useI18n()
+  const hasWindowDuration = rows.some((row) => row.windowHours != null)
+
+  const statusText = {
+    pass: t('status.passBadge'),
+    marginal: t('status.marginalBadge'),
+    fail: t('status.failBadge'),
+  }
+
+  const headers = [
+    t('columns.rank'),
+    t('columns.cell'),
+    t('columns.landing'),
+    ...(hasWindowDuration ? [t('columns.window')] : []),
+    t('columns.minBattery'),
+    t('columns.longestDark'),
+    t('columns.status'),
+  ]
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm tabular-nums">
-        <caption className="mb-2 text-left text-xs text-slate-400">Best cell and landing time pairs over the whole date range.</caption>
+        <caption className="mb-2 text-left text-xs text-slate-400">{t('results.bestPairsCaption')}</caption>
         <thead className="text-xs text-slate-400">
           <tr>
-            {['#', 'Cell', 'Landing (UTC)', 'Lowest battery (%)', 'Longest dark (h)', 'Status'].map((label) => (
+            {headers.map((label) => (
               <th key={label} scope="col" className="py-1 pr-2 font-normal">{label}</th>
             ))}
           </tr>
@@ -24,9 +42,12 @@ export default function BestPairsTable({ rows, onSelectRow }) {
                 </button>
               </td>
               <td className="py-1.5 pr-2">{formatUtc(row.landingTime)}</td>
+              {hasWindowDuration && (
+                <td className="py-1.5 pr-2">{row.windowHours != null ? `${row.windowHours} h` : '—'}</td>
+              )}
               <td className="py-1.5 pr-2">{Math.round(row.minBatteryFraction * 100)}</td>
               <td className="py-1.5 pr-2">{row.longestDarkHours}</td>
-              <td className="py-1.5">{STATUS_TEXT[row.status]}</td>
+              <td className="py-1.5">{statusText[row.status] ?? row.status}</td>
             </tr>
           ))}
         </tbody>
