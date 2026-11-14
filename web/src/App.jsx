@@ -197,6 +197,8 @@ export default function App() {
       return null // date outside the ephemeris; the form reports it
     }
   }, [data, landingTime, scenario.startDate])
+  // The Results map's hour is the landing time its ✓ ! ✕ colours describe; an off-grid time set in Detail makes landingIndex fall back to 0.
+  const resultsHour = useMemo(() => (results ? hourIndexOf(data.ephemeris, results.landingTimes[landingIndex]) : null), [data, results, landingIndex])
   const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
   const currentCell = useMemo(() => {
     try {
@@ -237,20 +239,19 @@ export default function App() {
       </select>
     </label>
   )
-  const map = data && (
-    <SouthPoleMap
-      regions={data.regions}
-      activeRegion={activeRegion}
-      maps={data.maps}
-      cells={cells}
-      sites={data.sites}
-      statusByCellId={statusByCellId}
-      currentCellId={currentCellId}
-      selectedCellId={selectedCellId}
-      onSelectCell={selectCell}
-      onOpenRegion={openRegion}
-    />
-  )
+  const mapProps = data && {
+    regions: data.regions,
+    activeRegion,
+    maps: data.maps,
+    cells,
+    sites: data.sites,
+    ephemeris: data.ephemeris,
+    statusByCellId,
+    currentCellId,
+    selectedCellId,
+    onSelectCell: selectCell,
+    onOpenRegion: openRegion,
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
@@ -319,7 +320,7 @@ export default function App() {
                     </label>
                   )}
                 </div>
-                {map}
+                <SouthPoleMap {...mapProps} hour={viewHour} defaultLayerId="sunNow" />
               </section>
               <aside className="space-y-4">
                 {selectedCell && (
@@ -376,7 +377,7 @@ export default function App() {
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                     <div className="space-y-2">
                       {regionPicker}
-                      {map}
+                      <SouthPoleMap {...mapProps} hour={resultsHour} defaultLayerId="searchResult" />
                     </div>
                     <div className="space-y-2">
                       {ranking.sortBy && (

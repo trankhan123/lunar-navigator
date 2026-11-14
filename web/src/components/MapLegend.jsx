@@ -12,7 +12,7 @@ function Swatch({ color, symbol = '', label }) {
 }
 
 // Colour never stands alone: every swatch has its text, search results keep ✕ ! ✓, infeasible cells are hatched.
-export default function MapLegend({ layerId }) {
+export default function MapLegend({ layerId, showsCentreDots = false }) {
   const layer = MAP_LAYERS.find((candidate) => candidate.id === layerId)
   const levelSwatches = layer.legend.map((entry, level) => ({ ...entry, symbol: layerId === 'searchResult' ? STATUS_SYMBOLS[level] : '' })).reverse()
   return (
@@ -29,6 +29,7 @@ export default function MapLegend({ layerId }) {
           Hatched: not feasible (too steep or in permanent shadow)
         </span>
       </p>
+      {showsCentreDots && <p>Dots: region centres (terrain horizon of the centre point)</p>}
       <p>Amber outline: current point · white: selected</p>
       <p>1 square = 1 km · up = towards 0° longitude (Earth-facing side)</p>
       <p>Sources: LOLA PGDA 90 (80 m), USGS LGRS, JPL Horizons.</p>

@@ -3,9 +3,11 @@ import { VIEW_SIZE_M } from '../core/mapView.js'
 const LABEL_STYLE = { fill: '#f8fafc', stroke: '#020617', paintOrder: 'stroke', pointerEvents: 'none' }
 
 // Region frames, their labels and site pins, sized by 1 / zoomScale so they keep their screen size at every zoom.
-export default function MapMarks({ regions, activeRegionCode, pinSites, zoomScale, onOpenRegion }) {
+// centres: [{regionCode, xM, yM, color, title}] — region-centre dots coloured by the Sun/Earth at the map hour.
+export default function MapMarks({ regions, activeRegionCode, pinSites, centres = [], zoomScale, onOpenRegion }) {
   const labelSize = VIEW_SIZE_M / 55 / zoomScale
   const pinRadius = VIEW_SIZE_M / 150 / zoomScale
+  const centreRadius = VIEW_SIZE_M / 120 / zoomScale
   const isOverview = activeRegionCode === null
   return (
     <g>
@@ -36,6 +38,11 @@ export default function MapMarks({ regions, activeRegionCode, pinSites, zoomScal
           </g>
         )
       })}
+      {centres.map((centre) => (
+        <circle key={centre.regionCode} cx={centre.xM} cy={-centre.yM} r={centreRadius} fill={centre.color} stroke="#020617" strokeWidth={2} vectorEffect="non-scaling-stroke">
+          <title>{centre.title}</title>
+        </circle>
+      ))}
       {pinSites.map((site) => (
         <g key={site.id} pointerEvents="none">
           <circle cx={site.xM} cy={-site.yM} r={pinRadius} fill="#f8fafc" stroke="#020617" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />

@@ -2,9 +2,11 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
 import { toPolarXY } from '../core/data.js'
-import { STATUS_SYMBOLS, cellColor } from '../core/mapLayers.js'
+import { MAP_LAYERS, STATUS_SYMBOLS, cellColor, cellLevel } from '../core/mapLayers.js'
+import { computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
 import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap } from '../core/mapView.js'
 import MapCells from './MapCells.jsx'
+import MapLayersPanel from './MapLayersPanel.jsx'
 import MapLegend from './MapLegend.jsx'
 import MapMarks from './MapMarks.jsx'
 
@@ -13,6 +15,8 @@ const OUTLINE_SIZE_M = 940
 const toolbarButton = 'grid size-9 place-items-center rounded border border-slate-600 text-lg leading-none transition-colors hover:bg-slate-800'
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const layerById = (layerId) => MAP_LAYERS.find((layer) => layer.id === layerId)
+const skySample = (sky, index) => ({ sunDiskFraction: sky?.sunDiskFraction[index], earthDiskFraction: sky?.earthDiskFraction[index] })
 
 function MapImage({ entry }) {
   const [xMin, yMin, xMax, yMax] = entry.boundsM
@@ -23,11 +27,14 @@ function MapImage({ entry }) {
  * README W2: one SVG of the whole south pole in PGDA metres (SVG y = −yM), panned and zoomed by d3-zoom.
  * activeRegion null = the overview; otherwise that region's cells are drawn.
  */
-function SouthPoleMap({ regions, activeRegion, maps, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell, onOpenRegion }) {
+function SouthPoleMap({
+  regions, activeRegion, maps, cells, sites, ephemeris, hour, defaultLayerId, statusByCellId, currentCellId, selectedCellId, onSelectCell, onOpenRegion,
+}) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
   const isFirstFit = useRef(true)
   const [transform, setTransform] = useState(zoomIdentity)
+  const [chosenLayerId, setChosenLayerId] = useState(defaultLayerId)
   const regionCode = activeRegion?.code ?? null
 
   useEffect(() => {
@@ -57,11 +64,35 @@ function SouthPoleMap({ regions, activeRegion, maps, cells, sites, statusByCellI
     behaviorRef.current.scaleBy(select(svgRef.current).transition().duration(prefersReducedMotion() ? 0 : 250), factor)
   }
 
-  const layerId = statusByCellId ? 'searchResult' : 'feasibility'
-  const colors = useMemo(
-    () => (cells ?? []).map((cell) => cellColor(layerId, { feasible: cell.feasible, status: statusByCellId?.get(cell.id) })),
-    [cells, layerId, statusByCellId],
+  // A chosen layer that cannot draw yet (no valid hour, no search) draws as Feasibility; the radio keeps the choice.
+  const availability = { hour: hour !== null && hour !== undefined, search: Boolean(statusByCellId) }
+  const chosenLayer = layerById(chosenLayerId)
+  const layerId = !chosenLayer.needs || availability[chosenLayer.needs] ? chosenLayerId : 'feasibility'
+  const layerNeedsHour = layerById(layerId).needs === 'hour'
+  const sky = useMemo(
+    () => (layerNeedsHour && cells && availability.hour ? computeSkyAtHour(cells, ephemeris, hour) : null),
+    [layerNeedsHour, cells, ephemeris, hour, availability.hour],
   )
+  const colors = useMemo(
+    () => (cells ?? []).map((cell, index) => cellColor(layerId, { feasible: cell.feasible, status: statusByCellId?.get(cell.id), ...skySample(sky, index) })),
+    [cells, layerId, statusByCellId, sky],
+  )
+  // Region-centre dots (their sites carry D4 horizons) show the Sun/Earth at the map hour at every zoom.
+  const dotLayerId = layerNeedsHour ? layerId : 'sunEarthNow'
+  const centreCells = useMemo(() => regionCentreCells(regions, sites), [regions, sites])
+  const centreSky = useMemo(
+    () => (availability.hour ? computeSkyAtHour(centreCells.map((centre) => centre.cell), ephemeris, hour) : null),
+    [centreCells, ephemeris, hour, availability.hour],
+  )
+  const centres = centreCells
+    .map((centre, index) => {
+      const sample = skySample(centreSky, index)
+      const level = cellLevel(dotLayerId, sample)
+      const regionName = regions.find((region) => region.code === centre.regionCode).name
+      const levelText = level === null ? 'no value for this hour' : layerById(dotLayerId).legend[level].label
+      return { regionCode: centre.regionCode, xM: centre.cell.xM, yM: centre.cell.yM, color: cellColor(dotLayerId, sample), title: `${regionName} centre: ${levelText}` }
+    })
+    .filter((centre) => centre.regionCode !== regionCode)
   const symbols = useMemo(() => {
     if (!cells || layerId !== 'searchResult') return null
     return cells.map((cell) => {
@@ -84,7 +115,7 @@ function SouthPoleMap({ regions, activeRegion, maps, cells, sites, statusByCellI
     : 'Map of the lunar south pole with the Artemis III regions. Use the Region list to open one.'
 
   return (
-    <figure>
+    <figure className="@container">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
         <nav aria-label="Map level" className="flex items-center gap-1">
           <button
@@ -106,6 +137,8 @@ function SouthPoleMap({ regions, activeRegion, maps, cells, sites, statusByCellI
         <button type="button" aria-label="Zoom in" onClick={() => zoomBy(ZOOM_STEP)} className={toolbarButton}>+</button>
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)} className={toolbarButton}>−</button>
       </div>
+      <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]">
+      <div>
       <svg
         ref={svgRef}
         viewBox={VIEW_BOX}
@@ -123,7 +156,7 @@ function SouthPoleMap({ regions, activeRegion, maps, cells, sites, statusByCellI
           {southPoleImage && <MapImage entry={southPoleImage} />}
           {regionImage && <MapImage entry={regionImage} />}
           {activeRegion && cells && <MapCells cells={cells} colors={colors} symbols={symbols} onSelectCell={onSelectCell} />}
-          <MapMarks regions={regions} activeRegionCode={regionCode} pinSites={pinSites} zoomScale={transform.k} onOpenRegion={onOpenRegion} />
+          <MapMarks regions={regions} activeRegionCode={regionCode} pinSites={pinSites} centres={centres} zoomScale={transform.k} onOpenRegion={onOpenRegion} />
           <g pointerEvents="none">
             {outlines.map(({ cell, color, width }) => (
               <rect
@@ -144,7 +177,10 @@ function SouthPoleMap({ regions, activeRegion, maps, cells, sites, statusByCellI
       <p aria-live="polite" className="mt-1 min-h-4 text-xs text-slate-400">
         {activeRegion && !cells ? `Loading ${activeRegion.name} cells…` : ''}
       </p>
-      <MapLegend layerId={layerId} />
+      </div>
+      <MapLayersPanel layerId={chosenLayerId} onLayerChange={setChosenLayerId} availability={availability} />
+      </div>
+      {activeRegion ? <MapLegend layerId={layerId} /> : <MapLegend layerId={dotLayerId} showsCentreDots />}
     </figure>
   )
 }
