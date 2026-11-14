@@ -47,6 +47,20 @@ export const loadValidation = (useMock) => loadJson(`${dataFolder(useMock)}/vali
 /** README D8 map backgrounds; the map works without them. */
 export const loadMaps = () => loadJson('/maps/maps.json').then((file) => file.maps).catch(() => [])
 
+let terrainIndexPromise = null
+/** README D10 terrain height map of one region: {entry, heights} (Int16 metres, row 0 = north); the 3D view only. */
+export async function loadTerrain(regionCode) {
+  terrainIndexPromise ??= loadJson('/terrain/index.json').catch((error) => {
+    terrainIndexPromise = null
+    throw error
+  })
+  const entry = (await terrainIndexPromise).regions.find((region) => region.code === regionCode)
+  if (!entry) throw new Error(`No terrain for ${regionCode}`)
+  const response = await fetch(entry.file)
+  if (!response.ok) throw new Error(`Could not load ${entry.file} (${response.status})`)
+  return { entry, heights: new Int16Array(await response.arrayBuffer()) }
+}
+
 const HOUR_MS = 3600 * 1000
 
 /** Ephemeris hour index of an ISO time on a whole hour. Throws outside the ephemeris. */

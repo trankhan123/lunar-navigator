@@ -18,6 +18,7 @@ from common import (EPHEMERIS_START, EPHEMERIS_STOP, MOON_LONLAT_CRS, PGDA_CRS, 
 
 MAX_FILE_BYTES = 2_000_000
 MAX_IMAGE_BYTES = 1_000_000
+MAX_TERRAIN_BYTES = 300_000
 MAP_KINDS = {"hillshade", "sun-visibility", "earth-visibility", "psr"}
 MAX_POSITION_ERROR_M = 100
 CELL_HALF_SIZE_M = 500  # boundsM must contain whole 1 km squares, not only their centres
@@ -232,6 +233,25 @@ def check_maps(data, maps_folder):
             problem("maps.json", f"{map_id} {kind}: boundsM must be 4 numbers [xMin, yMin, xMax, yMax] with min < max")
 
 
+def check_terrain(data, terrain_folder, region_bounds):
+    """D10: every region has a .bin of width × height Int16 samples whose bounds contain the region."""
+    for entry in data["regions"]:
+        code, width, height, bounds = entry.get("code"), entry.get("width"), entry.get("height"), entry.get("boundsM")
+        path = terrain_folder / str(entry.get("file")).removeprefix("/terrain/")
+        if not path.is_file():
+            problem("terrain/index.json", f"{code}: {entry.get('file')} missing")
+        elif path.stat().st_size != width * height * 2:
+            problem("terrain/index.json", f"{code}: expected {width * height * 2} bytes, file has {path.stat().st_size}")
+        elif path.stat().st_size > MAX_TERRAIN_BYTES:
+            problem("terrain/index.json", f"{code}: over 300 KB")
+        region = region_bounds.get(code)
+        if region is None or not (bounds[0] <= region[0] and bounds[1] <= region[1] and bounds[2] >= region[2] and bounds[3] >= region[3]):
+            problem("terrain/index.json", f"{code}: bounds do not contain the region")
+    missing = set(region_bounds) - {entry.get("code") for entry in data["regions"]}
+    if missing:
+        problem("terrain/index.json", f"no terrain for {sorted(missing)}")
+
+
 def run_check(file_name, check, *arguments):
     """Malformed input becomes a listed problem instead of a traceback, so the other files are still checked."""
     try:
@@ -255,6 +275,10 @@ def main():
         maps = load(folder.parent / "maps", "maps.json", False, required=False)
         if maps is not None:
             run_check("maps.json", check_maps, maps, folder.parent / "maps")
+        terrain = load(folder.parent / "terrain", "index.json", False, required=False)
+        if terrain is not None and regions is not None:
+            run_check("terrain/index.json", check_terrain, terrain, folder.parent / "terrain",
+                      {region["code"]: region["boundsM"] for region in regions["regions"]})
     for path in sorted(folder.glob("*.json")):  # files nothing references still obey size and mock rules
         if path.name not in loaded_files:
             load(folder, path.name, expect_mock)
