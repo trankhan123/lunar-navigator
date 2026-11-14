@@ -21,6 +21,19 @@ def test_check_maps_flags_unknown_kinds_duplicates_and_missing_images(tmp_path):
     assert not any("/maps/MAL.png: missing" in line for line in checker.problems)
 
 
+def test_check_relief_flags_missing_and_oversized_tiles(tmp_path):
+    (tmp_path / "1").mkdir()
+    (tmp_path / "1" / "0_0.jpg").write_bytes(b"x" * 10)
+    (tmp_path / "1" / "1_0.jpg").write_bytes(b"x" * 300_001)
+    level = {"z": 1, "tileSizeM": 304000, "metersPerPixel": 594, "contourIntervalM": 500, "tiles": ["0_0", "1_0", "0_1"]}
+    index = {"tileSizePx": 512, "elevationLegend": [{"elevationM": 0, "color": "#000000"}], "levels": [level]}
+    checker.problems.clear()
+    checker.check_relief(index, tmp_path)
+    assert len(checker.problems) == 2
+    assert any("1/1_0.jpg" in line and "300 kB" in line for line in checker.problems)
+    assert any("1/0_1.jpg: missing" in line for line in checker.problems)
+
+
 def test_check_validation_needs_stats_for_pgda69_rows():
     stat = {"n": 1, "meanOurs": 0, "meanPgda": 0, "meanDifference": 0, "rmse": 0, "pearsonR": 1}
     whole = {key: stat for key in ("halfDisk", "anyPart", "meanDisk")}

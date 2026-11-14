@@ -19,7 +19,8 @@ from common import (EPHEMERIS_START, EPHEMERIS_STOP, MOON_LONLAT_CRS, PGDA_CRS, 
 MAX_FILE_BYTES = 2_000_000
 MAX_IMAGE_BYTES = 1_000_000
 MAX_TERRAIN_BYTES = 300_000
-MAP_KINDS = {"hillshade", "sun-visibility", "earth-visibility", "psr"}
+MAX_TILE_BYTES = 300_000
+MAP_KINDS = {"hillshade", "sun-visibility", "earth-visibility", "psr", "slope"}
 MAX_POSITION_ERROR_M = 100
 CELL_HALF_SIZE_M = 500  # boundsM must contain whole 1 km squares, not only their centres
 ISO_HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00Z$")
@@ -252,6 +253,22 @@ def check_terrain(data, terrain_folder, region_bounds):
         problem("terrain/index.json", f"no terrain for {sorted(missing)}")
 
 
+def check_relief(data, relief_folder):
+    """relief/index.json: every listed tile exists and is at most 300 kB; levels double in tile count."""
+    if not (isinstance(data.get("tileSizePx"), int) and isinstance(data.get("elevationLegend"), list) and data["elevationLegend"]):
+        problem("relief/index.json", "needs tileSizePx (int) and elevationLegend (list of {elevationM, color})")
+    for level in data["levels"]:
+        z = level["z"]
+        if not (is_number(level.get("tileSizeM")) and is_number(level.get("metersPerPixel")) and is_number(level.get("contourIntervalM"))):
+            problem("relief/index.json", f"level {z}: needs tileSizeM, metersPerPixel and contourIntervalM")
+        for name in level["tiles"]:
+            path = relief_folder / str(z) / f"{name}.jpg"
+            if not path.is_file():
+                problem("relief/index.json", f"{z}/{name}.jpg: missing")
+            elif path.stat().st_size > MAX_TILE_BYTES:
+                problem("relief/index.json", f"{z}/{name}.jpg: {path.stat().st_size / 1e3:.0f} kB, limit is 300 kB")
+
+
 CAP_ID = re.compile(r"^CAP-r\d{3}c\d{3}$")
 
 
@@ -318,6 +335,9 @@ def main():
         if terrain is not None and regions is not None:
             run_check("terrain/index.json", check_terrain, terrain, folder.parent / "terrain",
                       {region["code"]: region["boundsM"] for region in regions["regions"]})
+        relief = load(folder.parent / "maps" / "relief", "index.json", False, required=False)
+        if relief is not None:
+            run_check("relief/index.json", check_relief, relief, folder.parent / "maps" / "relief")
     for path in sorted(folder.glob("*.json")):  # files nothing references still obey size and mock rules
         if path.name not in loaded_files:
             load(folder, path.name, expect_mock)

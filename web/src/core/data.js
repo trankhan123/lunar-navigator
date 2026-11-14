@@ -65,6 +65,9 @@ export function loadCapTiles(tileIds) {
 }
 /** README D8 map backgrounds; the map works without them. */
 export const loadMaps = () => loadJson('/maps/maps.json').then((file) => file.maps).catch(() => [])
+/** Relief tile pyramid index (pipeline/export_relief_tiles.py); null when the tiles are missing. Fetched once. */
+let reliefIndexPromise
+export const loadReliefIndex = () => (reliefIndexPromise ??= loadJson('/maps/relief/index.json').catch(() => null))
 
 let terrainIndexPromise = null
 /** README D10 terrain height map of one region: {entry, heights} (Int16 metres, row 0 = north); the 3D view only. */
