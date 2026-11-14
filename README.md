@@ -105,14 +105,14 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | C3 | WF4 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | | todo |
 | C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | | todo |
 | C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | WF3 Lead (Claude) | done |
-| W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | | todo |
-| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | | todo |
-| W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | | todo |
-| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | | todo |
-| W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | | todo |
-| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | | todo |
-| W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | | todo |
-| S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | | todo |
+| W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | doing |
+| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | trankhan123 | doing |
+| W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | doing |
+| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | todo |
+| W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | todo |
+| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | todo |
+| W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | todo |
+| S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
 | X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
 
 **Already done:** C0 and D1. The real `web/public/data/ephemeris.json` is in the repo: 2027-01-01 → 2029-01-31, 18,288 h, 0.69 MB. The vector method matches Horizons within 0.015°. Also done: `web/src/core/data.js` (loaders, `hourIndexOf`, `timeAtHour`), `scenario.js` constants and `countDays`, the Web Worker files (`windowSearchWorker.js`, `startWindowSearch.js`), the data checker, the mock data and `pipeline/download_data.py`.
@@ -215,6 +215,7 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 - **Feasibility:**
   - `feasible` = `slopeDeg ≤ slopeLimitDeg` and `psrFraction ≤ psrLimitFraction`;
   - `infeasibleReason` is `"slope"` (checked first), `"psr"` or `null`.
+  - the rule is applied to the rounded values written in the file.
 - **`horizon`:** 360 integers. `horizon[k]` is the terrain horizon elevation at azimuth k° in units of 0.1°. It may be negative because of curvature, and the mast height is already included.
 - **Infeasible cells:** they stay in the file and are drawn grey. Only feasible cells are searched.
 - **Size limit:** if a region has more than about 2,000 cells (the file would pass 2 MB), tell the team before changing the format.
@@ -288,16 +289,16 @@ Core files are pure functions with no React, no DOM and no fetch (`data.js` is t
 
 | Field | Type | Example | Rule (`validateScenario`) |
 |---|---|---|---|
-| `currentPoint` | `{type:'cell', cellId}` \| `{type:'site', siteId}` \| `{type:'coordinates', lat, lon}` | `{type:'cell', cellId:'MAL-…'}` | required |
-| `startDate`, `endDate` | `'YYYY-MM-DD'` | 2028-01-01, 2028-06-30 | start ≤ end; ≤ 183 days (both ends counted); `endDate + stayDays` inside the ephemeris |
+| `currentPoint` | `{type:'cell', cellId}` \| `{type:'site', siteId}` \| `{type:'coordinates', lat, lon}` | `{type:'cell', cellId:'MAL-…'}` | required; coordinates need −90 ≤ lat ≤ 90 and −180 ≤ lon ≤ 180 |
+| `startDate`, `endDate` | `'YYYY-MM-DD'` | 2028-01-01, 2028-06-30 | real calendar dates (2028-02-30 is an error); start ≤ end; ≤ 183 days (both ends counted); `endDate + stayDays` inside the ephemeris |
 | `stayDays` | integer | 6 | 1…30 |
 | `maxDarkHours` | number | 24 | ≥ 0 |
 | `maxCommLossHours` | number | 12 | ≥ 0 |
 | `panelMaxW` | number | 1000 | > 0. Power at 1 AU, full disk, Sun perpendicular to the panel |
 | `batteryCapacityWh` | number | 10000 | > 0. Full at landing |
 | `loadW` | number | 300 | ≥ 0. Constant average |
-| `panelMode` | `'auto'` \| `'vertical'` \| `'horizontal'` | auto | auto = vertical when \|lat\| ≥ 60°, else horizontal |
-| `searchScope` | `'region'` \| `'radius'` \| `'all'` | region | — |
+| `panelMode` | `'auto'` \| `'vertical'` \| `'horizontal'` | auto | one of the three; auto = vertical when \|lat\| ≥ 60°, else horizontal |
+| `searchScope` | `'region'` \| `'radius'` \| `'all'` | region | one of the three |
 | `searchRadiusKm` | number | 10 | > 0 when scope is `radius` |
 
 `validateScenario(scenario, ephemeris)` returns at most one `{field, message}` per field, or `[]` when the scenario is valid.
@@ -450,6 +451,7 @@ Rules:
   - `region` = feasible cells of the current point's region;
   - `radius` = feasible cells of all loaded regions within `searchRadiusKm`;
   - `all` = feasible cells of all 9 regions;
+  - for a site or typed coordinates, "its region" is the region of the nearest grid cell within 1 km; if there is none, only the current point is searched;
   - the current point is always index 0, even when it is infeasible or custom, and there are no duplicate ids.
 - **Default ranking order:**
   1. pass or marginal before fail;
@@ -494,7 +496,10 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
 - **Share link query keys:**
   - `point` (`cell:MAL-r3c4` \| `site:apollo-11` \| `coords:-85.9,-1.2`), `start`, `end`, `stay`, `dark`, `comm`, `panel`, `battery`, `load`, `panelMode`, `scope`, `radius`, `landing`, `cell`, `mode`, `screen`;
   - missing keys take `DEFAULT_SCENARIO` values;
-  - a link with a complete scenario runs the search on open.
+  - a link opened on the Results screen (`screen=results`) with a current point runs the search on open;
+  - untrusted values in the link (empty, not a number, unknown option, malformed point) fall back to the defaults.
+- **Keyboard path to the map:** a Cell list next to the Region list selects any cell without a mouse.
+- **Search:** before starting the worker, load the cells of every region the search needs (all regions for `radius` and `all`).
 - **About screen:** known limitations (window-finder.md §7), data sources and AI usage.
 - **Replace the old draft:** today's `App.jsx` is the old per-site draft reading `/data/mock/legacy/`. Replace it, then delete that folder.
 - **Done when:** `shareLink.test.js` passes; the mock flow map → form → results → detail works; `npm run build` passes.
@@ -503,9 +508,9 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
 
 Files: `SouthPoleMap.jsx`, `CellPopup.jsx`.
 
-- **`SouthPoleMap` props:** `{regions, cellsByRegion, sites, mapBackgrounds, statusByCellId, currentCellId, selectedCellId, onSelectCell(cell)}`.
+- **`SouthPoleMap` props:** `{region, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell(cell)}`, one region at a time. A `mapBackground` prop (the region's entry in `maps.json`) is added when D8 lands.
   - `statusByCellId` is a `Map<cellId, 0|1|2>` at the current landing time, or `null` before Submit;
-  - `mapBackgrounds` is `maps.json`, or `null` until D8 lands.
+  - every status also shows a symbol (✓ ! ✕) so it does not rely on colour alone.
 - **Drawing:**
   - draw in `xM/yM`, with x to the right and y up (the 0° meridian points up);
   - square cells 1 km wide;
@@ -514,17 +519,17 @@ Files: `SouthPoleMap.jsx`, `CellPopup.jsx`.
   - before Submit: feasible cells blue, infeasible cells grey (the tooltip gives the reason);
   - after Submit: green pass, yellow marginal, red fail, grey infeasible.
 - **Pins and current point:** pins mark famous sites; the current point is outlined.
-- **`CellPopup` props:** `{cell, ephemeris, hour, onCopyId, onUseAsCurrent, onClose}`.
+- **`CellPopup` props:** `{cell, ephemeris, hour, isCurrent, onUseAsCurrent, onClose}`. Copying the ID is handled inside, with a visible "Copied" confirmation.
   - It shows the id, lat/lon, height and slope.
   - It shows Sun and Earth elevation at `hour` and "sets in …", computed with C1/C2 tracks over the next 30 days.
-  - It has the buttons "Copy ID" and "Use as current point"; for infeasible cells it explains why.
+  - It has the buttons "Copy ID" and "Use as current point". Infeasible cells explain why, and can still be the current point (the planner's own spot may be infeasible).
 - **Done when:** it works on `mock/cells_MAL.json`, and tapping a cell selects it on a phone.
 
 ### W3 Scenario form
 
 Files: `ScenarioForm.jsx`, `core/scenario.js`.
 
-- **`ScenarioForm` props:** `{mode, value: Scenario, errors, onChange(scenario), onSubmit(scenario)}`.
+- **`ScenarioForm` props:** `{mode, value: Scenario, errors, sites, busy, onChange(scenario), onSubmit(scenario)}`.
 - **Modes:**
   - Simple asks only for the point, dates and stay days, plus the `LANDER_PRESETS` dropdown;
   - Expert shows every field.
@@ -689,7 +694,7 @@ File: `compute_horizon.py`.
   - Far terrain, where a ray leaves 80°S, comes from `LDEM_60S_240MPP_ADJ.TIF`.
 - **Output:** `horizon_<CODE>.json` and `horizon_sites.json`.
 - **Method** (window-finder.md §5.4):
-  - ray `k` at azimuth k°;
+  - ray `k` at azimuth k°, measured clockwise from **local geographic north** (same as `bodyAzimuthElevation`). In `PGDA_CRS` map coordinates, ray k at a cell of longitude λ points along `(sin(k+λ), cos(k+λ))`, not along `+y`;
   - samples from 100 m to 150 km, with the step growing with distance;
   - `angle = atan2(h_sample − h_cell − mast − d²/(2R), d)`;
   - `horizon[k] = round(10 × max angle)`;

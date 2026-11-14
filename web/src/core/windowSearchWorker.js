@@ -10,7 +10,7 @@ self.onmessage = ({ data }) => {
       self.postMessage({ type: 'progress', requestId, doneCells, totalCells }),
     )
     const buffers = Object.values(results).filter(ArrayBuffer.isView).map((array) => array.buffer)
-    self.postMessage({ type: 'done', requestId, results }, buffers)
+    self.postMessage({ type: 'done', requestId, results }, [...new Set(buffers)]) // a buffer may back several arrays
   } catch (error) {
     self.postMessage({ type: 'error', requestId, message: error.message })
   }

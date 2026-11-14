@@ -18,4 +18,7 @@ test('validateScenario', () => {
   assert.deepEqual(fieldsWithErrors({ ...valid, endDate: '2028-08-01' }), ['endDate'])
   assert.deepEqual(fieldsWithErrors({ ...valid, stayDays: 0 }), ['stayDays'])
   assert.deepEqual(fieldsWithErrors({ ...valid, searchScope: 'radius', searchRadiusKm: 0 }), ['searchRadiusKm'])
+  assert.deepEqual(fieldsWithErrors({ ...valid, currentPoint: { type: 'coordinates', lat: -200, lon: 0 } }), ['currentPoint'])
+  assert.deepEqual(fieldsWithErrors({ ...valid, startDate: '2028-02-30' }), ['startDate'])
+  assert.deepEqual(fieldsWithErrors({ ...valid, panelMode: 'sideways' }), ['panelMode'])
 })

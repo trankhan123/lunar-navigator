@@ -49,6 +49,8 @@ const HOUR_MS = 3600 * 1000
 
 /** Ephemeris hour index of an ISO time on a whole hour. Throws outside the ephemeris. */
 export function hourIndexOf(ephemeris, isoTime) {
+  // Only explicit UTC: a time without 'Z' would be read in the viewer's time zone.
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$/.test(isoTime)) throw new Error(`${isoTime} is not a UTC time like 2028-01-01T06:00Z`)
   const hour = (Date.parse(isoTime) - Date.parse(ephemeris.startTime)) / HOUR_MS
   if (!Number.isInteger(hour) || hour < 0 || hour >= ephemeris.hours) {
     throw new Error(`${isoTime} is not a whole hour inside the ephemeris`)
@@ -59,4 +61,38 @@ export function hourIndexOf(ephemeris, isoTime) {
 /** ISO time 'YYYY-MM-DDTHH:mmZ' of an ephemeris hour index. */
 export function timeAtHour(ephemeris, hour) {
   return new Date(Date.parse(ephemeris.startTime) + hour * HOUR_MS).toISOString().slice(0, 16) + 'Z'
+}
+
+const MOON_RADIUS_M = 1737400
+const DEG = Math.PI / 180
+
+/** Polar stereographic x/y in metres (PGDA CRS, +y = lon 0°) for lat ≤ −60°; null outside the south polar maps. */
+export function toPolarXY(latDeg, lonDeg) {
+  if (latDeg > -60) return { xM: null, yM: null }
+  const radiusM = 2 * MOON_RADIUS_M * Math.tan(((90 + latDeg) * DEG) / 2)
+  return { xM: radiusM * Math.sin(lonDeg * DEG), yM: radiusM * Math.cos(lonDeg * DEG) }
+}
+
+/**
+ * Scenario.currentPoint → Cell: a grid cell, or a pseudo-cell for a famous site / typed coordinates (README "Shared objects").
+ * @param {Object<string, Cell[]>} cellsByRegion  regions loaded so far
+ * @returns {Cell}
+ */
+export function resolveCurrentCell(currentPoint, cellsByRegion, sites) {
+  if (!currentPoint) throw new Error('Pick a current landing point first')
+  if (currentPoint.type === 'cell') {
+    const cell = Object.values(cellsByRegion).flat().find((candidate) => candidate.id === currentPoint.cellId)
+    if (!cell) throw new Error(`Cell ${currentPoint.cellId} is not in the loaded grid`)
+    return cell
+  }
+  const unknownTerrain = { heightM: 0, slopeDeg: null, psrFraction: null, feasible: null, infeasibleReason: null }
+  if (currentPoint.type === 'site') {
+    const site = sites.find((candidate) => candidate.id === currentPoint.siteId)
+    if (!site) throw new Error(`Unknown site ${currentPoint.siteId}`)
+    const position = toPolarXY(site.lat, site.lon)
+    return { id: `SITE-${site.id}`, label: site.name, lat: site.lat, lon: site.lon, ...position, ...unknownTerrain, horizon: site.horizon ?? null }
+  }
+  if (currentPoint.type !== 'coordinates') throw new Error(`Unknown point type ${currentPoint.type}`)
+  const { lat, lon } = currentPoint
+  return { id: 'CUSTOM', label: 'Custom point', lat, lon, ...toPolarXY(lat, lon), ...unknownTerrain, horizon: null }
 }

@@ -20,7 +20,10 @@ export default function MoonGlobe({ sites, onSelectSite }) {
       .onPointClick(onSelectSite)
       .pointOfView({ lat: -70, lng: 0, altitude: 2.2 })
     globe.globeMaterial().color.set('#9ca3af')
-    return () => globe._destructor()
+    return () => {
+      globe.renderer().forceContextLoss() // browsers cap live WebGL contexts; free this one on every tab switch
+      globe._destructor()
+    }
   }, [sites, onSelectSite])
 
   return <div ref={containerRef} className="h-80 w-full overflow-hidden rounded-xl" />

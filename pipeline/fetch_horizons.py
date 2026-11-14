@@ -9,15 +9,15 @@ from datetime import datetime, timedelta
 
 import requests
 
-from common import EPHEMERIS_START, EPHEMERIS_STOP, PROJECT_ROOT, RAW_FOLDER, WEB_DATA_FOLDER, write_json
+from common import EPHEMERIS_START, EPHEMERIS_STOP, PROJECT_ROOT, RAW_FOLDER, WEB_DATA_FOLDER, load_sites, write_json
 
 HORIZONS_URL = "https://ssd.jpl.nasa.gov/api/horizons.api"
 CACHE_FOLDER = RAW_FOLDER / "horizons"
 FIXTURE_FILE = PROJECT_ROOT / "web" / "src" / "core" / "fixtures" / "horizons_check.json"
 AU_KM = 149597870.7
 TIME_FORMAT = "%Y-%m-%dT%H:%MZ"
-# Vector-method check points (lat, lon, from pipeline/sites.json) and times (whole hours inside the ephemeris).
-CHECK_POINTS = [("malapert-massif", -85.925, -1.205), ("haworth", -86.635, -23.672), ("apollo-11", 0.67416, 23.47314)]
+# Vector-method check points (site ids in pipeline/sites.json) and times (whole hours inside the ephemeris).
+CHECK_SITE_IDS = ["malapert-massif", "haworth", "apollo-11"]
 CHECK_TIMES = ["2027-02-10T06:00Z", "2027-09-01T00:00Z", "2028-01-01T00:00Z", "2028-05-20T18:00Z", "2028-11-05T03:00Z"]
 BODY_COMMANDS = {"sun": "10", "earth": "399"}
 
@@ -32,10 +32,12 @@ def call_horizons(cache_name, parameters):
     response = requests.get(HORIZONS_URL, params=query, timeout=120)
     response.raise_for_status()
     text = response.text
-    if "$$SOE" not in text:
-        raise RuntimeError(f"Horizons returned no ephemeris for {cache_name}:\n{text[:1500]}")
+    if "$$SOE" not in text or "$$EOE" not in text:
+        raise RuntimeError(f"Horizons returned no complete ephemeris for {cache_name}:\n{text[:1500]}")
     CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(text, encoding="utf-8")
+    partial_path = cache_path.with_suffix(".part")  # never leave a half-written cache that later runs would trust
+    partial_path.write_text(text, encoding="utf-8")
+    partial_path.replace(cache_path)
     return text
 
 
@@ -85,6 +87,8 @@ def parse_ephemeris(text):
     """Horizons rows → dicts in contract units. ObsSub/SunSub longitudes are East-positive 0..360 (MOON_ME frame)."""
     if "Target pole/equ : MOON_ME" not in text or "East-longitude positive" not in text:
         raise RuntimeError("Unexpected frame or longitude convention in the Horizons header")
+    if "Units: KM and KM/S" not in text:
+        raise RuntimeError("Horizons ranges are not in km (RANGE_UNITS='KM' missing?)")
     return [{
         "time": parse_time(row["Date__(UT)__HR:MN"]),
         "sunSubLonDeg": east_longitude(float(row["SunSub-LON"])),
@@ -96,7 +100,7 @@ def parse_ephemeris(text):
     } for row in read_table(text)]
 
 
-def write_ephemeris_json(rows):
+def write_ephemeris_json(rows, retrieved):
     """Columnar ephemeris.json: degrees rounded to 2 decimals, km to 0, AU to 5. Rows must be consecutive hours."""
     for previous, current in zip(rows, rows[1:]):
         if current["time"] - previous["time"] != timedelta(hours=1):
@@ -104,7 +108,7 @@ def write_ephemeris_json(rows):
     column = lambda key, digits: [round(row[key], digits) for row in rows]
     write_json(WEB_DATA_FOLDER / "ephemeris.json", {
         "source": "JPL Horizons API (DE441): COMMAND=301 CENTER=500@399 QUANTITIES=14,15,19,20, MOON_ME frame, "
-                  f"retrieved {datetime.now():%Y-%m-%d}",
+                  f"retrieved {retrieved:%Y-%m-%d}",
         "startTime": rows[0]["time"].strftime(TIME_FORMAT),
         "stepHours": 1,
         "hours": len(rows),
@@ -120,7 +124,7 @@ def write_ephemeris_json(rows):
 def fetch_topocentric(name, lat, lon, height_km, body, time):
     """Apparent azimuth/elevation of the Sun or Earth seen from a point on the Moon at one time."""
     hour = datetime.strptime(time, TIME_FORMAT)
-    text = call_horizons(f"topo_{name}_{body}_{hour:%Y-%m-%dT%H}.txt", {
+    text = call_horizons(f"topo_{name}_{lat}_{lon}_{body}_{hour:%Y-%m-%dT%H}.txt", {
         "COMMAND": BODY_COMMANDS[body], "CENTER": "coord@301", "COORD_TYPE": "GEODETIC",
         "SITE_COORD": f"{lon},{lat},{height_km}", "QUANTITIES": "4",
         "START_TIME": f"{hour:%Y-%m-%d %H:%M}", "STOP_TIME": f"{hour + timedelta(hours=1):%Y-%m-%d %H:%M}", "STEP_SIZE": "1h",
@@ -134,8 +138,10 @@ def fetch_topocentric(name, lat, lon, height_km, body, time):
 def write_horizons_fixture(rows):
     """CHECK_POINTS × Sun/Earth × CHECK_TIMES, with the sub-point values from the (rounded) ephemeris at the same hour."""
     by_time = {row["time"].strftime(TIME_FORMAT): row for row in rows}
+    sites = {site["id"]: site for site in load_sites()}
     points = []
-    for name, lat, lon in CHECK_POINTS:
+    for name in CHECK_SITE_IDS:
+        lat, lon = sites[name]["lat"], sites[name]["lon"]
         for body in BODY_COMMANDS:
             for time in CHECK_TIMES:
                 azimuth, elevation = fetch_topocentric(name, lat, lon, 0, body, time)
@@ -154,9 +160,12 @@ def main():
     rows = []
     for start, stop in quarter_ranges(EPHEMERIS_START, EPHEMERIS_STOP):
         quarter_rows = parse_ephemeris(fetch_ephemeris_text(start, stop))
+        if (quarter_rows[0]["time"], quarter_rows[-1]["time"]) != (start, stop):
+            raise RuntimeError(f"Horizons returned {quarter_rows[0]['time']} … {quarter_rows[-1]['time']}, asked {start} … {stop}")
         print(f"rows   {start:%Y-%m-%d} → {stop:%Y-%m-%d %H:%M}: {len(quarter_rows)}")
         rows += quarter_rows
-    write_ephemeris_json(rows)
+    retrieved = datetime.fromtimestamp(min(path.stat().st_mtime for path in CACHE_FOLDER.glob("ephemeris_*.txt")))
+    write_ephemeris_json(rows, retrieved)
     write_horizons_fixture(rows)
 
 
