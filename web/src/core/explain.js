@@ -1,4 +1,3 @@
-// W5 / W7 — plain-English explanations. Contract: README "W5" and "W7".
 import {
   VISIBLE_THRESHOLD,
   distanceKm,
@@ -27,7 +26,10 @@ const COMPASS_ADJECTIVES = {
   'north-west': 'north-western',
 }
 
-/** 0° → 'north', 45° → 'north-east', … (8 directions). */
+// Precision formatter eliminating floating-point binary representation artifacts.
+const fmt = (n, d = 1) => Number(Number(n).toFixed(d))
+
+/** Resolves an azimuth to the nearest 45° cardinal or intercardinal compass direction. */
 export function compassName(azimuthDeg) {
   const normalized = ((azimuthDeg % 360) + 360) % 360
   const index = Math.round(normalized / 45) % 8
@@ -35,17 +37,20 @@ export function compassName(azimuthDeg) {
 }
 
 /**
- * One English sentence on why two cells differ, e.g.
- * "Moving 2.3 km to MAL-r4c5 cuts the longest dark period from 72 h to 10 h because the northern ridge is 1.5° lower."
- * @param {{cell:Object, metrics:Object, sunTrack:Object, startIndex:number, lengthHours:number}} current
- * @param {{cell:Object, metrics:Object, sunTrack:Object, startIndex:number, lengthHours:number}} other
- * @returns {string}
+ * Generates concise telemetry explaining the solar access differential between two landing cells.
+ * Evaluates horizon blockage along the solar vector during divergent illumination periods.
  */
-export function explainDifference(current, other) {
-  const dist = distanceKm(current.cell, other.cell).toFixed(1)
-  const targetId = other.cell.id || other.cell.label || 'target'
-  const curDark = current.metrics.longestDarkHours
-  const otherDark = other.metrics.longestDarkHours
+export function explainDifference(current, other, resultA, resultB) {
+  const cur = resultA !== undefined ? { cell: current, metrics: resultA } : (current || {})
+  const oth = resultB !== undefined ? { cell: other, metrics: resultB } : (other || {})
+
+  const curCell = cur.cell || {}
+  const othCell = oth.cell || {}
+  const dist = fmt(curCell.lat != null && othCell.lat != null ? distanceKm(curCell, othCell) : 0, 1)
+  const targetId = othCell.id || othCell.label || 'target'
+
+  const curDark = fmt(cur.metrics?.longestDarkHours ?? 0, 1)
+  const otherDark = fmt(oth.metrics?.longestDarkHours ?? 0, 1)
 
   let verbPhrase
   if (otherDark < curDark) {
@@ -56,62 +61,71 @@ export function explainDifference(current, other) {
     verbPhrase = `keeps the longest dark period at ${curDark} h`
   }
 
-  // Find critical hours where sunlight status differs due to terrain
-  const lengthHours = current.lengthHours || other.lengthHours || 0
+  const lengthHours = cur.lengthHours || oth.lengthHours || 0
   let bestHour = null
   let maxDiff = -Infinity
 
-  for (let h = 0; h < lengthHours; h++) {
-    const curIdx = current.startIndex + h
-    const otherIdx = other.startIndex + h
-    const curSun = current.sunTrack.diskFraction[curIdx] >= VISIBLE_THRESHOLD
-    const otherSun = other.sunTrack.diskFraction[otherIdx] >= VISIBLE_THRESHOLD
+  const curTrack = cur.sunTrack
+  const othTrack = oth.sunTrack
+  const curStart = cur.startIndex || 0
+  const othStart = oth.startIndex || 0
 
-    // When dark period is cut, look for hours dark at current but sunlit at other
-    if (!curSun && otherSun) {
-      const az = current.sunTrack.azimuthDeg[curIdx]
-      const curH = horizonElevationAt(current.cell.horizon, az)
-      const otherH = horizonElevationAt(other.cell.horizon, az)
-      const diff = curH - otherH
-      if (diff > maxDiff) {
-        maxDiff = diff
-        bestHour = { az, diff, type: 'lower' }
-      }
-    }
-  }
+  if (curTrack?.diskFraction && othTrack?.diskFraction && lengthHours > 0) {
+    const curHorizon = Array.isArray(curCell.horizon) && curCell.horizon.length ? curCell.horizon : null
+    const othHorizon = Array.isArray(othCell.horizon) && othCell.horizon.length ? othCell.horizon : null
 
-  // If no hours where current is dark & other is sunlit, check reverse
-  if (!bestHour) {
+    // Target gained illumination where baseline was shadowed
     for (let h = 0; h < lengthHours; h++) {
-      const curIdx = current.startIndex + h
-      const otherIdx = other.startIndex + h
-      const curSun = current.sunTrack.diskFraction[curIdx] >= VISIBLE_THRESHOLD
-      const otherSun = other.sunTrack.diskFraction[otherIdx] >= VISIBLE_THRESHOLD
+      const curIdx = curStart + h
+      const othIdx = othStart + h
+      const curSun = (curTrack.diskFraction[curIdx] ?? 0) >= VISIBLE_THRESHOLD
+      const othSun = (othTrack.diskFraction[othIdx] ?? 0) >= VISIBLE_THRESHOLD
 
-      if (curSun && !otherSun) {
-        const az = other.sunTrack.azimuthDeg[otherIdx]
-        const curH = horizonElevationAt(current.cell.horizon, az)
-        const otherH = horizonElevationAt(other.cell.horizon, az)
-        const diff = otherH - curH
+      if (!curSun && othSun) {
+        const az = curTrack.azimuthDeg ? curTrack.azimuthDeg[curIdx] : 0
+        const curH = curHorizon ? horizonElevationAt(curHorizon, az) : 0
+        const othH = othHorizon ? horizonElevationAt(othHorizon, az) : 0
+        const diff = curH - othH
         if (diff > maxDiff) {
           maxDiff = diff
-          bestHour = { az, diff, type: 'higher' }
+          bestHour = { az, diff, type: 'lower' }
         }
       }
     }
-  }
 
-  // If still no direct sunlit/dark difference, compare horizon along track
-  if (!bestHour) {
-    for (let h = 0; h < lengthHours; h++) {
-      const curIdx = current.startIndex + h
-      const az = current.sunTrack.azimuthDeg[curIdx]
-      const curH = horizonElevationAt(current.cell.horizon, az)
-      const otherH = horizonElevationAt(other.cell.horizon, az)
-      const diff = curH - otherH
-      if (Math.abs(diff) > maxDiff) {
-        maxDiff = Math.abs(diff)
-        bestHour = { az, diff, type: diff >= 0 ? 'lower' : 'higher' }
+    // Baseline had illumination where target was shadowed
+    if (!bestHour) {
+      for (let h = 0; h < lengthHours; h++) {
+        const curIdx = curStart + h
+        const othIdx = othStart + h
+        const curSun = (curTrack.diskFraction[curIdx] ?? 0) >= VISIBLE_THRESHOLD
+        const othSun = (othTrack.diskFraction[othIdx] ?? 0) >= VISIBLE_THRESHOLD
+
+        if (curSun && !othSun) {
+          const az = othTrack.azimuthDeg ? othTrack.azimuthDeg[othIdx] : 0
+          const curH = curHorizon ? horizonElevationAt(curHorizon, az) : 0
+          const othH = othHorizon ? horizonElevationAt(othHorizon, az) : 0
+          const diff = othH - curH
+          if (diff > maxDiff) {
+            maxDiff = diff
+            bestHour = { az, diff, type: 'higher' }
+          }
+        }
+      }
+    }
+
+    // Fallback: maximum horizon deviation along the active solar path
+    if (!bestHour) {
+      for (let h = 0; h < lengthHours; h++) {
+        const curIdx = curStart + h
+        const az = curTrack.azimuthDeg ? curTrack.azimuthDeg[curIdx] : 0
+        const curH = curHorizon ? horizonElevationAt(curHorizon, az) : 0
+        const othH = othHorizon ? horizonElevationAt(othHorizon, az) : 0
+        const diff = curH - othH
+        if (Math.abs(diff) > maxDiff) {
+          maxDiff = Math.abs(diff)
+          bestHour = { az, diff, type: diff >= 0 ? 'lower' : 'higher' }
+        }
       }
     }
   }
@@ -120,7 +134,7 @@ export function explainDifference(current, other) {
   if (bestHour && Math.abs(bestHour.diff) >= 0.05) {
     const dir = compassName(bestHour.az)
     const adj = COMPASS_ADJECTIVES[dir] || dir
-    const diffDeg = Math.abs(bestHour.diff).toFixed(1)
+    const diffDeg = fmt(Math.abs(bestHour.diff), 1)
     reason = `because the ${adj} ridge is ${diffDeg}° ${bestHour.type}.`
   } else {
     reason = 'with negligible difference in terrain obstruction.'
@@ -130,25 +144,16 @@ export function explainDifference(current, other) {
 }
 
 /**
- * Learn mode card "Why 1 km matters": the pair of neighbouring cells (≤ maxDistanceKm apart)
- * with the largest difference in longestDarkHours at one landing time.
- * @param {import('./optimizer.js').WindowResults} results
- * @param {Object<string, import('./data.js').Cell>|Map<string, import('./data.js').Cell>} cellsById
- * @param {number} landingIndex
- * @param {number} [maxDistanceKm=1.5]
- * @returns {{cellIdA:string, cellIdB:string, distanceKm:number, longestDarkHoursA:number, longestDarkHoursB:number}|null}
+ * Identifies the adjacent cell pair within maximum range exhibiting the steepest
+ * terrain-driven darkness gradient at the specified landing epoch.
  */
 export function findMostDifferentNeighbors(results, cellsById, landingIndex, maxDistanceKm = 1.5) {
-  const { cellCount, landingCount } = results
-  if (!cellCount || cellCount < 2 || landingIndex < 0 || landingIndex >= landingCount) {
+  const { cellCount = 0, landingCount = 0 } = results || {}
+  if (cellCount < 2 || landingIndex < 0 || landingIndex >= landingCount) {
     return null
   }
 
-  function getCell(id) {
-    if (!cellsById) return null
-    if (cellsById instanceof Map) return cellsById.get(id)
-    return cellsById[id]
-  }
+  const getCell = (id) => (cellsById instanceof Map ? cellsById.get(id) : cellsById?.[id])
 
   let bestPair = null
   let maxDarkDiff = -1

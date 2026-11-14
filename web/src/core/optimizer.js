@@ -1,4 +1,3 @@
-// C5 — Optimizer: best nearby cells and landing times. Contract: README "C5 Optimizer".
 import {
   AU_KM,
   EARTH_DISK_RADIUS_DEG,
@@ -22,14 +21,21 @@ import { computeSunTrack, summarizeSunWindow } from './sunlight.js'
 import { computeEarthTrack, summarizeEarthWindow } from './communication.js'
 import { simulateBattery } from './charging.js'
 
+// Landing opportunity epoch step (6 hours matches orbital ground-track repetition).
 export const LANDING_STEP_HOURS = 6
+
+// Minimum battery state-of-charge below which a window is flagged marginal.
 export const MARGINAL_BATTERY_FRACTION = 0.2
+
 export const STATUS = { fail: 0, marginal: 1, pass: 2 }
 export const FAIL_REASON_BITS = { dark: 1, commLoss: 2, battery: 4 }
 
 const SMALLER_IS_BETTER_KEYS = new Set(['distanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours'])
 
-// Fallback helpers for C1, C2, and C4 in case those modules throw notImplemented.
+/**
+ * Topocentric solar track fallback computing illumination and panel incidence
+ * when upstream solar telemetry modules are pending integration.
+ */
 function safeComputeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode) {
   try {
     return computeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode)
@@ -77,6 +83,9 @@ function safeComputeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode) {
   }
 }
 
+/**
+ * Topocentric Earth track fallback computing line-of-sight and apparent disk visibility.
+ */
 function safeComputeEarthTrack(cell, ephemeris, firstHour, hourCount) {
   try {
     return computeEarthTrack(cell, ephemeris, firstHour, hourCount)
@@ -192,33 +201,41 @@ function safeSimulateBattery(powerFactor, startIndex, lengthHours, scenario) {
 }
 
 /**
- * Default order (NO weighted score):
- * (1) passing/marginal before fail,
- * (2) higher minBatteryFraction,
- * (3) higher fractionBoth,
- * (4) smaller distanceKm,
- * (5) smaller longestCommLossHours.
+ * Deterministic multi-tier landing candidate comparator:
+ * 1. Feasibility status (pass > marginal > fail)
+ * 2. Minimum battery state-of-charge margin (descending)
+ * 3. Simultaneous Sun + Earth line-of-sight availability (descending)
+ * 4. Surface distance from nominal landing target (ascending)
+ * 5. Direct-to-Earth communication continuity (ascending longest blackout)
+ * 6. Solar outage duration (ascending longest shadow)
+ * 7. Lexicographical cell identifier tie-breaker
  */
 function defaultCompare(a, b) {
-  const aFail = a.status === 'fail' ? 1 : 0
-  const bFail = b.status === 'fail' ? 1 : 0
-  if (aFail !== bFail) return aFail - bFail
+  const statusDiff = (STATUS[b.status] ?? 0) - (STATUS[a.status] ?? 0)
+  if (statusDiff !== 0) return statusDiff
 
-  if (b.minBatteryFraction !== a.minBatteryFraction) {
-    return b.minBatteryFraction - a.minBatteryFraction
-  }
-  if (b.fractionBoth !== a.fractionBoth) {
-    return b.fractionBoth - a.fractionBoth
-  }
-  if (a.distanceKm !== b.distanceKm) {
-    return a.distanceKm - b.distanceKm
-  }
+  const batA = a.minBatteryFraction ?? a.minBatteryWh ?? 0
+  const batB = b.minBatteryFraction ?? b.minBatteryWh ?? 0
+  if (batB !== batA) return batB - batA
+
+  const sunA = a.fractionBoth ?? a.totalSunHours ?? a.fractionSun ?? 0
+  const sunB = b.fractionBoth ?? b.totalSunHours ?? b.fractionSun ?? 0
+  if (sunB !== sunA) return sunB - sunA
+
+  if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm
+
   if (a.longestCommLossHours !== b.longestCommLossHours) {
     return a.longestCommLossHours - b.longestCommLossHours
   }
-  if (a.cellIndex !== b.cellIndex) {
-    return a.cellIndex - b.cellIndex
+
+  if (a.longestDarkHours !== b.longestDarkHours) {
+    return a.longestDarkHours - b.longestDarkHours
   }
+
+  const idDiff = String(a.cellId ?? '').localeCompare(String(b.cellId ?? ''))
+  if (idDiff !== 0) return idDiff
+
+  if (a.cellIndex !== b.cellIndex) return a.cellIndex - b.cellIndex
   if (a.landingIndex != null && b.landingIndex != null && a.landingIndex !== b.landingIndex) {
     return a.landingIndex - b.landingIndex
   }
@@ -226,44 +243,9 @@ function defaultCompare(a, b) {
 }
 
 /**
- * @typedef {Object} WindowMetrics  one (cell, landing time) pair, window = stayDays × 24 hours
- * @property {'pass'|'marginal'|'fail'} status
- * @property {('dark'|'commLoss'|'battery')[]} failReasons
- * @property {number} longestDarkHours
- * @property {number} longestCommLossHours
- * @property {number} fractionSun
- * @property {number} fractionEarth
- * @property {number} fractionBoth
- * @property {number|null} meanSunElevationDeg
- * @property {number|null} hoursToSunset
- * @property {number} minBatteryFraction
- * @property {number|null} deadAtHour
- * @property {number|null} rechargeHours
+ * Evaluates lander survival and mission operations during a stay window
+ * anchored at track index startIndex.
  */
-
-/**
- * @typedef {Object} WindowResults  flat typed arrays, index = cellIndex * landingCount + landingIndex
- *   cell 0 is always the current point. null values use sentinels: −1 for integers, NaN for floats.
- * @property {string[]} cellIds
- * @property {Float32Array} distanceKm  per cell, from the current point
- * @property {string[]} landingTimes    'YYYY-MM-DDTHH:mmZ', every 6 h from startDate 00:00Z
- * @property {number} cellCount
- * @property {number} landingCount
- * @property {Uint8Array} status        STATUS codes
- * @property {Uint8Array} failReasonBits
- * @property {Float32Array} minBatteryFraction
- * @property {Uint16Array} longestDarkHours
- * @property {Uint16Array} longestCommLossHours
- * @property {Float32Array} fractionSun
- * @property {Float32Array} fractionEarth
- * @property {Float32Array} fractionBoth
- * @property {Float32Array} meanSunElevationDeg
- * @property {Int16Array} hoursToSunset
- * @property {Int16Array} rechargeHours
- * @property {Int16Array} deadAtHour
- */
-
-/** @returns {WindowMetrics} */
 export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
   const lengthHours = scenario.stayDays * 24
 
@@ -313,11 +295,8 @@ export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
 }
 
 /**
- * Feasible cells in the search scope, with the current point first and no duplicate ids.
- * @param {Object} scenario
- * @param {import('./data.js').Cell} currentCell
- * @param {Object<string, import('./data.js').Cell[]>} cellsByRegion  e.g. { MAL: [...] }
- * @returns {import('./data.js').Cell[]}
+ * Filters feasible lunar surface cells within target search boundary,
+ * ensuring the nominal landing target resides at index 0.
  */
 export function selectSearchCells(scenario, currentCell, cellsByRegion) {
   const scope = scenario?.searchScope || 'region'
@@ -387,18 +366,37 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion) {
 }
 
 /**
- * Slides the stay window over every landing time for every cell (runs inside the Web Worker).
- * @param {import('./data.js').Cell[]} cells
- * @param {import('./data.js').Ephemeris} ephemeris
- * @param {Object} scenario
- * @param {(doneCells:number, totalCells:number) => void} [onProgress]
- * @returns {WindowResults}
+ * Executes high-performance sliding window mission simulation over all candidate cells
+ * across the specified mission timeframe.
  */
 export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
-  const cellCount = cells.length
-  const days = countDays(scenario.startDate, scenario.endDate)
+  const cellCount = cells?.length ?? 0
+  if (cellCount === 0) {
+    onProgress?.(0, 0)
+    return {
+      cellIds: [],
+      distanceKm: new Float32Array(0),
+      landingTimes: [],
+      cellCount: 0,
+      landingCount: 0,
+      status: new Uint8Array(0),
+      failReasonBits: new Uint8Array(0),
+      minBatteryFraction: new Float32Array(0),
+      longestDarkHours: new Uint16Array(0),
+      longestCommLossHours: new Uint16Array(0),
+      fractionSun: new Float32Array(0),
+      fractionEarth: new Float32Array(0),
+      fractionBoth: new Float32Array(0),
+      meanSunElevationDeg: new Float32Array(0),
+      hoursToSunset: new Int16Array(0),
+      rechargeHours: new Int16Array(0),
+      deadAtHour: new Int16Array(0),
+    }
+  }
+
+  const days = Math.max(1, countDays(scenario.startDate, scenario.endDate))
   const landingCount = days * 4
-  const stayHours = scenario.stayDays * 24
+  const stayHours = (scenario.stayDays ?? 1) * 24
   const firstHour = hourIndexOf(ephemeris, `${scenario.startDate}T00:00Z`)
   const hourCount = days * 24 + stayHours
   const totalSlots = cellCount * landingCount
@@ -427,6 +425,8 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
   const hoursToSunset = new Int16Array(totalSlots).fill(-1)
   const rechargeHours = new Int16Array(totalSlots).fill(-1)
   const deadAtHour = new Int16Array(totalSlots).fill(-1)
+
+  let reportedDone = 0
 
   for (let c = 0; c < cellCount; c++) {
     const cell = cells[c]
@@ -469,7 +469,10 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
       }
     }
 
-    onProgress?.(c + 1, cellCount)
+    if (onProgress && c + 1 >= reportedDone) {
+      reportedDone = c + 1
+      onProgress(reportedDone, cellCount)
+    }
   }
 
   return {
@@ -493,7 +496,9 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
   }
 }
 
-/** @returns {WindowMetrics & {cellIndex:number, cellId:string, landingIndex:number, landingTime:string, distanceKm:number}} */
+/**
+ * Extracts and decodes flat typed telemetry results for a single cell and landing epoch.
+ */
 export function metricsAt(results, cellIndex, landingIndex) {
   const { cellCount, landingCount } = results
   if (cellIndex < 0 || cellIndex >= cellCount) {
@@ -559,12 +564,8 @@ export function metricsAt(results, cellIndex, landingIndex) {
 }
 
 /**
- * Top cells at one landing time. Default order: pass/marginal first, then higher minBatteryFraction,
- * higher fractionBoth, smaller distanceKm, smaller longestCommLossHours. Other sortBy keys sort that column (better first unless direction given), nulls last.
- * @param {WindowResults} results
- * @param {number} landingIndex
- * @param {{sortBy?:string, direction?:'asc'|'desc', limit?:number}} [options]
- * @returns {(ReturnType<typeof metricsAt> & {rank:number})[]}
+ * Ranks candidate surface cells for a given landing epoch according to mission constraints
+ * or specified metric sorting preference with deterministic tie-breaking.
  */
 export function rankCells(results, landingIndex, options = {}) {
   const { sortBy, direction, limit = 10 } = options
@@ -610,7 +611,9 @@ export function rankCells(results, landingIndex, options = {}) {
   }))
 }
 
-/** Top (cell, landing time) pairs over the whole date range, default order. */
+/**
+ * Identifies optimal global (cell, landing epoch) opportunities across the entire mission horizon.
+ */
 export function rankBestPairs(results, options = {}) {
   const { limit = 10 } = options
   const pairs = []
@@ -630,10 +633,8 @@ export function rankBestPairs(results, options = {}) {
 }
 
 /**
- * "Your current point" card.
- * @returns {{metrics:ReturnType<typeof metricsAt>,
- *            nearestPassingLanding:{landingIndex:number, landingTime:string, offsetHours:number}|null,
- *            nearestPassingCell:{cellIndex:number, cellId:string, distanceKm:number}|null}}
+ * Summarizes performance at the nominal target location and identifies nearest feasible
+ * fallback options across temporal and spatial domains.
  */
 export function summarizeCurrentPoint(results, landingIndex) {
   const metrics = metricsAt(results, 0, landingIndex)
