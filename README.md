@@ -75,7 +75,7 @@ LGRS shapefiles cannot be downloaded by script (ScienceBase returns 403). See [D
    - If the contract has to change, agree with the team first. Then update this README, the contract test and `pipeline/check_web_data.py` in the same commit.
 4. **Implement:**
    - remove the `eslint-disable` stub line at the top of the JS file;
-   - replace `throw notImplemented(...)` or `raise NotImplementedError` with real code.
+   - replace `raise NotImplementedError` (Python stubs) with real code.
 5. **Done** means all of these are true:
    - the module's *Done when* list holds;
    - its contract test passes (`cd web && node --test src/core/<file>.test.js`);

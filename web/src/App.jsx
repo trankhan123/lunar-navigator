@@ -11,8 +11,10 @@ import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
+import { cellDisplayName } from './core/format.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
+import { isCellOnPolarMap } from './core/mapView.js'
 import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
@@ -236,6 +238,14 @@ export default function App() {
     () => (search.status === 'done' ? mapHourRange(data.ephemeris, search.scenario.startDate, search.scenario.endDate) : null),
     [data, search],
   )
+  // The point that was searched (not the form's live one), to name it and to decide whether the polar map and cell table apply.
+  const searchedPoint = useMemo(() => {
+    try {
+      return search.status === 'done' ? resolveCurrentCell(search.scenario.currentPoint, cellsByRegion, data.sites) : null
+    } catch {
+      return null
+    }
+  }, [data, search, cellsByRegion])
   const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
   const currentCell = useMemo(() => {
     try {
@@ -409,11 +419,17 @@ export default function App() {
                   <CurrentPointCard
                     summary={currentPointSummary}
                     scenario={search.scenario}
+                    point={searchedPoint}
                     onSelectLanding={selectLanding}
                     onOpenCell={(cellId) => openDetail(cellId, results.landingTimes[landingIndex])}
                   />
                   <LandingTimeSlider landingTimes={results.landingTimes} value={landingIndex} onChange={selectLanding} />
                   <CurrentPointStrip statuses={results.status.subarray(0, results.landingCount)} value={landingIndex} onSelectLanding={selectLanding} />
+                  {searchedPoint && !isCellOnPolarMap(searchedPoint) ? (
+                    <p className="rounded border border-slate-700 p-3 text-slate-300">
+                      Only this point was searched: it is outside the south polar terrain grid.
+                    </p>
+                  ) : (
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                     <div className="space-y-2">
                       {regionPicker}
@@ -432,10 +448,12 @@ export default function App() {
                         onSort={sortRanking}
                         onSelectRow={(row) => openDetail(row.cellId, row.landingTime)}
                         currentCellId={results.cellIds[0]}
+                        currentPointName={searchedPoint && cellDisplayName(searchedPoint)}
                         mode={mode}
                       />
                     </div>
                   </div>
+                  )}
                   <BestPairsTable rows={bestPairs} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
                 </>
               )}

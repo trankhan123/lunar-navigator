@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { timeAtHour } from '../core/data.js'
 import { buildDetail, pathForChart, summarySentence, toCsv } from '../core/detail.js'
-import { formatUtc } from '../core/format.js'
+import { cellDisplayName, formatUtc, hasNoTerrain } from '../core/format.js'
 import BatteryChart from './BatteryChart.jsx'
 import CompareView from './CompareView.jsx'
 import CountdownCard from './CountdownCard.jsx'
@@ -54,8 +54,9 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
         ← Back
       </button>
       <h2 ref={headingRef} tabIndex={-1} className="font-mono text-lg font-semibold focus:outline-none">
-        {cell.id}
+        {cellDisplayName(cell)}
       </h2>
+      {hasNoTerrain(cell) && <p className="text-xs text-slate-400">Smooth-sphere horizon: terrain not included</p>}
       <label className="text-sm text-slate-300">
         Landing (UTC){' '}
         <input
@@ -84,7 +85,7 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
 
   const { sun, earth, battery, energy, sunSummary, earthSummary } = detail
   const cursorTime = timeAtHour(ephemeris, detail.landingHour + cursor)
-  const sentence = summarySentence(detail, cell.id, cursor)
+  const sentence = summarySentence(detail, cellDisplayName(cell), cursor)
   const metrics = [
     ['Longest dark period', `${sunSummary.longestDarkHours} h`],
     ['Time in sunlight', percent(sunSummary.fractionSun)],
@@ -131,12 +132,12 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
       <HorizonChart
         horizonDeg={horizonDegrees(cell.horizon)}
         compareHorizonDeg={compareDetail ? horizonDegrees(currentCell.horizon) : null}
-        compareLabel={compareDetail ? `${currentCell.id} terrain (current point)` : null}
+        compareLabel={compareDetail ? `${cellDisplayName(currentCell)} terrain (current point)` : null}
         sunPath={pathForChart(sun.azimuthDeg, sun.elevationDeg, 0, detail.stayHours)}
         earthPath={pathForChart(earth.azimuthDeg, earth.elevationDeg, 0, detail.stayHours)}
         sunNow={[sun.azimuthDeg[cursor], sun.elevationDeg[cursor]]}
         earthNow={[earth.azimuthDeg[cursor], earth.elevationDeg[cursor]]}
-        description={`Horizon chart for ${cell.id}. ${sentence}`}
+        description={`Horizon chart for ${cellDisplayName(cell)}. ${sentence}`}
       />
       <BatteryChart
         landingTime={landingTime}

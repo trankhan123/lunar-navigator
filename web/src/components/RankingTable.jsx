@@ -12,7 +12,7 @@ const COLUMNS = [
   { key: 'rechargeHours', label: 'Recharge (h)', show: (row) => row.rechargeHours ?? '—', expert: true },
 ]
 
-export default function RankingTable({ rows, sortBy, direction, onSort, onSelectRow, currentCellId, mode }) {
+export default function RankingTable({ rows, sortBy, direction, onSort, onSelectRow, currentCellId, currentPointName, mode }) {
   const columns = COLUMNS.filter((column) => mode === 'expert' || !column.expert)
   return (
     <div className="overflow-x-auto">
@@ -46,7 +46,7 @@ export default function RankingTable({ rows, sortBy, direction, onSort, onSelect
               <td className="py-1.5 pr-2 text-slate-400">{row.rank}</td>
               <td className="py-1.5 pr-2">
                 <button type="button" onClick={() => onSelectRow(row)} className="font-mono text-sky-300 underline-offset-2 hover:underline">
-                  {row.cellId}
+                  {row.cellId === currentCellId && currentPointName ? currentPointName : row.cellId}
                 </button>
                 {row.cellId === currentCellId && <span className="ml-1 text-xs text-amber-300">(you)</span>}
               </td>
