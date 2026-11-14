@@ -164,3 +164,52 @@ test('findMostDifferentNeighbors: finds the pair with largest dark hours differe
   const none = findMostDifferentNeighbors(results, cellsById, 0, 0.5)
   assert.equal(none, null)
 })
+
+test('explainDifference: formats floating-point inputs cleanly without decimal tail artifacts', () => {
+  // Input values with binary floating-point representation quirks:
+  // 1.8 - 0.3 = 1.5000000000000002
+  // 5.3 - 2.1 = 3.2000000000000006
+  // 2.4 - 1.2 = 1.2000000000000002
+  const currentHorizon = new Array(360).fill(0)
+  currentHorizon[0] = 18 // 1.8°
+
+  const otherHorizon = new Array(360).fill(0)
+  otherHorizon[0] = 3 // 0.3° (ridge diff: 1.8 - 0.3 = 1.5°)
+
+  const currentCell = { id: 'MAL-r4c4', lat: -85.925, lon: -1.205, horizon: currentHorizon }
+  const otherCell = {
+    id: 'MAL-r4c5',
+    lat: -85.925 + (2.3 / 1737.4) * (180 / Math.PI),
+    lon: -1.205,
+    horizon: otherHorizon,
+  }
+
+  const current = {
+    cell: currentCell,
+    metrics: { longestDarkHours: 5.3 - 2.1 }, // 3.2000000000000006
+    sunTrack: {
+      azimuthDeg: new Float32Array([0]),
+      diskFraction: new Float32Array([0.0]),
+    },
+    startIndex: 0,
+    lengthHours: 1,
+  }
+  const other = {
+    cell: otherCell,
+    metrics: { longestDarkHours: 2.4 - 1.2 }, // 1.2000000000000002
+    sunTrack: {
+      azimuthDeg: new Float32Array([0]),
+      diskFraction: new Float32Array([1.0]),
+    },
+    startIndex: 0,
+    lengthHours: 1,
+  }
+
+  const text = explainDifference(current, other)
+  assert.equal(
+    text,
+    'Moving 2.3 km to MAL-r4c5 cuts the longest dark period from 3.2 h to 1.2 h because the northern ridge is 1.5° lower.',
+  )
+  assert.ok(!text.includes('.00000'))
+  assert.ok(!text.includes('.20000'))
+})
