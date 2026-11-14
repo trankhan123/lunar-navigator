@@ -46,6 +46,9 @@ export const loadSites = (useMock) => loadJson(`${dataFolder(useMock)}/sites.jso
 export const loadValidation = (useMock) => loadJson(`${dataFolder(useMock)}/validation.json`)
 /** README D8 map backgrounds; the map works without them. */
 export const loadMaps = () => loadJson('/maps/maps.json').then((file) => file.maps).catch(() => [])
+/** Relief tile pyramid index (pipeline/export_relief_tiles.py); null when the tiles are missing. Fetched once. */
+let reliefIndexPromise
+export const loadReliefIndex = () => (reliefIndexPromise ??= loadJson('/maps/relief/index.json').catch(() => null))
 
 const HOUR_MS = 3600 * 1000
 

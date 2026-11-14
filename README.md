@@ -252,8 +252,16 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 - `kind` is one of:
   - `hillshade`: grey PGDA 90 relief, `south_pole` at 500 m/px and each region at its native 80 m;
   - `sun-visibility` / `earth-visibility`: PGDA 69 value × 4e-05 (share of time the Sun / Earth is in view), RGBA with the ramp `#440154 → #3b528b → #21918c → #5ec962 → #fde725` for 0 → 1, transparent where there is no data; only for regions that overlap the ±151.74 km square (about 85°S to the pole), with `boundsM` clipped to it (CAB has none, NR2 and MMP are partly covered);
-  - `psr`: PGDA 90 LPSR 20 m, `#cc79a7` on permanent shadow, transparent elsewhere; one entry per region.
+  - `psr`: PGDA 90 LPSR 20 m, `#cc79a7` on permanent shadow, transparent elsewhere; one entry per region;
+  - `slope`: PGDA 90 LDSM 80 m in classes < 10° `#009e73`, 10–15° `#f0e442`, 15–20° `#e69f00`, > 20° `#334155` with light diagonal hatch (the app's infeasible-cell colour; the limit is `common.SLOPE_LIMIT_DEG`); only `south_pole`.
+- **Whole-pole overlays** use `id: "south_pole"` with kind `sun-visibility`, `earth-visibility`, `psr` or `slope` (no new field: (`id`, `kind`) stays unique, and `south_pole` already means "the whole map"). Their `boundsM` is the raster's own extent (±151.74 km for PGDA 69, ±304 km for the others), indexed PNG, possibly at a coarser `metersPerPixel` so the file stays ≤ 1 MB. The web map draws them at the overview, and `slope` inside a region too.
 - Each PNG is ≤ 1 MB; `python pipeline/check_web_data.py` also checks `maps.json` (kinds, duplicates, files, sizes, `boundsM`).
+
+### `web/public/maps/relief/index.json` (D8b relief tiles)
+
+- Pyramid of 512 px JPEG tiles `relief/<z>/<x>_<y>.jpg`: level `z` splits the ±304 km square into 2^z × 2^z tiles, `x` grows east, `y` grows south (row 0 = north edge). Levels 0–4, level 4 is about 74 m/px and is written only for tiles that touch the 85°S disk or a region frame; tiles without DEM data are not written.
+- Index: `{tileSizePx, boundsM, levels: [{z, tileSizeM, metersPerPixel, contourIntervalM, tiles: ["x_y", …]}], elevationLegend: [{elevationM, color}], contourIntervalsM: [500, 250]}`.
+- Each tile is multidirectional shaded relief (4 lights, altitude 35°, 2× vertical exaggeration) times a muted colour-blind-safe (cividis) elevation tint, with thin contour lines every 500 m (levels 0–2) or 250 m (levels 3–4), no labels. Each tile ≤ 300 kB, checked by `check_web_data.py`.
 
 ### Pipeline intermediate files (`pipeline/out/`, committed so others can build without raw data)
 
@@ -522,6 +530,10 @@ Files: `SouthPoleMap.jsx` (+ `MapCells.jsx`, `MapMarks.jsx`, `MapLegend.jsx`, `M
   - square cells 1 km wide;
   - one SVG in PGDA metres, viewBox ±304 km, SVG y = −yM; pan and zoom with d3-zoom 3.0.0, the only map library. Every d3 package, globe.gl's included, is pinned with `overrides` in `web/package.json`;
   - the wheel zooms only once the map has focus (click it) or with Ctrl/⌘, so page scrolling is never captured; region frames take clicks at the overview only.
+- **Relief and overlays:**
+  - the Relief layer is the tile pyramid above (`MapReliefTiles.jsx`, tile choice in `core/mapTiles.js`): the level follows the screen metres per pixel, only tiles in view load (≤ 30 `<image>`s), and the next coarser level stays under them so nothing blanks while tiles load. Without `relief/index.json` the old single hillshade image is used;
+  - at the overview the NASA layers (% sunlight, % Earth, permanent shadow, slope classes) are the whole-pole `south_pole` images; inside a region they are that region's images (slope: the whole-pole image);
+  - cell fills are 65 % opaque so the relief shows through.
 - **Colours:**
   - before Submit: feasible cells blue, infeasible cells grey (the tooltip gives the reason);
   - after Submit: green pass, yellow marginal, red fail, grey infeasible.
@@ -750,7 +762,7 @@ File: `validate.py`.
 File: `export_map_background.py`.
 
 - **Input:** the hillshade `LDEM_80S_80MPP_ADJ_HILL.TIF`, the PGDA 69 Sun and Earth visibility rasters (`AVGVISIB_85S_060M_201608.TIF`, `…_EARTH.TIF`), the PGDA 90 permanent-shadow raster `LPSR_80S_20MPP_ADJ.TIF` and `regions.json`.
-- **Output:** `web/public/maps/south_pole.png`, `<CODE>.png`, `<CODE>_sun.png`, `<CODE>_earth.png`, `<CODE>_psr.png` and `maps.json` (35 entries today).
+- **Output:** `web/public/maps/south_pole.png`, `<CODE>.png`, `<CODE>_sun.png`, `<CODE>_earth.png`, `<CODE>_psr.png`, the whole-pole `south_pole_sun.png`, `_earth.png`, `_psr.png`, `_slope.png` and `maps.json` (39 entries); relief tiles come from `export_relief_tiles.py` (see `relief/index.json`).
 - **Rules:**
   - write the PNGs with rasterio (GDAL PNG driver), no new library;
   - each image is ≤ 1 MB.
