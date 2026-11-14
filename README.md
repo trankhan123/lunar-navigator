@@ -566,6 +566,17 @@ Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `Cur
 
 ### W5 Detail
 
+**Logic (pure, tested):** `core/detail.js` and `countdownText` in `core/format.js`. The full contract is in their JSDoc:
+
+| Function | Returns |
+|---|---|
+| `buildDetail(cell, ephemeris, scenario, landingTime)` | `{landingHour, stayHours, trackHours, sun, earth, sunSummary, earthSummary, battery, energy}`; tracks cover the stay + 30 days (cut at the ephemeris end); parts whose module is a stub are `null` |
+| `pathForChart(azimuthDeg, elevationDeg, start, length)` | `[az, el]` points with `null` where the path wraps across 0°/360° |
+| `toCsv(detail, ephemeris)` | CSV text, one row per stay hour (columns below) |
+| `summarySentence(detail, cellLabel, atIndex)` | e.g. "Night at MAL-r5c4. Sunlight returns in 3 d 12 h. Earth sets in 18 h." |
+| `countdownText(body, event, isVisibleNow, hoursLeft)` | e.g. "Sun sets in 3 h 20 min", "Earth stays hidden for at least 9 d" |
+
+
 Files: `DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js`.
 
 - **`DetailView`** `{cell, currentCell, ephemeris, scenario, landingTime, mode, onBack}`:
