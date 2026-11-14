@@ -1,11 +1,1 @@
-[
- {
-  "mock": true,
-  "id": "mock-site",
-  "name": "Mock Site",
-  "lat": -89,
-  "lon": 0,
-  "group": "mock",
-  "hasTerrain": true
- }
-]
+{"mock":true,"sites":[{"id":"peak-near-cabeus-b","name":"Peak near Cabeus B","group":"artemis-region","lat":-83.552,"lon":-68.416,"region":"CAB","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"haworth","name":"Haworth","group":"artemis-region","lat":-86.635,"lon":-23.672,"region":"HAW","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"malapert-massif","name":"Malapert Massif","group":"artemis-region","lat":-85.925,"lon":-1.205,"region":"MAL","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"mons-mouton-plateau","name":"Mons Mouton Plateau","group":"artemis-region","lat":-84.291,"lon":27.427,"region":"MMP","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"mons-mouton","name":"Mons Mouton","group":"artemis-region","lat":-85.409,"lon":30.837,"region":"MMO","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"nobile-rim-1","name":"Nobile Rim 1","group":"artemis-region","lat":-85.423,"lon":36.19,"region":"NR1","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"nobile-rim-2","name":"Nobile Rim 2","group":"artemis-region","lat":-83.976,"lon":57.961,"region":"NR2","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"de-gerlache-rim-2","name":"de Gerlache Rim 2","group":"artemis-region","lat":-88.142,"lon":-63.662,"region":"DGR","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"slater-plain","name":"Slater Plain","group":"artemis-region","lat":-87.256,"lon":125.218,"region":"SLP","source":"usgs-square-center","verified":false,"hasTerrain":false,"horizon":null},{"id":"apollo-11","name":"Apollo 11","group":"apollo","lat":0.67416,"lon":23.47314,"region":null,"source":"nssdca-apollo","verified":true,"hasTerrain":false,"horizon":null},{"id":"apollo-15","name":"Apollo 15","group":"apollo","lat":26.13239,"lon":3.6333,"region":null,"source":"nssdca-apollo","verified":true,"hasTerrain":false,"horizon":null},{"id":"apollo-17","name":"Apollo 17","group":"apollo","lat":20.1911,"lon":30.7723,"region":null,"source":"nssdca-apollo","verified":true,"hasTerrain":false,"horizon":null}]}

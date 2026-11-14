@@ -1,0 +1,1 @@
+{"mock":true,"regions":[{"code":"MAL","siteId":"malapert-massif","name":"Malapert Massif","lat":-85.925,"lon":-1.205,"verified":false,"cellCount":49,"feasibleCount":28,"cellsFile":"cells_MAL.json","boundsM":[-6100.0,120092.0,900.0,127092.0]}]}

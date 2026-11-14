@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import MoonGlobe from './components/MoonGlobe.jsx'
 import HorizonChart from './components/HorizonChart.jsx'
 
-const DATA_FOLDER = '/data/mock'
+// Old per-site draft; W1 replaces this page with the Window Finder flow.
+const DATA_FOLDER = '/data/mock/legacy'
 
 export default function App() {
   const [sites, setSites] = useState([])
