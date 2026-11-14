@@ -1,6 +1,4 @@
 // C0 — shared geometry. Contract: README "C0 Shared geometry and time series".
-/* eslint-disable no-unused-vars -- stub parameters; delete this line when you implement the module */
-import { notImplemented } from './notImplemented.js'
 
 export const MOON_RADIUS_KM = 1737.4
 export const SUN_RADIUS_KM = 696000
@@ -10,6 +8,7 @@ export const SUN_DISK_RADIUS_DEG = 0.27
 export const EARTH_DISK_RADIUS_DEG = 0.95
 // A body counts as visible (sunlit / Earth in view) when at least this share of its disk is above the horizon.
 export const VISIBLE_THRESHOLD = 0.5
+const DEG = Math.PI / 180
 
 /**
  * Azimuth/elevation of the Sun or Earth seen from a cell (window-finder.md §4.3).
@@ -20,7 +19,23 @@ export const VISIBLE_THRESHOLD = 0.5
  * @returns {{azimuthDeg:number, elevationDeg:number}}  azimuth 0 ≤ az < 360, clockwise from North
  */
 export function bodyAzimuthElevation(cell, subLonDeg, subLatDeg, distanceKm) {
-  throw notImplemented('C0', 'bodyAzimuthElevation')
+  const lat = cell.lat * DEG
+  const lon = cell.lon * DEG
+  const cellRadiusKm = MOON_RADIUS_KM + cell.heightM / 1000
+  const up = [Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon), Math.sin(lat)]
+  const east = [-Math.sin(lon), Math.cos(lon), 0]
+  const north = [-Math.sin(lat) * Math.cos(lon), -Math.sin(lat) * Math.sin(lon), Math.cos(lat)] // up × east
+  const subLat = subLatDeg * DEG
+  const subLon = subLonDeg * DEG
+  const toBody = [
+    distanceKm * Math.cos(subLat) * Math.cos(subLon) - cellRadiusKm * up[0],
+    distanceKm * Math.cos(subLat) * Math.sin(subLon) - cellRadiusKm * up[1],
+    distanceKm * Math.sin(subLat) - cellRadiusKm * up[2],
+  ]
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+  const elevationDeg = Math.asin(dot(toBody, up) / Math.sqrt(dot(toBody, toBody))) / DEG
+  const azimuthDeg = (Math.atan2(dot(toBody, east), dot(toBody, north)) / DEG + 360) % 360
+  return { azimuthDeg, elevationDeg }
 }
 
 /**
@@ -30,7 +45,11 @@ export function bodyAzimuthElevation(cell, subLonDeg, subLatDeg, distanceKm) {
  * @returns {number} degrees
  */
 export function horizonElevationAt(horizon, azimuthDeg) {
-  throw notImplemented('C0', 'horizonElevationAt')
+  if (!horizon) return 0
+  const wrapped = ((azimuthDeg % 360) + 360) % 360
+  const lower = Math.floor(wrapped) % 360
+  const share = wrapped - Math.floor(wrapped)
+  return (horizon[lower] * (1 - share) + horizon[(lower + 1) % 360] * share) / 10
 }
 
 /**
@@ -38,7 +57,7 @@ export function horizonElevationAt(horizon, azimuthDeg) {
  * @returns {number} 0..1
  */
 export function visibleDiskFraction(elevationDeg, horizonDeg, diskRadiusDeg) {
-  throw notImplemented('C0', 'visibleDiskFraction')
+  return Math.min(1, Math.max(0, (elevationDeg - horizonDeg + diskRadiusDeg) / (2 * diskRadiusDeg)))
 }
 
 /**
@@ -48,5 +67,8 @@ export function visibleDiskFraction(elevationDeg, horizonDeg, diskRadiusDeg) {
  * @returns {number} km
  */
 export function distanceKm(a, b) {
-  throw notImplemented('C0', 'distanceKm')
+  const halfDeltaLat = ((b.lat - a.lat) * DEG) / 2
+  const halfDeltaLon = ((b.lon - a.lon) * DEG) / 2
+  const h = Math.sin(halfDeltaLat) ** 2 + Math.cos(a.lat * DEG) * Math.cos(b.lat * DEG) * Math.sin(halfDeltaLon) ** 2
+  return 2 * MOON_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)))
 }

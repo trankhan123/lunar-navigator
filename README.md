@@ -50,7 +50,7 @@ npm test           # contract tests of web/src/core (fail until each module is i
 npm run lint && npm run build
 ```
 
-While `web/public/data/ephemeris.json` does not exist yet, the web reads fake data from `web/public/data/mock/` (every file has `"mock": true`, and the UI shows a **MOCK DATA** badge). To regenerate it after a contract change, run `python pipeline/make_mock_data.py`.
+While `web/public/data/regions.json` does not exist yet (D5), the web reads fake data from `web/public/data/mock/` (every file has `"mock": true`, and the UI shows a **MOCK DATA** badge). To regenerate it after a contract change, run `python pipeline/make_mock_data.py`.
 
 **Data pipeline** (Python 3.11+):
 
@@ -89,7 +89,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 
 | ID | Module | Files | Needs | Size | Owner | Status |
 |---|---|---|---|---|---|---|
-| D1 | Ephemeris (JPL Horizons) | `pipeline/fetch_horizons.py` | — | M | Claude (trankhan123) | doing |
+| D1 | Ephemeris (JPL Horizons) | `pipeline/fetch_horizons.py` | — | M | Claude (trankhan123) | done |
 | D2 | LGRS grid (1 km cells) | `pipeline/build_grid.py` | LGRS shapefiles (manual download) | M | | todo |
 | D3 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | | todo |
 | D4 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | | todo |
@@ -97,7 +97,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D6 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | | todo |
 | D7 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | | todo |
 | D8 | Map background images | `pipeline/export_map_background.py` | D5 | S | | todo |
-| C0 | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | doing |
+| C0 | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
 | C1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | | todo |
 | C2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | | todo |
 | C3 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | | todo |
@@ -113,7 +113,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | S1 | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | | todo |
 | X1 | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
 
-**Already done:** `web/src/core/data.js` (loaders, `hourIndexOf`, `timeAtHour`), `scenario.js` constants and `countDays`, the Web Worker files (`windowSearchWorker.js`, `startWindowSearch.js`), the data checker, the mock data and `pipeline/download_data.py`.
+**Already done:** C0 and D1. The real `web/public/data/ephemeris.json` is in the repo: 2027-01-01 → 2029-01-31, 18,288 h, 0.69 MB. The vector method matches Horizons within 0.015°. Also done: `web/src/core/data.js` (loaders, `hourIndexOf`, `timeAtHour`), `scenario.js` constants and `countDays`, the Web Worker files (`windowSearchWorker.js`, `startWindowSearch.js`), the data checker, the mock data and `pipeline/download_data.py`.
 
 **Critical path for the end of day 1** (window-finder.md §8: full flow for one region, Malapert Massif):
 
@@ -485,7 +485,8 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
 - **Loading:**
   - at start, load the ephemeris, regions and sites;
   - load cells per region on demand with `loadCells(useMock, region.cellsFile)`;
-  - `useMock` is true while `/data/ephemeris.json` is missing, or when `?mock=1` is in the URL.
+  - `useMock` is true while `/data/regions.json` is missing, or when `?mock=1` is in the URL.
+  - The real `/data/ephemeris.json` already exists. The mock ephemeris only covers 2028-01 → 2028-07.
 - **State it holds:** `scenario`, `results`, `landingIndex`, `selectedCellId`, `mode` (`'simple'|'expert'`).
 - **Share link query keys:**
   - `point` (`cell:MAL-r3c4` \| `site:apollo-11` \| `coords:-85.9,-1.2`), `start`, `end`, `stay`, `dark`, `comm`, `panel`, `battery`, `load`, `panelMode`, `scope`, `radius`, `landing`, `cell`, `mode`, `screen`;
@@ -634,6 +635,11 @@ File: `fetch_horizons.py`.
   - read the header for column names and units (ask for the Earth range in km);
   - longitudes become East-positive in −180…180.
 - **Fixture:** 3 points (MAL centre, HAW centre, Apollo 11) × Sun and Earth × 5 times, via `CENTER='coord@301'`, `SITE_COORD`, `QUANTITIES='4'`.
+- **Result (14/11):**
+  - 9 quarterly calls (about 47 s, cached), giving 18,288 hours;
+  - frame `MOON_ME`, Horizons longitudes are East-positive 0…360 and were converted to −180…180;
+  - the Earth range came back in km (`RANGE_UNITS=KM`);
+  - fixture: 30 points; `bodyAzimuthElevation` differs from Horizons apparent az/el by at most **0.015° in azimuth and 0.010° in elevation**, so the sub-point method is validated (no fallback needed).
 - **Done when:**
   - `check_web_data.py` passes on the ephemeris part;
   - `geometry.test.js` passes the Horizons test (< 0.1°) once C0 is implemented. If it fails, check the longitude convention and frame first; the fallback is in §5.1.

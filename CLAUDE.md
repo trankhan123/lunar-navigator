@@ -119,7 +119,7 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
   - đạt mà pin thấp nhất < 20 % thì là **sát ngưỡng**.
 - **Xếp hạng:** đạt trước, rồi pin thấp nhất cao hơn, rồi % có cả nắng lẫn Trái Đất cao hơn, rồi gần hơn. Không dùng điểm có trọng số.
 - **Kiểm chứng:**
-  - so vector với Horizons (< 0,1°) qua fixture;
+  - so vector với Horizons (< 0,1°) qua fixture. **Đã đạt ngày 14/11:** 30 điểm, sai lệch tối đa 0,015° phương vị và 0,010° góc cao;
   - so % nắng và % thấy Trái Đất với PGDA 69 (chỉ cần cùng xu hướng);
   - so một ô với QuickMap.
 

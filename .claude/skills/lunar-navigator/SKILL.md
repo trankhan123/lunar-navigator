@@ -51,6 +51,10 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - C0 hình học + chuỗi giờ, C1 nắng, C2 liên lạc, C3 năng lượng cần, C4 sạc pin, C5 tối ưu ("quãng đường tối ưu" = xếp hạng ô/thời điểm và ô đạt gần nhất; tìm đường rover đã bỏ);
   - W1 app shell, W2 bản đồ, W3 form, W4 kết quả, W5 chi tiết, W6 globe, W7 chế độ học, S1 bài nộp.
 - **Đã làm sẵn:** `core/data.js` (loader, `hourIndexOf`, `timeAtHour`), hằng số và `countDays` trong `scenario.js`, Worker (`windowSearchWorker.js`, `startWindowSearch.js`), `pipeline/common.py`, `check_web_data.py`, `make_mock_data.py`, mock trong `web/public/data/mock/` (vùng MAL 7×7, ephemeris giả 2028-01 → 2028-07).
+- **Xong ngày 14/11 (Claude):**
+  - C0 (`geometry.js`, `timeSeries.js`);
+  - D1 (`fetch_horizons.py`): `web/public/data/ephemeris.json` thật (2027-01-01 → 2029-01-31, 18.288 giờ, 0,69 MB) và fixture `web/src/core/fixtures/horizons_check.json`;
+  - kiểm chứng vector với Horizons: sai lệch tối đa 0,015° phương vị, 0,010° góc cao trên 30 điểm.
 - **Còn là khung:** mọi hàm khác `throw notImplemented(...)` hoặc `raise NotImplementedError`. Dòng `eslint-disable no-unused-vars` ở đầu file khung phải xoá khi implement.
 - **Bản nháp cũ:** `App.jsx` đọc `/data/mock/legacy/`. W1 thay nó bằng luồng Window Finder rồi xoá `legacy/`.
 
@@ -74,6 +78,13 @@ cd web && vercel deploy --prod # deploy (Root Directory = web)
   - PGDA 69 `AVGVISIB_*`: 5058×5058, int16, phủ ±152 km, nodata −32768. Tỉ lệ thời gian = giá trị × 4e-05 (đọc từ tag `scales`). Max ~0,79 cho Mặt Trời và 1,0 cho Trái Đất.
   - `LPSR`: giá trị × 2.5e-05 + 0,5 → 0 hoặc 1 (vùng tối vĩnh cửu).
 - **Horizons:** bước `1h` chạy được, 1 tháng trả 745 dòng. Cột đầu ra là `azimuth elevation` ngay sau ngày giờ và một ký tự cờ (ví dụ `2028-Jan-01 00:00 i 133.19 -2.11`).
+- **Horizons ephemeris** (`COMMAND=301`, `CENTER=500@399`, `QUANTITIES=14,15,19,20`, `RANGE_UNITS=KM`, `CSV_FORMAT=YES`):
+  - header ghi `Target pole/equ : MOON_ME {East-longitude positive}`;
+  - cột: `ObsSub-LON, ObsSub-LAT, SunSub-LON, SunSub-LAT, r, rdot, delta, deldot`;
+  - kinh độ trong khoảng 0…360 nên phải đổi sang −180…180; `r` và `delta` tính bằng km;
+  - dòng tên cột nằm ở `$$SOE − 2`;
+  - một quý khoảng 2.200 dòng, gọi theo quý chạy được; cả 9 quý mất khoảng 47 giây.
+- **Horizons az/el tại điểm trên Mặt Trăng:** `CENTER=coord@301`, `COORD_TYPE=GEODETIC`, `SITE_COORD=lon,lat,alt_km`, `QUANTITIES=4`. Cột bắt đầu bằng `Azi` và `Elev`; trả về giá trị apparent, không có khúc xạ.
 - **PGDA:** link thư mục `https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/` trả 404, nhưng link tới từng file vẫn tải được. Danh sách file xem ở `https://pgda.gsfc.nasa.gov/products/90` và `/products/69`. Server hay ngắt kết nối giữa chừng (`Connection reset by peer`) nhưng hỗ trợ Range (206), nên `download_data.py` tự thử lại tối đa 5 lần và tải tiếp từ file `.part`.
 - **Vercel link:** `vercel link` tự tạo `web/.env.local` chứa `VERCEL_OIDC_TOKEN`. File này là bí mật, đã gitignore.
 - **Vercel xoá project:** `vercel project rm <name>` cần thêm `--confirm-name <name>`, và chỉ chạy khi người dùng đã duyệt.
@@ -219,7 +230,7 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
   - đạt mà pin thấp nhất < 20 % thì là **sát ngưỡng**.
 - **Xếp hạng:** đạt trước, rồi pin thấp nhất cao hơn, rồi % có cả nắng lẫn Trái Đất cao hơn, rồi gần hơn. Không dùng điểm có trọng số.
 - **Kiểm chứng:**
-  - so vector với Horizons (< 0,1°) qua fixture;
+  - so vector với Horizons (< 0,1°) qua fixture. **Đã đạt ngày 14/11:** 30 điểm, sai lệch tối đa 0,015° phương vị và 0,010° góc cao;
   - so % nắng và % thấy Trái Đất với PGDA 69 (chỉ cần cùng xu hướng);
   - so một ô với QuickMap.
 
