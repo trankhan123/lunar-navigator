@@ -87,6 +87,24 @@ test('neighborLesson: prefers a pair with the current point, names both cells an
   )
 })
 
+test('neighborLesson: of a worse and a better neighbour of the current point, the better one wins', () => {
+  const betterCell = makeCell('MAL-better', -1, 10)
+  const withBetter = new Map([...cellsById, [betterCell.id, betterCell]])
+  const results = lessonResults(['MAL-light', 'MAL-dark', 'MAL-better'], [50, 90, 0])
+  const lesson = neighborLesson(results, withBetter, 0, context)
+  assert.equal(lesson.scope, 'current')
+  assert.match(lesson.sentence, /^From your current point MAL-light: moving 1 km to MAL-better cuts the longest dark period from 50 h to 0 h/)
+})
+
+test('neighborLesson: a 1 h improvement loses to a 35 h worse neighbour, a 12 h improvement wins', () => {
+  const betterCell = makeCell('MAL-better', -1, 10)
+  const withBetter = new Map([...cellsById, [betterCell.id, betterCell]])
+  const small = neighborLesson(lessonResults(['MAL-light', 'MAL-dark', 'MAL-better'], [50, 85, 49]), withBetter, 0, context)
+  assert.match(small.sentence, /moving 1 km to MAL-dark increases the longest dark period from 50 h to 85 h/)
+  const enough = neighborLesson(lessonResults(['MAL-light', 'MAL-dark', 'MAL-better'], [50, 85, 38]), withBetter, 0, context)
+  assert.match(enough.sentence, /moving 1 km to MAL-better cuts the longest dark period from 50 h to 38 h/)
+})
+
 test('neighborLesson: says "Elsewhere in this region" when the current point has no different neighbour', () => {
   const results = lessonResults(['MAL-far', 'MAL-light', 'MAL-dark'], [0, 12, 90])
   const lesson = neighborLesson(results, cellsById, 0, context)
