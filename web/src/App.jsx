@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AboutView from './components/AboutView.jsx'
-import BestPairsTable from './components/BestPairsTable.jsx'
+import BestWindowsTable from './components/BestWindowsTable.jsx'
 import CellPopup from './components/CellPopup.jsx'
 import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
@@ -13,7 +13,7 @@ import SouthPoleMap from './components/SouthPoleMap.jsx'
 import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
-import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
+import { rankBestWindows, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
 import { startWindowSearch } from './core/startWindowSearch.js'
@@ -192,7 +192,7 @@ export default function App() {
     [results, landingIndex],
   )
   const rankedRows = useMemo(() => results && rankCells(results, landingIndex, { ...ranking, limit: 10 }), [results, landingIndex, ranking])
-  const bestPairs = useMemo(() => results && rankBestPairs(results, { limit: 10 }), [results])
+  const bestWindows = useMemo(() => results && rankBestWindows(results, { limit: 10 }), [results])
   const currentPointSummary = useMemo(() => results && summarizeCurrentPoint(results, landingIndex), [results, landingIndex])
 
   const selectCell = useCallback((cell) => setSelectedCellId(cell.id), [])
@@ -436,7 +436,7 @@ export default function App() {
                       />
                     </div>
                   </div>
-                  <BestPairsTable rows={bestPairs} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
+                  <BestWindowsTable rows={bestWindows} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
                 </>
               )}
             </section>

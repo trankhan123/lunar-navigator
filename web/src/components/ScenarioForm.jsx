@@ -7,7 +7,7 @@ const POINT_TYPES = [
   ['site', 'Famous site'],
   ['coordinates', 'Coordinates'],
 ]
-const SCOPE_LABELS = { region: 'Same region', radius: 'Within a radius', all: 'All 9 regions' }
+const SCOPE_LABELS = { region: 'Same region (about 5 s)', radius: 'Within a radius', all: 'All 9 regions (about 20 s)' }
 const PANEL_LABELS = { auto: 'Automatic', vertical: 'Vertical, Sun-tracking', horizontal: 'Horizontal' }
 // Fields Simple mode shows; errors on any other field are listed above the Submit button there.
 const SIMPLE_MODE_FIELDS = new Set(['currentPoint', 'startDate', 'endDate', 'stayDays'])
@@ -202,6 +202,7 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
             </select>,
           )}
           {value.searchScope === 'radius' && numberField('Search radius', 'searchRadiusKm', 'km')}
+          <p className="text-xs text-slate-400 col-span-2">Search times measured on a laptop for 6 months and a 6-day stay; they grow with the date range and stay length.</p>
         </div>
       )}
 

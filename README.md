@@ -108,7 +108,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
 | W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `CellHoverCard`, `DirectionCard`, `MapSearch`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js` | W1, D8 | L | trankhan123 | done (map v2) |
 | W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
-| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | done |
+| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestWindowsTable.jsx` | C5 | L | trankhan123 | done |
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
 | W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | doing (texture done; Sun/Earth arrows left) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
@@ -431,7 +431,7 @@ Files: `optimizer.js`. The Web Worker files `windowSearchWorker.js` and `startWi
 | `runWindowSearch(cells, ephemeris, scenario, onProgress)` | `WindowResults` |
 | `metricsAt(results, cellIndex, landingIndex)` | `WindowMetrics` + `{cellIndex, cellId, landingIndex, landingTime, distanceKm}` |
 | `rankCells(results, landingIndex, {sortBy, direction, limit = 10})` | rows of `metricsAt` + `rank` |
-| `rankBestPairs(results, {limit = 10})` | best (cell, landing time) pairs over the whole range |
+| `rankBestWindows(results, {limit = 10})` | one row per cell (its best landing window), see "Best windows" below |
 | `summarizeCurrentPoint(results, landingIndex)` | `{metrics, nearestPassingLanding: {landingIndex, landingTime, offsetHours} \| null, nearestPassingCell: {cellIndex, cellId, distanceKm} \| null}` |
 | `startWindowSearch({cells, ephemeris, scenario, onProgress})` | `{promise (resolves WindowResults), cancel}` |
 
@@ -476,6 +476,10 @@ Rules:
   - main → worker: `{type:'run', requestId, cells, ephemeris, scenario}`;
   - worker → main: `{type:'progress', requestId, doneCells, totalCells}`, then `{type:'done', requestId, results}` (typed array buffers are transferred) or `{type:'error', requestId, message}`.
   - the same worker also answers the W2 map's `{type:'fractions', requestId, cells, ephemeris, firstHour, hourCount}` with `{type:'done', requestId, results: {fractionSun, fractionEarth}}` (Float32Array per cell, buffers transferred; no progress messages). `startWindowSearch.js` exports `startVisibilityFractions` next to `startWindowSearch`.
+- **Best windows:** the worker only returns `WindowResults`; `App.jsx` ranks them on the main thread (about 13 ms for 906 cells × 728 landings).
+  - a window is a run of consecutive landing times (6 h step) of one cell whose status is not `fail` (pass or marginal); `slipHours = 6 × (last − first)`, so 0 for a single time;
+  - the best landing inside a window and the best window of a cell use the default order (pass, higher lowest battery, higher % Sun and Earth, nearer, shorter comm loss, shorter dark), then the longer window; cells that never pass are left out;
+  - `rankBestWindows` rows are `metricsAt` of the best landing + `{rank, windowStartTime, windowEndTime, slipHours}`; `landingTime` is the best landing.
 - **Speed:** region scope (about 225 cells × 730 landings × 144 h) in under 3 s on a laptop.
 
 ## Web UI modules (`web/src/components/`, one component per file)
@@ -553,7 +557,7 @@ Files: `ScenarioForm.jsx`, `core/scenario.js`.
 
 **Logic (pure, tested):** `currentPointSentence(summary, scenario)` in `core/format.js` turns `summarizeCurrentPoint` into the card's plain-English verdict (full wording in its JSDoc). The map colours come from `results.status[cellIndex × landingCount + landingIndex]`.
 
-Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx`.
+Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestWindowsTable.jsx`.
 
 - **`LandingTimeSlider`** `{landingTimes, value, onChange(index)}`: steps of 6 h, its own Play/Pause (one step every 300 ms), shows the UTC time.
 - **`RankingTable`** `{rows, sortBy, direction, onSort(key), onSelectRow(row), currentCellId, mode}`:
@@ -562,7 +566,7 @@ Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `Cur
   - the first click on a heading sorts better-first, the next click reverses (`aria-sort` set); "Back to the default order" resets.
 - **`CurrentPointCard`** `{summary, scenario, onSelectLanding(index), onOpenCell(cellId)}`: the `currentPointSentence` verdict, plus buttons "Details of my point", "Go to <nearest passing time>" and "Open <nearest passing cell>".
 - **`CurrentPointStrip`** `{statuses, value, onSelectLanding(index)}`: SVG strip of cell 0 over all landing times (`results.status.subarray(0, landingCount)`), consecutive equal statuses drawn as one rectangle; click jumps.
-- **`BestPairsTable`** `{rows, onSelectRow(row)}`: the output of `rankBestPairs`.
+- **`BestWindowsTable`** `{rows, onSelectRow(row)}`: the output of `rankBestWindows`; a row click opens the cell at `row.landingTime`.
 - **Map:** the Results screen reuses `SouthPoleMap` with `statusByCellId` at the selected landing time (✓ ! ✕ symbols).
 - **While the worker runs:** a progress bar fed by `onProgress`.
 - **Done when:** dragging the slider updates the map colours and the table in under 100 ms for region scope.

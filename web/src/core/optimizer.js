@@ -20,7 +20,7 @@ const SMALLER_IS_BETTER_KEYS = new Set(['distanceKm', 'longestDarkHours', 'longe
 /**
  * Flat typed-array slot comparator for high-throughput candidate selection.
  */
-function compareResultSlots(results, c1, k1, c2, k2) {
+function compareResultSlots(results, c1, k1, c2, k2, slipHours1 = 0, slipHours2 = 0) {
   const lc = results.landingCount
   const idx1 = c1 * lc + k1
   const idx2 = c2 * lc + k2
@@ -48,6 +48,8 @@ function compareResultSlots(results, c1, k1, c2, k2) {
   const dark1 = results.longestDarkHours?.[idx1] ?? 0
   const dark2 = results.longestDarkHours?.[idx2] ?? 0
   if (dark1 !== dark2) return dark1 - dark2
+
+  if (slipHours1 !== slipHours2) return slipHours2 - slipHours1 // a longer window ranks first
 
   const id1 = results.cellIds?.[c1] ?? ''
   const id2 = results.cellIds?.[c2] ?? ''
@@ -494,49 +496,37 @@ export function rankCells(results, landingIndex, options = {}) {
 }
 
 /**
- * Identifies optimal global (cell, landing epoch) opportunities across the entire mission horizon
- * using a single-pass top-K buffer.
+ * Best landing window of every cell, ranked: a window is a run of consecutive passing (pass or marginal)
+ * landing times; slipHours is how long the landing can slip inside it. Cells that never pass are left out.
  */
-export function rankBestPairs(results, options = {}) {
-  const { limit = 10 } = options
-  const cellCount = results?.cellCount ?? 0
-  const landingCount = results?.landingCount ?? 0
-  const totalSlots = cellCount * landingCount
-  if (totalSlots === 0) return []
-
-  const effectiveLimit = limit != null && limit > 0 ? limit : totalSlots
-  const top = []
-
+export function rankBestWindows(results, { limit = 10 } = {}) {
+  const { cellCount = 0, landingCount = 0, status, landingTimes } = results ?? {}
+  const bestPerCell = []
   for (let c = 0; c < cellCount; c++) {
+    let best = null
     for (let k = 0; k < landingCount; k++) {
-      if (top.length === effectiveLimit) {
-        const worst = top[effectiveLimit - 1]
-        if (compareResultSlots(results, c, k, worst.cellIndex, worst.landingIndex) >= 0) {
-          continue
-        }
+      if (status[c * landingCount + k] === STATUS.fail) continue
+      let endIndex = k
+      let bestIndex = k
+      while (endIndex + 1 < landingCount && status[c * landingCount + endIndex + 1] !== STATUS.fail) {
+        endIndex++
+        if (compareResultSlots(results, c, endIndex, c, bestIndex) < 0) bestIndex = endIndex
       }
-
-      let low = 0
-      let high = top.length
-      while (low < high) {
-        const mid = (low + high) >> 1
-        if (compareResultSlots(results, c, k, top[mid].cellIndex, top[mid].landingIndex) < 0) {
-          high = mid
-        } else {
-          low = mid + 1
-        }
+      const slipHours = LANDING_STEP_HOURS * (endIndex - k)
+      if (!best || compareResultSlots(results, c, bestIndex, c, best.landingIndex, slipHours, best.slipHours) < 0) {
+        best = { cellIndex: c, landingIndex: bestIndex, startIndex: k, endIndex, slipHours }
       }
-
-      top.splice(low, 0, { cellIndex: c, landingIndex: k })
-      if (top.length > effectiveLimit) {
-        top.pop()
-      }
+      k = endIndex // the run is done, the next one starts after a failing landing
     }
+    if (best) bestPerCell.push(best)
   }
-
-  return top.map((entry, i) => ({
-    ...metricsAt(results, entry.cellIndex, entry.landingIndex),
+  bestPerCell.sort((a, b) => compareResultSlots(results, a.cellIndex, a.landingIndex, b.cellIndex, b.landingIndex, a.slipHours, b.slipHours))
+  return bestPerCell.slice(0, limit > 0 ? limit : undefined).map((window, i) => ({
+    ...metricsAt(results, window.cellIndex, window.landingIndex),
     rank: i + 1,
+    windowStartTime: landingTimes[window.startIndex],
+    windowEndTime: landingTimes[window.endIndex],
+    slipHours: window.slipHours,
   }))
 }
 
