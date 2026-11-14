@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import numpy as np
 from pyproj import Transformer
 
-from common import MOON_LONLAT_CRS, PGDA_CRS, PSR_LIMIT_FRACTION, SLOPE_LIMIT_DEG, WEB_DATA_FOLDER, load_sites, write_json
+from common import MAST_HEIGHT_M, MOON_LONLAT_CRS, PGDA_CRS, PSR_LIMIT_FRACTION, SLOPE_LIMIT_DEG, WEB_DATA_FOLDER, load_sites, write_json
 
 MOCK_FOLDER = WEB_DATA_FOLDER / "mock"
 START, DAYS = datetime(2028, 1, 1), 213  # covers 2028-01-01 … 2028-07-31 (default 6-month scenario + stay)
@@ -72,7 +72,7 @@ def main():
     write_json(MOCK_FOLDER / "ephemeris.json", mock_ephemeris())
     write_json(MOCK_FOLDER / f"cells_{REGION_CODE}.json", {
         "mock": True, "region": REGION_CODE, "name": region_site["name"],
-        "gridSource": "FAKE 7 × 7 grid, 1 km", "demSource": "FAKE horizons", "mastHeightM": 2,
+        "gridSource": "FAKE 7 × 7 grid, 1 km", "demSource": "FAKE horizons", "mastHeightM": MAST_HEIGHT_M,
         "slopeLimitDeg": SLOPE_LIMIT_DEG, "psrLimitFraction": PSR_LIMIT_FRACTION, "horizonUnitDeg": 0.1, "cells": cells,
     })
     write_json(MOCK_FOLDER / "regions.json", {"mock": True, "regions": [{

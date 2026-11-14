@@ -13,3 +13,16 @@ test('share link round trip', () => {
   }
   assert.deepEqual(decodeShareQuery(encodeShareQuery(state)), state)
 })
+
+test('share link: malformed values fall back to defaults', () => {
+  const { scenario } = decodeShareQuery('stay=&dark=abc&battery=1e999&panelMode=x&scope=y&point=cellX')
+  assert.equal(scenario.stayDays, DEFAULT_SCENARIO.stayDays)
+  assert.equal(scenario.maxDarkHours, DEFAULT_SCENARIO.maxDarkHours)
+  assert.equal(scenario.batteryCapacityWh, DEFAULT_SCENARIO.batteryCapacityWh)
+  assert.equal(scenario.panelMode, 'auto')
+  assert.equal(scenario.searchScope, 'region')
+  assert.equal(scenario.currentPoint, null)
+  assert.equal(decodeShareQuery('point=coords:,').scenario.currentPoint, null)
+  assert.equal(decodeShareQuery('point=cell:').scenario.currentPoint, null)
+  assert.deepEqual(decodeShareQuery('point=coords:-85.9,-1.2').scenario.currentPoint, { type: 'coordinates', lat: -85.9, lon: -1.2 })
+})

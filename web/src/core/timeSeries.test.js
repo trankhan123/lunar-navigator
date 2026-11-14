@@ -26,6 +26,24 @@ test('meanWhereAtLeast', () => {
   assert.equal(meanWhereAtLeast([10, 20], [0, 0], 0.5, 0, 2), null)
 })
 
+test('window functions refuse windows outside the series', () => {
+  assert.throws(() => longestRunBelow([1, 0, 0, 1], 0.5, 2, 5), RangeError)
+  assert.throws(() => firstIndexBelow([1, 1], 0.5, -1, 1), RangeError)
+})
+
+test('nextCrossing when the value sits exactly on the threshold, and chained countdowns', () => {
+  assertNear(nextCrossing([0.5, 0.2, 0.1, 0.8], 0.5, 0).hoursFromNow, 2 + 0.4 / 0.7)
+  assert.equal(nextCrossing([0.5, 0.2, 0.1, 0.8], 0.5, 0).direction, 'up')
+  const series = [1, 1, 0.8, 0.3, 0, 0, 0, 0.2, 0.7, 1, 1, 0.6, 0.1, 0, 0]
+  const sunset = nextCrossing(series, 0.5, 0)
+  assert.equal(sunset.direction, 'down')
+  assertNear(sunset.hoursFromNow, 2.6)
+  const sunrise = nextCrossing(series, 0.5, sunset.hoursFromNow)
+  assert.equal(sunrise.direction, 'up')
+  assertNear(sunrise.hoursFromNow, 5)
+  assert.equal(nextCrossing(series, 0.5, -1), null)
+})
+
 test('nextCrossing interpolates between hourly samples', () => {
   assert.deepEqual(nextCrossing([1, 1, 0, 0], 0.5, 0), { direction: 'down', hoursFromNow: 1.5 })
   assert.deepEqual(nextCrossing([0, 0, 1], 0.5, 0.5), { direction: 'up', hoursFromNow: 1 })

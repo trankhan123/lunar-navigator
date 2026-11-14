@@ -115,6 +115,17 @@ cd web && vercel deploy --prod # deploy (Root Directory = web)
 - **Vite dev:** file JSON không tồn tại vẫn trả `index.html` với mã 200, nên phát hiện thiếu `regions.json` bằng cách bắt lỗi parse JSON (`loadRegions(false).catch(...)`), không dựa vào `response.ok`. Vercel thì trả 404.
 - **Hàm khung trong UI:** component gọi hàm của workflow khác (C1, C2, C5, `validateScenario`) qua `try/catch` có comment `shortcut:`. Khi workflow đó xong, xoá `try`.
 - **Playwright MCP:** ảnh chụp chỉ lưu được trong thư mục dự án (`.playwright-mcp/`, đã gitignore), không lưu vào scratchpad.
+- **Review bằng 4 subagent ECC (14/11)** (react-patterns, accessibility, tdd-workflow, python-patterns) đã sửa:
+  - `nextCrossing` trả `Infinity` khi giá trị nằm đúng ngưỡng (hỏng đồng hồ đếm ngược);
+  - `asin` ra NaN khi thiên thể ở đúng đỉnh đầu;
+  - `replaceState` không debounce, có thể làm sập Safari;
+  - tìm kiếm khi chưa tải đủ các vùng;
+  - không có error boundary;
+  - globe làm bundle đầu nặng 2,26 MB (giờ tải lười, bundle chính còn 250 kB);
+  - bản đồ không chọn được bằng bàn phím (đã thêm danh sách Cell);
+  - `check_web_data.py` cho qua dữ liệu sai (giờ kiểm tra phủ thời gian ephemeris, `xM/yM` so với lat/lon, ngưỡng lấy từ `common.py`, `validation.json`, file JSON lạ).
+- **Quy ước phương vị** (chốt cho D4): k° tính từ **bắc địa lý tại ô**, không phải trục `+y` của bản đồ. Có test ở lon 90.
+- **Chrome mới:** `scrollIntoView` trả về Promise. Không được trả về nó từ `useEffect` (React báo `destroy is not a function`); luôn bọc thân effect trong `{ }`.
 - **globe.gl 2.x:** tạo bằng `new Globe(element)`, dọn bằng `globe._destructor()`. Callback truyền vào phải ổn định (`useCallback`), nếu không quả cầu sẽ bị dựng lại mỗi lần render.
 
 ### Dùng skill ECC trong dự án

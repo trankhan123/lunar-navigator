@@ -4,7 +4,8 @@ from pathlib import Path
 import rasterio
 import requests
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from common import PROJECT_ROOT
+
 MAX_ATTEMPTS = 5
 
 
@@ -22,6 +23,8 @@ def read_download_table():
 
 def download(url, target_path):
     expected_size = int(requests.head(url, allow_redirects=True, timeout=60).headers.get("Content-Length", -1))
+    if expected_size < 0:
+        raise RuntimeError(f"{url}: server sent no Content-Length, cannot verify the download")
     if target_path.exists() and target_path.stat().st_size == expected_size:
         print(f"skip   {target_path.name} (already downloaded)")
         return
@@ -45,7 +48,7 @@ def download(url, target_path):
             if attempt == MAX_ATTEMPTS:
                 raise
             print(f"retry  {target_path.name} (attempt {attempt} failed: {type(error).__name__})")
-    if expected_size > 0 and partial_path.stat().st_size != expected_size:
+    if partial_path.stat().st_size != expected_size:
         raise RuntimeError(f"{target_path.name}: got {partial_path.stat().st_size} bytes, expected {expected_size}")
     partial_path.rename(target_path)
     print(f"done   {target_path.name} ({expected_size / 1e6:.0f} MB)")

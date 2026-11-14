@@ -1,20 +1,33 @@
+import { memo } from 'react'
 import { toPolarXY } from '../core/data.js'
 
 const CELL_SIZE_M = 1000
 const CELL_GAP_M = 60
-// Index = STATUS code from core/optimizer.js: fail, marginal, pass.
+// Index = STATUS code from core/optimizer.js: fail, marginal, pass. Symbols keep the status readable without colour.
 const STATUS_COLORS = ['#ef4444', '#f59e0b', '#10b981']
+const STATUS_SYMBOLS = ['✕', '!', '✓']
+const STATUS_WORDS = ['fails a limit', 'meets limits, battery below 20 %', 'meets all limits']
 const FEASIBLE_COLOR = '#0ea5e9'
 const INFEASIBLE_COLOR = '#334155'
+const NOT_SEARCHED_COLOR = '#64748b'
 
-function cellFill(cell, statusByCellId) {
-  if (!cell.feasible) return INFEASIBLE_COLOR
-  if (!statusByCellId) return FEASIBLE_COLOR
-  const status = statusByCellId.get(cell.id)
-  return status === undefined ? '#64748b' : STATUS_COLORS[status]
+function cellTitle(cell, status) {
+  if (!cell.feasible) return `${cell.id} (not feasible: ${cell.infeasibleReason})`
+  return status === undefined ? cell.id : `${cell.id}: ${STATUS_WORDS[status]}`
 }
 
-export default function SouthPoleMap({ region, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell }) {
+function legendItem(color, label, symbol = '') {
+  return (
+    <span key={label} className="inline-flex items-center gap-1.5">
+      <span className="inline-grid size-3.5 place-items-center rounded-sm text-[9px] font-bold text-slate-950" style={{ backgroundColor: color }} aria-hidden="true">
+        {symbol}
+      </span>
+      {label}
+    </span>
+  )
+}
+
+function SouthPoleMap({ region, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell }) {
   const [xMin, yMin, xMax, yMax] = region.boundsM
   const widthM = xMax - xMin
   const heightM = yMax - yMin
@@ -32,29 +45,36 @@ export default function SouthPoleMap({ region, cells, sites, statusByCellId, cur
         viewBox={`0 0 ${widthM} ${heightM}`}
         className="max-h-[70vh] w-full rounded-lg bg-slate-900"
         role="img"
-        aria-label={`Map of ${region.name}: ${cells.length} cells of 1 km, ${feasibleCount} feasible. Select a cell for details.`}
+        aria-label={`Map of ${region.name}: ${cells.length} cells of 1 km, ${feasibleCount} feasible. Use the Cell list above the map to select one with the keyboard.`}
       >
         {cells.map((cell) => {
           const [x, y] = toSvg(cell.xM, cell.yM)
+          const status = statusByCellId?.get(cell.id)
+          const fill = !cell.feasible ? INFEASIBLE_COLOR : !statusByCellId ? FEASIBLE_COLOR : (STATUS_COLORS[status] ?? NOT_SEARCHED_COLOR)
           const isCurrent = cell.id === currentCellId
           const isSelected = cell.id === selectedCellId
           return (
-            <rect
-              key={cell.id}
-              x={x - CELL_SIZE_M / 2 + CELL_GAP_M / 2}
-              y={y - CELL_SIZE_M / 2 + CELL_GAP_M / 2}
-              width={CELL_SIZE_M - CELL_GAP_M}
-              height={CELL_SIZE_M - CELL_GAP_M}
-              fill={cellFill(cell, statusByCellId)}
-              fillOpacity={cell.feasible ? 0.75 : 1}
-              stroke={isCurrent ? '#fbbf24' : isSelected ? '#f8fafc' : 'none'}
-              strokeWidth={isCurrent ? 3 : 2}
-              vectorEffect="non-scaling-stroke"
-              className="cursor-pointer hover:fill-opacity-100"
-              onClick={() => onSelectCell(cell)}
-            >
-              <title>{`${cell.id}${cell.feasible ? '' : ` (not feasible: ${cell.infeasibleReason})`}`}</title>
-            </rect>
+            <g key={cell.id} className="cursor-pointer" onClick={() => onSelectCell(cell)}>
+              <rect
+                x={x - CELL_SIZE_M / 2 + CELL_GAP_M / 2}
+                y={y - CELL_SIZE_M / 2 + CELL_GAP_M / 2}
+                width={CELL_SIZE_M - CELL_GAP_M}
+                height={CELL_SIZE_M - CELL_GAP_M}
+                fill={fill}
+                fillOpacity={cell.feasible ? 0.75 : 1}
+                stroke={isCurrent ? '#fbbf24' : isSelected ? '#f8fafc' : 'none'}
+                strokeWidth={isCurrent ? 3 : 2}
+                vectorEffect="non-scaling-stroke"
+                className="transition-[fill-opacity] hover:[fill-opacity:1]"
+              >
+                <title>{cellTitle(cell, status)}</title>
+              </rect>
+              {cell.feasible && status !== undefined && (
+                <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fontSize={420} fontWeight="700" fill="#020617" pointerEvents="none">
+                  {STATUS_SYMBOLS[status]}
+                </text>
+              )}
+            </g>
           )
         })}
         {sitesInView.map((site) => {
@@ -71,24 +91,15 @@ export default function SouthPoleMap({ region, cells, sites, statusByCellId, cur
       </svg>
       <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
         {statusByCellId
-          ? [
-              legendItem(STATUS_COLORS[2], 'Meets all limits'),
-              legendItem(STATUS_COLORS[1], 'Meets limits, battery below 20 %'),
-              legendItem(STATUS_COLORS[0], 'Fails a limit'),
-            ]
+          ? STATUS_WORDS.map((word, status) => legendItem(STATUS_COLORS[status], word[0].toUpperCase() + word.slice(1), STATUS_SYMBOLS[status])).reverse()
           : legendItem(FEASIBLE_COLOR, 'Feasible cell')}
         {legendItem(INFEASIBLE_COLOR, 'Too steep or in permanent shadow')}
+        <span>Amber outline: current point · white: selected</span>
         <span>1 square = 1 km · up = towards 0° longitude (Earth-facing side)</span>
       </figcaption>
     </figure>
   )
 }
 
-function legendItem(color, label) {
-  return (
-    <span key={label} className="inline-flex items-center gap-1.5">
-      <span className="inline-block size-3 rounded-sm" style={{ backgroundColor: color }} aria-hidden="true" />
-      {label}
-    </span>
-  )
-}
+// Memo: the form re-renders App on every keystroke; ~2,000 cells should not re-render with it.
+export default memo(SouthPoleMap)

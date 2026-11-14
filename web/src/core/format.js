@@ -2,8 +2,9 @@
 
 /** 0.5 → '30 min', 3.33 → '3 h 20 min', 76 → '3 d 4 h'. */
 export function formatDuration(hours) {
-  if (hours < 48) {
-    const minutes = Math.round(hours * 60)
+  if (!Number.isFinite(hours) || hours < 0) return '—'
+  const minutes = Math.round(hours * 60)
+  if (minutes < 48 * 60) {
     const wholeHours = Math.floor(minutes / 60)
     const restMinutes = minutes % 60
     if (wholeHours === 0) return `${restMinutes} min`

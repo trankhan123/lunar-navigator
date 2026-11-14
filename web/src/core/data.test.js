@@ -10,6 +10,7 @@ test('hour index ↔ ISO time', () => {
   assert.equal(timeAtHour(ephemeris, 30), '2028-01-02T06:00Z')
   assert.throws(() => hourIndexOf(ephemeris, '2028-01-03T00:00Z'))
   assert.throws(() => hourIndexOf(ephemeris, '2028-01-01T00:30Z'))
+  assert.throws(() => hourIndexOf(ephemeris, '2028-01-01T06:00'))
 })
 
 test('toPolarXY matches the PGDA projection (pyproj: lat −85, lon 0 → y 151713 m)', () => {
@@ -28,6 +29,8 @@ test('resolveCurrentCell: grid cell, site and typed coordinates', () => {
   const siteCell = resolveCurrentCell({ type: 'site', siteId: 'apollo-11' }, {}, [site])
   assert.equal(siteCell.id, 'SITE-apollo-11')
   assert.equal(siteCell.xM, null)
+  assert.equal(resolveCurrentCell({ type: 'site', siteId: 'x' }, {}, [{ id: 'x', name: 'X', lat: 0, lon: 0 }]).horizon, null)
+  assert.throws(() => resolveCurrentCell({ type: 'bogus' }, {}, []))
   const custom = resolveCurrentCell({ type: 'coordinates', lat: -85, lon: 0 }, {}, [])
   assert.equal(custom.id, 'CUSTOM')
   assert.equal(custom.horizon, null)

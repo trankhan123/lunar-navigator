@@ -5,32 +5,56 @@ Run: python pipeline/check_web_data.py                       (web/public/data)
 Exit code 1 and a list of problems when something is wrong.
 """
 import json
+import math
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
-from common import REGION_CODES, WEB_DATA_FOLDER
+from pyproj import Transformer
+
+from common import (EPHEMERIS_START, EPHEMERIS_STOP, MOON_LONLAT_CRS, PGDA_CRS, PSR_LIMIT_FRACTION, REGION_CODES,
+                    SLOPE_LIMIT_DEG, WEB_DATA_FOLDER)
 
 MAX_FILE_BYTES = 2_000_000
+MAX_POSITION_ERROR_M = 100
 ISO_HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00Z$")
+EPHEMERIS_START_TIME = f"{EPHEMERIS_START}T00:00Z"
+EPHEMERIS_HOURS = ((date.fromisoformat(EPHEMERIS_STOP) - date.fromisoformat(EPHEMERIS_START)).days + 1) * 24
 EPHEMERIS_ARRAYS = ["sunSubLonDeg", "sunSubLatDeg", "sunDistanceAu", "earthSubLonDeg", "earthSubLatDeg", "earthDistanceKm"]
 CELL_KEYS = ["id", "label", "lat", "lon", "xM", "yM", "heightM", "slopeDeg", "psrFraction", "feasible", "infeasibleReason", "horizon"]
 SITE_GROUPS = {"artemis-region", "apollo", "clps", "international"}
+TO_POLAR_XY = Transformer.from_crs(MOON_LONLAT_CRS, PGDA_CRS, always_xy=True)
 problems = []
+loaded_files = set()
 
 
 def problem(file_name, message):
     problems.append(f"{file_name}: {message}")
 
 
-def load(folder, file_name, expect_mock):
+def is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def in_range(value, low, high):
+    return is_number(value) and low <= value <= high
+
+
+def load(folder, file_name, expect_mock, required=True):
+    loaded_files.add(file_name)
     path = folder / file_name
     if not path.exists():
-        problem(file_name, "missing")
+        if required:
+            problem(file_name, "missing")
         return None
     if path.stat().st_size > MAX_FILE_BYTES:
         problem(file_name, f"{path.stat().st_size / 1e6:.1f} MB, limit is 2 MB")
-    data = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        problem(file_name, f"not valid JSON ({error})")
+        return None
     if not isinstance(data, dict):
         problem(file_name, "top level must be an object")
         return None
@@ -39,24 +63,25 @@ def load(folder, file_name, expect_mock):
     return data
 
 
-def in_range(value, low, high):
-    return isinstance(value, (int, float)) and low <= value <= high
-
-
 def check_horizon(file_name, owner, horizon):
     if horizon is None:
         return
-    if not (isinstance(horizon, list) and len(horizon) == 360 and all(isinstance(v, int) and -900 <= v <= 900 for v in horizon)):
+    if not (isinstance(horizon, list) and len(horizon) == 360 and all(type(v) is int and -900 <= v <= 900 for v in horizon)):
         problem(file_name, f"{owner}: horizon must be null or 360 integers in 0.1° units")
 
 
-def check_ephemeris(data):
+def check_ephemeris(data, expect_mock):
     name = "ephemeris.json"
     if not ISO_HOUR.match(str(data.get("startTime"))):
         problem(name, "startTime must look like 2027-01-01T00:00Z")
-    if data.get("stepHours") != 1:
+    if type(data.get("stepHours")) is not int or data["stepHours"] != 1:
         problem(name, "stepHours must be 1")
     hours = data.get("hours")
+    if type(hours) is not int or hours <= 0:
+        problem(name, "hours must be a positive integer")
+        return
+    if not expect_mock and (data.get("startTime"), hours) != (EPHEMERIS_START_TIME, EPHEMERIS_HOURS):
+        problem(name, f"must start at {EPHEMERIS_START_TIME} and cover {EPHEMERIS_HOURS} hours (to {EPHEMERIS_STOP} 23:00)")
     for key in EPHEMERIS_ARRAYS:
         values = data.get(key)
         if not isinstance(values, list) or len(values) != hours:
@@ -67,80 +92,131 @@ def check_ephemeris(data):
             problem(name, f"{key} has values outside {low}..{high}")
 
 
+def check_cell(file_name, code, cell):
+    """One grid cell. Returns its (xM, yM) when the cell is valid enough to bound the region, else None."""
+    cell_id = cell.get("id", "?")
+    if sorted(cell) != sorted(CELL_KEYS):
+        problem(file_name, f"{cell_id}: keys must be exactly {CELL_KEYS}")
+        return None
+    if not isinstance(cell_id, str) or cell_id != f"{code}-{cell['label']}":
+        problem(file_name, f"{cell_id}: id must equal '{code}-' + label")
+    if not (in_range(cell["lat"], -90, -60) and in_range(cell["lon"], -180, 180) and is_number(cell["xM"]) and is_number(cell["yM"])):
+        problem(file_name, f"{cell_id}: lat/lon/xM/yM missing or out of range")
+        return None
+    x, y = TO_POLAR_XY.transform(cell["lon"], cell["lat"])
+    if math.hypot(x - cell["xM"], y - cell["yM"]) > MAX_POSITION_ERROR_M:
+        problem(file_name, f"{cell_id}: xM/yM do not match lat/lon in the PGDA projection (swapped axes?)")
+    if not (in_range(cell["slopeDeg"], 0, 90) and in_range(cell["psrFraction"], 0, 1) and is_number(cell["heightM"])):
+        problem(file_name, f"{cell_id}: heightM must be a number, slopeDeg 0..90, psrFraction 0..1")
+        return None
+    # Rule applied to the rounded values written in the file (README "cells_<CODE>.json").
+    expected = cell["slopeDeg"] <= SLOPE_LIMIT_DEG and cell["psrFraction"] <= PSR_LIMIT_FRACTION
+    reason = None if expected else ("slope" if cell["slopeDeg"] > SLOPE_LIMIT_DEG else "psr")
+    if cell["feasible"] is not expected or cell["infeasibleReason"] != reason:
+        problem(file_name, f"{cell_id}: feasible/infeasibleReason do not match slope and PSR limits")
+    check_horizon(file_name, cell_id, cell["horizon"])
+    if cell["horizon"] is None:
+        problem(file_name, f"{cell_id}: grid cells must have a horizon")
+    return cell["xM"], cell["yM"]
+
+
 def check_cells(data, file_name, code):
-    limit_slope, limit_psr = data.get("slopeLimitDeg"), data.get("psrLimitFraction")
     if data.get("region") != code:
         problem(file_name, f'region must be "{code}"')
     if data.get("horizonUnitDeg") != 0.1:
         problem(file_name, "horizonUnitDeg must be 0.1")
-    cells = data.get("cells") or []
-    if not cells:
-        problem(file_name, "cells is empty")
-    seen = set()
-    for cell in cells:
-        cell_id = cell.get("id", "?")
-        if sorted(cell) != sorted(CELL_KEYS):
-            problem(file_name, f"{cell_id}: keys must be exactly {CELL_KEYS}")
-            continue
-        if cell_id in seen or not cell_id.startswith(f"{code}-") or cell_id != f"{code}-{cell['label']}":
-            problem(file_name, f"{cell_id}: id must be unique and equal '{code}-' + label")
-        seen.add(cell_id)
-        if not (in_range(cell["lat"], -90, -60) and in_range(cell["lon"], -180, 180)):
-            problem(file_name, f"{cell_id}: lat/lon out of range")
-        expected = cell["slopeDeg"] <= limit_slope and cell["psrFraction"] <= limit_psr
-        reason = None if expected else ("slope" if cell["slopeDeg"] > limit_slope else "psr")
-        if cell["feasible"] is not expected or cell["infeasibleReason"] != reason:
-            problem(file_name, f"{cell_id}: feasible/infeasibleReason do not match slope and PSR limits")
-        check_horizon(file_name, cell_id, cell["horizon"])
-        if cell["horizon"] is None:
-            problem(file_name, f"{cell_id}: grid cells must have a horizon")
-    return len(cells), sum(cell.get("feasible") is True for cell in cells)
+    if (data.get("slopeLimitDeg"), data.get("psrLimitFraction")) != (SLOPE_LIMIT_DEG, PSR_LIMIT_FRACTION):
+        problem(file_name, f"slopeLimitDeg/psrLimitFraction must equal common.py ({SLOPE_LIMIT_DEG}, {PSR_LIMIT_FRACTION})")
+    cells = data.get("cells")
+    if not isinstance(cells, list) or not cells:
+        problem(file_name, "cells must be a non-empty list")
+        return (0, 0), []
+    ids = [cell.get("id") for cell in cells]
+    if len(set(ids)) != len(ids):
+        problem(file_name, "cell ids must be unique")
+    positions = [position for cell in cells if (position := check_cell(file_name, code, cell))]
+    return (len(cells), sum(cell.get("feasible") is True for cell in cells)), positions
 
 
 def check_regions(data, folder, expect_mock):
-    for region in data.get("regions") or problem("regions.json", "regions is empty") or []:
+    regions = data.get("regions")
+    if not isinstance(regions, list) or not regions:
+        problem("regions.json", "regions must be a non-empty list")
+        return
+    for region in regions:
         code = region.get("code")
         if code not in REGION_CODES:
             problem("regions.json", f"unknown region code {code}")
             continue
-        if not (isinstance(region.get("boundsM"), list) and len(region["boundsM"]) == 4):
-            problem("regions.json", f"{code}: boundsM must be [xMin, yMin, xMax, yMax]")
+        bounds = region.get("boundsM")
+        if not (isinstance(bounds, list) and len(bounds) == 4 and all(is_number(v) for v in bounds)):
+            problem("regions.json", f"{code}: boundsM must be 4 numbers [xMin, yMin, xMax, yMax]")
+            bounds = None
         if region.get("cellsFile") != f"cells_{code}.json":
             problem("regions.json", f"{code}: cellsFile must be cells_{code}.json")
             continue
         cells = load(folder, region["cellsFile"], expect_mock)
-        if cells is not None:
-            counts = check_cells(cells, region["cellsFile"], code)
-            if counts != (region.get("cellCount"), region.get("feasibleCount")):
-                problem("regions.json", f"{code}: cellCount/feasibleCount {region.get('cellCount')}/{region.get('feasibleCount')} but file has {counts}")
+        if cells is None:
+            continue
+        counts, positions = check_cells(cells, region["cellsFile"], code)
+        if counts != (region.get("cellCount"), region.get("feasibleCount")):
+            problem("regions.json", f"{code}: cellCount/feasibleCount {region.get('cellCount')}/{region.get('feasibleCount')} but file has {counts}")
+        if bounds and positions and not all(bounds[0] <= x <= bounds[2] and bounds[1] <= y <= bounds[3] for x, y in positions):
+            problem("regions.json", f"{code}: boundsM does not contain every cell centre")
 
 
-def check_sites(data):
+def check_sites(data, expect_mock):
+    sites = data.get("sites")
+    if not isinstance(sites, list) or not sites:
+        problem("sites.json", "sites must be a non-empty list")
+        return
     seen = set()
-    for site in data.get("sites") or problem("sites.json", "sites is empty") or []:
+    for site in sites:
         site_id = site.get("id", "?")
         if site_id in seen or site.get("group") not in SITE_GROUPS:
             problem("sites.json", f"{site_id}: duplicate id or unknown group")
         seen.add(site_id)
+        if site.get("source") == "TODO":
+            problem("sites.json", f"{site_id}: TODO site must not be published")
         if not (in_range(site.get("lat"), -90, 90) and in_range(site.get("lon"), -180, 180)):
-            problem("sites.json", f"{site_id}: lat/lon missing or out of range (TODO sites must not be published)")
+            problem("sites.json", f"{site_id}: lat/lon missing or out of range")
+            continue
         if site.get("region") is not None and site["region"] not in REGION_CODES:
             problem("sites.json", f"{site_id}: unknown region")
         if site.get("hasTerrain") is not (site.get("horizon") is not None):
             problem("sites.json", f"{site_id}: hasTerrain must be true exactly when horizon is given")
+        if not expect_mock and site["lat"] <= -60 and site.get("horizon") is None:
+            problem("sites.json", f"{site_id}: sites at lat ≤ −60° are inside the DEM and need a horizon (D4)")
         check_horizon("sites.json", site_id, site.get("horizon"))
+
+
+def check_validation(data, expect_mock):
+    if not (isinstance(data.get("pgda69"), list) and isinstance(data.get("horizons"), dict) and isinstance(data.get("quickmap"), list)):
+        problem("validation.json", "needs pgda69 (list), horizons (object) and quickmap (list)")
+
+
+def run_check(file_name, check, *arguments):
+    """Malformed input becomes a listed problem instead of a traceback, so the other files are still checked."""
+    try:
+        check(*arguments)
+    except (TypeError, AttributeError, KeyError, ValueError) as error:
+        problem(file_name, f"malformed ({type(error).__name__}: {error})")
 
 
 def main():
     folder = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else WEB_DATA_FOLDER
     expect_mock = folder.name == "mock"
-    for file_name, check in [("ephemeris.json", check_ephemeris), ("sites.json", check_sites)]:
-        data = load(folder, file_name, expect_mock)
+    for file_name, check, required in [("ephemeris.json", check_ephemeris, True), ("sites.json", check_sites, True),
+                                       ("validation.json", check_validation, expect_mock)]:
+        data = load(folder, file_name, expect_mock, required)
         if data is not None:
-            check(data)
+            run_check(file_name, check, data, expect_mock)
     regions = load(folder, "regions.json", expect_mock)
     if regions is not None:
-        check_regions(regions, folder, expect_mock)
+        run_check("regions.json", check_regions, regions, folder, expect_mock)
+    for path in sorted(folder.glob("*.json")):  # files nothing references still obey size and mock rules
+        if path.name not in loaded_files:
+            load(folder, path.name, expect_mock)
     print(f"checked {folder}")
     for line in problems:
         print("  problem:", line)

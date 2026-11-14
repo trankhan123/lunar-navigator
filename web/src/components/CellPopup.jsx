@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { computeEarthTrack, nextEarthEvent } from '../core/communication.js'
 import { timeAtHour } from '../core/data.js'
 import { formatDuration, formatUtc } from '../core/format.js'
@@ -28,8 +28,20 @@ function skyLine(name, body) {
   return `${name} ${body.elevationDeg.toFixed(1)}° high, ${event}`
 }
 
-export default function CellPopup({ cell, ephemeris, hour, onUseAsCurrent, onClose }) {
+// App renders this with key={cell.id}, so the "Copied" state resets and the popup scrolls into view per cell.
+export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCurrent, onClose }) {
   const sky = useMemo(() => skyAt(cell, ephemeris, hour), [cell, ephemeris, hour])
+  const [copyMessage, setCopyMessage] = useState('')
+  const sectionRef = useRef(null)
+  useEffect(() => {
+    sectionRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) // returns a Promise in new Chrome: never return it
+  }, [])
+
+  function copyId() {
+    const copying = navigator.clipboard?.writeText(cell.id) ?? Promise.reject(new Error('no clipboard'))
+    copying.then(() => setCopyMessage('Copied')).catch(() => setCopyMessage('Copy failed: select the ID above'))
+  }
+
   const rows = [
     ['Latitude, longitude', `${cell.lat.toFixed(4)}°, ${cell.lon.toFixed(4)}°`],
     ['Height', `${Math.round(cell.heightM)} m`],
@@ -37,15 +49,15 @@ export default function CellPopup({ cell, ephemeris, hour, onUseAsCurrent, onClo
     ['Permanent shadow', `${Math.round(cell.psrFraction * 100)} % of the cell`],
   ]
   return (
-    <section aria-labelledby="cell-title" className="rounded-lg border border-slate-800 bg-slate-900 p-4 text-sm">
+    <section ref={sectionRef} aria-labelledby="cell-title" className="scroll-mt-4 rounded-lg border border-slate-800 bg-slate-900 p-4 text-sm">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div>
           <h2 id="cell-title" className="font-mono text-base font-semibold">{cell.id}</h2>
-          <p className={cell.feasible ? 'text-sky-300' : 'text-slate-400'}>
+          <p className={cell.feasible ? 'text-sky-300' : 'text-slate-300'}>
             {cell.feasible ? 'Feasible landing cell' : `Not feasible: ${REASON_TEXT[cell.infeasibleReason]}`}
           </p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close cell details" className="rounded px-2 text-lg text-slate-400 hover:text-slate-100">
+        <button type="button" onClick={onClose} aria-label="Close cell details" className="-mr-2 -mt-2 grid size-10 place-items-center rounded text-xl text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100">
           ×
         </button>
       </div>
@@ -68,19 +80,21 @@ export default function CellPopup({ cell, ephemeris, hour, onUseAsCurrent, onClo
           <p className="text-xs text-slate-400">Sun and Earth times for this cell appear once the sunlight and communication modules are ready.</p>
         )}
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => navigator.clipboard?.writeText(cell.id)} className="rounded border border-slate-700 px-3 py-1.5 hover:bg-slate-800">
+      <div className="mt-3 flex flex-wrap items-center gap-2" aria-live="polite">
+        <button type="button" onClick={copyId} className="rounded border border-slate-500 px-3 py-2 transition-colors hover:bg-slate-800">
           Copy ID
         </button>
         <button
           type="button"
           onClick={onUseAsCurrent}
-          disabled={!cell.feasible}
-          className="rounded bg-sky-600 px-3 py-1.5 font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={isCurrent}
+          className="rounded bg-sky-700 px-3 py-2 font-medium text-white transition-colors hover:bg-sky-800 disabled:cursor-default disabled:opacity-60"
         >
-          Use as current point
+          {isCurrent ? 'This is your current point' : 'Use as current point'}
         </button>
+        {copyMessage && <span className="text-xs text-slate-300">{copyMessage}</span>}
       </div>
+      {!cell.feasible && <p className="mt-2 text-xs text-slate-400">You can still use it as your current point to find the nearest good cells.</p>}
     </section>
   )
 }

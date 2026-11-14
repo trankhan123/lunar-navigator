@@ -49,6 +49,8 @@ const HOUR_MS = 3600 * 1000
 
 /** Ephemeris hour index of an ISO time on a whole hour. Throws outside the ephemeris. */
 export function hourIndexOf(ephemeris, isoTime) {
+  // Only explicit UTC: a time without 'Z' would be read in the viewer's time zone.
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$/.test(isoTime)) throw new Error(`${isoTime} is not a UTC time like 2028-01-01T06:00Z`)
   const hour = (Date.parse(isoTime) - Date.parse(ephemeris.startTime)) / HOUR_MS
   if (!Number.isInteger(hour) || hour < 0 || hour >= ephemeris.hours) {
     throw new Error(`${isoTime} is not a whole hour inside the ephemeris`)
@@ -88,8 +90,9 @@ export function resolveCurrentCell(currentPoint, cellsByRegion, sites) {
     const site = sites.find((candidate) => candidate.id === currentPoint.siteId)
     if (!site) throw new Error(`Unknown site ${currentPoint.siteId}`)
     const position = toPolarXY(site.lat, site.lon)
-    return { id: `SITE-${site.id}`, label: site.name, lat: site.lat, lon: site.lon, ...position, ...unknownTerrain, horizon: site.horizon }
+    return { id: `SITE-${site.id}`, label: site.name, lat: site.lat, lon: site.lon, ...position, ...unknownTerrain, horizon: site.horizon ?? null }
   }
+  if (currentPoint.type !== 'coordinates') throw new Error(`Unknown point type ${currentPoint.type}`)
   const { lat, lon } = currentPoint
   return { id: 'CUSTOM', label: 'Custom point', lat, lon, ...toPolarXY(lat, lon), ...unknownTerrain, horizon: null }
 }

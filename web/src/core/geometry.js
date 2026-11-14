@@ -33,7 +33,8 @@ export function bodyAzimuthElevation(cell, subLonDeg, subLatDeg, distanceKm) {
     distanceKm * Math.sin(subLat) - cellRadiusKm * up[2],
   ]
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-  const elevationDeg = Math.asin(dot(toBody, up) / Math.sqrt(dot(toBody, toBody))) / DEG
+  // Clamp: rounding can push the ratio to 1 + ε when the body is exactly overhead, and asin would return NaN.
+  const elevationDeg = Math.asin(Math.min(1, Math.max(-1, dot(toBody, up) / Math.sqrt(dot(toBody, toBody))))) / DEG
   const azimuthDeg = (Math.atan2(dot(toBody, east), dot(toBody, north)) / DEG + 360) % 360
   return { azimuthDeg, elevationDeg }
 }

@@ -38,6 +38,17 @@ test('bodyAzimuthElevation: azimuth clockwise from North, elevation above the lo
   assertNear(nearPole.elevationDeg, 1, 1e-3)
 })
 
+test('bodyAzimuthElevation: exactly overhead stays finite', () => {
+  assertNear(bodyAzimuthElevation({ lat: 1.5, lon: -179.99, heightM: 0 }, -179.99, 1.5, 1.496e8).elevationDeg, 90, 1e-6)
+})
+
+test('bodyAzimuthElevation: azimuth is from local geographic north, also away from lon 0 (D4 must use the same)', () => {
+  const cellAtLon90 = { lat: -85, lon: 90, heightM: 0 }
+  const north = bodyAzimuthElevation(cellAtLon90, 90, 0, 1.5e8).azimuthDeg
+  assertNear(Math.min(north, 360 - north), 0, 1e-3)
+  assertNear(bodyAzimuthElevation(cellAtLon90, 0, 0, 1.5e8).azimuthDeg, 270, 1e-3)
+})
+
 // Written by module D1 (fetch_horizons.py); skipped until it exists.
 const fixtureUrl = new URL('./fixtures/horizons_check.json', import.meta.url)
 test('bodyAzimuthElevation matches JPL Horizons within 0.1°', { skip: !existsSync(fixtureUrl) }, () => {

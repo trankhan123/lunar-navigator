@@ -8,6 +8,9 @@ test('formatDuration', () => {
   assert.equal(formatDuration(2.999), '3 h')
   assert.equal(formatDuration(76), '3 d 4 h')
   assert.equal(formatDuration(72), '3 d')
+  assert.equal(formatDuration(47.995), '2 d')
+  assert.equal(formatDuration(Infinity), '—')
+  assert.equal(formatDuration(-0.25), '—')
 })
 
 test('formatUtc', () => {
