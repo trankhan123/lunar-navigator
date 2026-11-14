@@ -1,4 +1,4 @@
-import { cellDisplayName, currentPointSentence, formatUtc, hasNoTerrain } from '../core/format.js'
+import { cellDisplayName, currentPointSentence, formatUtc, hasNoTerrain, usesCapGrid } from '../core/format.js'
 import { useI18n } from '../i18n/index.jsx'
 
 const BORDER = { pass: 'border-emerald-500/60', marginal: 'border-amber-500/60', fail: 'border-red-500/60' }
@@ -22,6 +22,7 @@ export default function CurrentPointCard({ summary, scenario, point, onSelectLan
       </h3>
       <p className="mt-1 text-slate-100">{currentPointSentence(summary, scenario, pointName)}</p>
       {point && hasNoTerrain(point) && <p className="mt-1 text-xs text-slate-400">{t('currentPoint.noTerrain')}</p>}
+      {point && usesCapGrid(point) && <p className="mt-1 text-xs text-slate-400">{t('currentPoint.capGrid')}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" onClick={() => onOpenCell(metrics.cellId)} className={buttonClass}>
           {t('currentPoint.detailsBtn')}

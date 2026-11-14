@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { searchMap } from '../core/mapSearch.js'
 
 // Enter picks the first match, Escape clears. A typed cell ID asks App to load its region's file (onNeedRegionCells).
-export default function MapSearch({ regions, sites, cellsByRegion, onNeedRegionCells, onPick }) {
+export default function MapSearch({ regions, sites, cellsByRegion, capCells = null, onNeedRegionCells, onNeedCapPoint, onPick }) {
   const [text, setText] = useState('')
-  const { matches, regionCodeToLoad } = useMemo(() => searchMap(text, regions, sites, cellsByRegion), [text, regions, sites, cellsByRegion])
+  const { matches, regionCodeToLoad, capPointToLoad } = useMemo(() => searchMap(text, regions, sites, cellsByRegion, capCells), [text, regions, sites, cellsByRegion, capCells])
   useEffect(() => {
     if (regionCodeToLoad) onNeedRegionCells(regionCodeToLoad)
   }, [regionCodeToLoad, onNeedRegionCells])
+  useEffect(() => {
+    if (capPointToLoad) onNeedCapPoint(capPointToLoad)
+  }, [capPointToLoad]) // eslint-disable-line react-hooks/exhaustive-deps -- once per typed point; the callback is a fresh closure each render
 
   function pick(match) {
     onPick(match)
@@ -15,7 +18,7 @@ export default function MapSearch({ regions, sites, cellsByRegion, onNeedRegionC
   }
   const typed = text.trim()
   const loadingRegion = regionCodeToLoad && regions.find((region) => region.code === regionCodeToLoad)
-  const status = !typed ? '' : loadingRegion ? `Loading ${loadingRegion.name} cells…` : matches.length === 0 ? `No region, site or cell matches “${typed}”.` : ''
+  const status = !typed ? '' : loadingRegion ? `Loading ${loadingRegion.name} cells…` : capPointToLoad ? 'Loading the cap grid cell…' : matches.length === 0 ? `No region, site or cell matches “${typed}”.` : ''
 
   return (
     <form

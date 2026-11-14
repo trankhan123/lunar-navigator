@@ -11,12 +11,14 @@ import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
-import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
+import { capTileIdsInBounds } from './core/capGrid.js'
+import { capTileIdsForSearch, regionCodesForSearch, searchAnchor } from './core/capSearch.js'
+import { hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell } from './core/data.js'
 import { cellDisplayName } from './core/format.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
 import { isCellOnPolarMap } from './core/mapView.js'
-import { rankBestWindows, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
+import { CAP_REGION_SEARCH_KM, rankBestWindows, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
 import { startWindowSearch } from './core/startWindowSearch.js'
@@ -47,31 +49,23 @@ async function loadAllData() {
   const useMock = regionsFile === null
   if (useMock) regionsFile = await loadRegions(true)
   // The real ephemeris (D1) exists already, so even mock cells get real Sun and Earth positions.
-  const [ephemeris, sitesFile, maps] = await Promise.all([
+  const [ephemeris, sitesFile, maps, capIndex] = await Promise.all([
     loadEphemeris(false).catch(() => loadEphemeris(true)),
     loadSites(useMock),
     useMock ? [] : loadMaps(),
+    useMock ? null : loadCapIndex(), // README D9; null = no cap grid, everything works as before
   ])
-  return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites, maps }
+  return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites, maps, capIndex }
 }
 
-/** Regions whose cells the search needs: all of them for radius/all scopes, else the current point's region. */
-function regionCodesForSearch(scenario, regions, sites) {
-  if (scenario.searchScope !== 'region') return regions.map((region) => region.code)
-  const point = scenario.currentPoint
-  if (point.type === 'cell') return [point.cellId.split('-')[0]]
-  if (point.type === 'site') return [sites.find((site) => site.id === point.siteId)?.region].filter(Boolean)
-  const { xM, yM } = toPolarXY(point.lat, point.lon)
-  return regions
-    .filter(({ boundsM: [x0, y0, x1, y1] }) => xM !== null && xM >= x0 && xM <= x1 && yM >= y0 && yM <= y1)
-    .map((region) => region.code)
-}
+const CAP_BATCH_SIZE = 10 // tiles per batch of the background load, so the map fills in steps
 
 export default function App() {
   const { t } = useI18n()
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [cellsByRegion, setCellsByRegion] = useState({})
+  const [capTiles, setCapTiles] = useState({}) // README D9: tile id → cells, filled as tiles load
   const [regionCode, setRegionCode] = useState(initialCellId?.split('-')[0] ?? null)
   const [screen, setScreen] = useState(SCREENS.some(([id]) => id === initialState.screen) ? initialState.screen : 'map')
   const [mode, setMode] = useState(initialState.mode)
@@ -83,6 +77,7 @@ export default function App() {
   const focusRequests = useRef(0)
   const [search, setSearch] = useState({ status: 'idle' })
   const [ranking, setRanking] = useState({ sortBy: undefined, direction: undefined })
+  const requestedCapTiles = useRef(new Set())
   const cellRequests = useRef(new Map()) // region code → pending or finished request, so each file is fetched once
   const latestSearch = useRef(0)
   const cancelSearch = useRef(null)
@@ -111,6 +106,44 @@ export default function App() {
     },
     [data],
   )
+
+  const capCells = useMemo(() => Object.values(capTiles).flat(), [capTiles])
+  // Loads CAP tiles not requested yet; resolves with the cells of all the asked tiles.
+  const needCapTiles = useCallback(async (tileIds) => {
+    const fresh = tileIds.filter((tileId) => !requestedCapTiles.current.has(tileId))
+    fresh.forEach((tileId) => requestedCapTiles.current.add(tileId))
+    try {
+      const lists = await loadCapTiles(tileIds)
+      if (fresh.length > 0) setCapTiles((loaded) => ({ ...loaded, ...Object.fromEntries(tileIds.map((tileId, index) => [tileId, lists[index]])) }))
+      return lists.flat()
+    } catch (error) {
+      fresh.forEach((tileId) => requestedCapTiles.current.delete(tileId)) // allow a retry
+      setLoadError(error.message)
+      return []
+    }
+  }, [])
+  // Wide screens load the whole cap grid in the background after the first paint; phones load tiles as the map zooms in (MapCapLayer).
+  useEffect(() => {
+    if (!data?.capIndex || !window.matchMedia('(min-width: 768px)').matches) return
+    const tileIds = data.capIndex.tiles.map((tile) => tile.id)
+    let isStopped = false
+    const timer = setTimeout(async () => {
+      for (let first = 0; first < tileIds.length && !isStopped; first += CAP_BATCH_SIZE) await needCapTiles(tileIds.slice(first, first + CAP_BATCH_SIZE))
+    }, 300)
+    return () => {
+      isStopped = true
+      clearTimeout(timer)
+    }
+  }, [data, needCapTiles])
+  // A form point on the cap needs its own tile (a CAP cell id, or the real horizon of a typed point).
+  useEffect(() => {
+    const point = scenario.currentPoint
+    if (!data?.capIndex || !point) return
+    const anchor = searchAnchor(point, data.sites, {})
+    // Loads a file for the form's point: syncing with an external resource, setState happens when it arrives.
+    // eslint-disable-next-line react/set-state-in-effect
+    if (anchor) needCapTiles(capTileIdsInBounds(data.capIndex, [anchor.xM, anchor.yM, anchor.xM, anchor.yM]))
+  }, [data, scenario.currentPoint, needCapTiles])
 
   // null = the south-pole overview (README W2); a link with a cell opens that cell's region.
   const activeRegion = data?.regions.find((region) => region.code === regionCode) ?? null
@@ -146,20 +179,33 @@ export default function App() {
     setScreen('results')
     setSearch({ status: 'running', doneCells: 0, totalCells: 0 })
     try {
-      const codes = regionCodesForSearch(searchScenario, data.regions, data.sites)
+      const point = searchScenario.currentPoint
+      // An LGRS cell point is read first: a radius search needs to know where it is.
+      const pointRegion = point.type === 'cell' ? data.regions.find((region) => region.code === point.cellId.split('-')[0]) : null
+      const pointLoaded = pointRegion ? { [pointRegion.code]: await loadRegionCells(pointRegion) } : {}
+      const anchor = searchAnchor(point, data.sites, { ...cellsByRegion, ...pointLoaded })
+      const codes = regionCodesForSearch(searchScenario, data.regions, data.sites, anchor)
       const neededRegions = data.regions.filter((region) => codes.includes(region.code))
-      const loadedLists = await Promise.all(neededRegions.map(async (region) => [region.code, await loadRegionCells(region)]))
+      const [loadedLists, searchCapCells] = await Promise.all([
+        Promise.all(neededRegions.map(async (region) => [region.code, await loadRegionCells(region)])),
+        needCapTiles(capTileIdsForSearch(searchScenario, data.capIndex, anchor, neededRegions.length > 0)),
+      ])
       if (!isLatest()) return
-      const loaded = { ...cellsByRegion, ...Object.fromEntries(loadedLists) }
-      const currentCell = resolveCurrentCell(searchScenario.currentPoint, loaded, data.sites)
-      const cells = selectSearchCells(searchScenario, currentCell, loaded)
+      const loaded = { ...cellsByRegion, ...pointLoaded, ...Object.fromEntries(loadedLists) }
+      const currentCell = resolveCurrentCell(point, loaded, data.sites, searchCapCells)
+      const cells = selectSearchCells(searchScenario, currentCell, loaded, searchCapCells)
       // Open the searched region so the Results map shows its ✓ ! ✕ colours: the current point's own region, else the region of the
       // nearest searched grid cell (a site with no region, coordinates outside every frame); otherwise keep the open one.
-      const ownRegion = regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites)[0]
+      const ownRegion = regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites, anchor).find((code) => data.regions.some((region) => region.code === code))
       const searchedRegion = ownRegion ?? nearestRegionCode(currentCell, cells, data.regions)
       if (searchedRegion) {
         setRegionCode(searchedRegion)
         setMapFocus(null)
+      } else if (anchor && cells.some((cell) => cell.id.startsWith('CAP-'))) {
+        // Only CAP cells were searched: show the overview, zoomed to the searched area.
+        const halfM = Math.max(searchScenario.searchScope === 'radius' ? searchScenario.searchRadiusKm : CAP_REGION_SEARCH_KM, 4) * 1200
+        setRegionCode(null)
+        setMapFocus({ boundsM: [anchor.xM - halfM, anchor.yM - halfM, anchor.xM + halfM, anchor.yM + halfM], requestId: ++focusRequests.current })
       }
       const { promise, cancel } = startWindowSearch({
         cells,
@@ -244,19 +290,19 @@ export default function App() {
   // The point that was searched (not the form's live one), to name it and to decide whether the polar map and cell table apply.
   const searchedPoint = useMemo(() => {
     try {
-      return search.status === 'done' ? resolveCurrentCell(search.scenario.currentPoint, cellsByRegion, data.sites) : null
+      return search.status === 'done' ? resolveCurrentCell(search.scenario.currentPoint, cellsByRegion, data.sites, capCells) : null
     } catch {
       return null
     }
-  }, [data, search, cellsByRegion])
-  const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
+  }, [data, search, cellsByRegion, capCells])
+  const cellsById = useMemo(() => new Map([...Object.values(cellsByRegion).flat(), ...capCells].map((cell) => [cell.id, cell])), [cellsByRegion, capCells])
   const currentCell = useMemo(() => {
     try {
-      return data ? resolveCurrentCell(scenario.currentPoint, cellsByRegion, data.sites) : null
+      return data ? resolveCurrentCell(scenario.currentPoint, cellsByRegion, data.sites, capCells) : null
     } catch {
       return null // no current point chosen yet, or its region is not loaded yet
     }
-  }, [data, scenario.currentPoint, cellsByRegion])
+  }, [data, scenario.currentPoint, cellsByRegion, capCells])
 
   // First click sorts a column better-first (README C5 "Sorting by column"), the next click reverses it.
   function sortRanking(key) {
@@ -272,7 +318,7 @@ export default function App() {
   }
 
   const cells = activeRegion ? (cellsByRegion[activeRegion.code] ?? null) : null
-  const selectedCell = cells?.find((cell) => cell.id === selectedCellId) ?? null
+  const selectedCell = cells?.find((cell) => cell.id === selectedCellId) ?? (selectedCellId?.startsWith('CAP-') ? (cellsById.get(selectedCellId) ?? null) : null)
   const detailCell = cellsById.get(selectedCellId) ?? (currentCell?.id === selectedCellId ? currentCell : null)
   const detailScenario = search.status === 'done' ? search.scenario : scenario
   const detailLandingTime = landingTime ?? `${detailScenario.startDate}T00:00Z`
@@ -304,6 +350,9 @@ export default function App() {
     focus: mapFocus,
     cellsByRegion,
     onNeedRegionCells: needRegionCells,
+    capIndex: data.capIndex,
+    capCells,
+    onNeedCapTiles: needCapTiles,
   }
 
   return (

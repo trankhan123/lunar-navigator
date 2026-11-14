@@ -7,6 +7,9 @@ export const cellDisplayName = (cell) => (cell.id.startsWith('SITE-') || cell.id
 /** True when the point's terrain is the smooth sphere (no horizon data): sites outside the terrain model and custom points. */
 export const hasNoTerrain = (cell) => !cell.horizon
 
+/** True when the point's terrain comes from the 2 km whole-cap grid (README D9): a CAP cell, or a point inside one. */
+export const usesCapGrid = (cell) => cell.id.startsWith('CAP-') || cell.horizonSource === 'cap'
+
 /** Why a cell is not feasible, in the UI's words (cell popup and map hover card). */
 export const INFEASIBLE_REASON_TEXT = { slope: 'slope above the limit', psr: 'mostly in permanent shadow' }
 
