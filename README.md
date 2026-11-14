@@ -602,13 +602,16 @@ Files: `DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.
 
 File: `MoonGlobe.jsx`.
 
-- **Props:** `{sites, regions, selectedSiteId, sunDirection, earthDirection, onSelectSite(site), onOpenSouthPoleMap()}`. `sunDirection` and `earthDirection` are `{azimuthDeg, elevationDeg}` or `null`.
+- **Props:** `{sites, regions, ephemeris, hour, selectedSiteId, onSelectSite(site), onOpenRegion(code)}`. `hour` is an ephemeris hour index (App passes the map's current hour, else hour 0). The card for the Sun and Earth is computed inside from `bodyDirections` (`core/mapSky.js`).
 - **Content:**
-  - texture `/textures/lroc_color_2k.jpg` (NASA SVS 4720);
-  - pins for the sites and the 9 regions;
-  - arrows toward the Sun and Earth from the selected site.
-- **Interaction:** a click at lat < −80° opens the map screen.
-- **Lifecycle:** keep `new Globe(container)`, the `_destructor()` cleanup and stable callbacks.
+  - texture `/textures/lroc_color_4k.jpg` (`lroc_color_2k.jpg` below 768 px) plus the LOLA elevation `/textures/ldem_bump_1440.png` as `bumpImageUrl` (NASA SVS 4720);
+  - real light: a directional light at the sub-solar point of `hour` plus a dim ambient light, so the terminator is real; the text "Sunlight at <UTC time>" states the time;
+  - HTML pins for the sites (small, coloured by group, hover title with name, group, lat/lon), the selected site named and highlighted, a colour legend, rings on the 9 Artemis III regions;
+  - labelled markers at the sub-solar and sub-Earth points (`core/globeSky.js` `subBodyPoints`, ephemeris columns of C0) and ground-track arcs from the selected site to each (Sun `#e69f00`, Earth `#56b4e9`);
+  - a card with azimuth, elevation and in view / hidden for the Sun and Earth ("terrain not included" for sites without a horizon);
+  - camera buttons South pole (default view), Near side, Far side.
+- **Interaction:** a click on a region centre site or inside its ring (`regionAtPoint`, 2.5°) calls `onOpenRegion(code)` and App opens the 2D map with that region; a click on any other site selects it as the current point.
+- **Lifecycle:** keep `new Globe(container)`, the `_destructor()` cleanup, the `ResizeObserver` and stable callbacks (kept in a ref).
 
 ### W7 Learn mode
 
@@ -766,6 +769,20 @@ File: `export_map_background.py`.
 - **Rules:**
   - write the PNGs with rasterio (GDAL PNG driver), no new library;
   - each image is ≤ 1 MB.
+
+### D9 — Whole-cap 2 km grid (CAP)
+
+File: `build_cap_grid.py` (tests: `test_build_cap_grid.py`; checker: `check_cap` in `check_web_data.py`). Data only: the web app does not read it yet.
+
+- **Grid:** square 2000 m cells in `PGDA_CRS`; centres at `x = (i + 0.5) × 2000`, `y = (j + 0.5) × 2000`. A cell is kept when its centre is at or south of 85°S (projected distance from the pole ≤ that of 85°S, 151.7 km).
+- **Exclusion:** a cell is dropped when its centre lies inside the `boundsM` of any of the 9 regions in `regions.json` (they already have 1 km LGRS cells). `excludedRegionCodes` in `index.json` lists them.
+- **Id:** `CAP-r<row>c<col>`, `row = j − jMin`, `col = i − iMin` (minimum over the kept cells), each zero-padded to 3 digits; `label` is the part after `CAP-`.
+- **Cell:** exactly the `cells_<CODE>.json` cell (`id, label, lat, lon, xM, yM, heightM, slopeDeg, psrFraction, feasible, infeasibleReason, horizon`). Feasibility is D3 on the 2 km square (slope median from `LDSM` 80 m, PSR share from `LPSR` 20 m, same limits and reasons). Horizon is D4 with its defaults (360 rays, 100 m to 150 km, 2 m mast, near DEM 80 m, far DEM 240 m). Cells are assembled by D5's `build_cell`.
+- **Files:**
+  - `pipeline/out/grid_CAP.json` (list), `feasibility_CAP.json` and `horizon_CAP.json` (objects keyed by id), same shapes as the region files;
+  - `web/public/data/cap/index.json` = `{cellSizeM: 2000, tileSizeM: 40000, southOfLatDeg: -85, excludedRegionCodes, cellCount, feasibleCount, tiles: [{id: "cap_<tx>_<ty>", boundsM: [xMin, yMin, xMax, yMax], cellCount, feasibleCount}]}`;
+  - `web/public/data/cap/cap_<tx>_<ty>.json` = `{tileId, cells: [...]}`; tiles are 40 km squares aligned to multiples of 40000 m (`tx = floor(xM / 40000)`, can be negative), only non-empty tiles are written, each < 2 MB.
+- **Re-run:** `python pipeline/build_cap_grid.py` (needs the raw rasters; horizons use all CPU cores, `--jobs N` to limit; `--limit 200` is a dry timing run that writes nothing), then `python pipeline/check_web_data.py`. The checker runs `check_cap` only when `cap/index.json` exists.
 
 ## Site coordinates
 
