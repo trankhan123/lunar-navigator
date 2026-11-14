@@ -1,0 +1,30 @@
+# Dependencies and build output
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+
+# Large data: re-download with `python pipeline/download_data.py`
+pipeline/raw/
+*.tif
+*.TIF
+*.tiff
+*.TIFF
+*.IMG
+*.JP2
+*.part
+
+# Secrets: env files, API keys, Vercel link (holds VERCEL_OIDC_TOKEN)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.vercel/
+
+# Local tool output and personal settings
+.playwright-mcp/
+.claude/settings.local.json
+.DS_Store
+.claude/settings.local.proposed.json

@@ -1,0 +1,22 @@
+{
+  "convention": "lat: degrees North (south is negative). lon: degrees East, -180..180 (west is negative). Mean Earth/Polar Axis frame.",
+  "sources": {
+    "usgs-square-center": "Centre of the USGS region square for each Artemis III candidate region, as listed by MoonSnag Mission Watch (https://moonsnag.com/coordination, retrieved 2026-11-14). The squares come from McClernan 2024, USGS data release https://doi.org/10.5066/P1MEQ6UK (regions sourced from LROC QuickMap). NASA itself published names and a map, not coordinates (NTRS 20250011660; NASA news release 2024-10-28).",
+    "lunar-surface-data-book": "Approximate centres from realestateonthemoon.com/lunar-south-pole (retrieved 2026-11-14), which cites NASA's Lunar Surface Data Book and LROC mosaics. Used only as a cross-check.",
+    "nssdca-apollo": "NASA NSSDCA Apollo Landing Site Coordinates, Lunar Module positions measured in LRO images (Wagner et al. 2017, Icarus 283, 92-103). https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html"
+  },
+  "sites": [
+    { "id": "peak-near-cabeus-b", "name": "Peak near Cabeus B", "lat": -83.552, "lon": -68.416, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-83.6, -68.8], "verified": false },
+    { "id": "haworth", "name": "Haworth", "lat": -86.635, "lon": -23.672, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-86.8, -22.8], "verified": false },
+    { "id": "malapert-massif", "name": "Malapert Massif", "lat": -85.925, "lon": -1.205, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-86.0, -0.2], "verified": false },
+    { "id": "mons-mouton-plateau", "name": "Mons Mouton Plateau", "lat": -84.291, "lon": 27.427, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-84.3, 30.6], "verified": false, "note": "Largest region (about ±58 km), so its centre is only indicative." },
+    { "id": "mons-mouton", "name": "Mons Mouton", "lat": -85.409, "lon": 30.837, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-85.4, 31.7], "verified": false },
+    { "id": "nobile-rim-1", "name": "Nobile Rim 1", "lat": -85.423, "lon": 36.19, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-85.4, 37.4], "verified": false },
+    { "id": "nobile-rim-2", "name": "Nobile Rim 2", "lat": -83.976, "lon": 57.961, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-84.0, 58.8], "verified": false },
+    { "id": "de-gerlache-rim-2", "name": "de Gerlache Rim 2", "lat": -88.142, "lon": -63.662, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-88.2, -64.6], "verified": false },
+    { "id": "slater-plain", "name": "Slater Plain", "lat": -87.256, "lon": 125.218, "group": "artemis", "hasTerrain": true, "source": "usgs-square-center", "crossCheck": [-88.0, 111.0], "verified": false, "note": "Cross-check differs by about 25 km; that value is the crater the plain lies north of, so the USGS-square centre is kept." },
+    { "id": "apollo-11", "name": "Apollo 11", "lat": 0.67416, "lon": 23.47314, "group": "apollo", "hasTerrain": false, "source": "nssdca-apollo", "verified": true },
+    { "id": "apollo-15", "name": "Apollo 15", "lat": 26.13239, "lon": 3.6333, "group": "apollo", "hasTerrain": false, "source": "nssdca-apollo", "verified": true },
+    { "id": "apollo-17", "name": "Apollo 17", "lat": 20.1911, "lon": 30.7723, "group": "apollo", "hasTerrain": false, "source": "nssdca-apollo", "verified": true }
+  ]
+}
