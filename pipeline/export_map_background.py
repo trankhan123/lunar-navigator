@@ -41,6 +41,7 @@ PSR_COLOR = "#cc79a7"
 SLOPE_FILE = RAW_FOLDER / "LDSM_80S_80MPP_ADJ.TIF"
 # Palette of slope_class_indices: 0 no data, 1 < 10°, 2 10–15°, 3 15–20°, 4 steeper than SLOPE_LIMIT_DEG (the app's infeasible colour), 5 its hatch.
 SLOPE_PALETTE = ["#000000", "#009e73", "#f0e442", "#e69f00", "#334155", "#94a3b8"]
+FRACTION_STEPS = 10
 WHOLE_POLE_SCALES = [1, 1.5, 2, 3]  # pixel-size multiples tried in turn until the PNG is ≤ 1 MB
 
 
@@ -63,9 +64,10 @@ def psr_to_rgba(psr):
 
 
 def fraction_to_palette(fraction):
-    """Fractions 0–1 (NaN = no data) → (indices, palette): index 0 transparent, 1 + round(100 × fraction) a FRACTION_COLORS step."""
-    palette = [[0, 0, 0, 0]] + [[*color, 255] for color in fraction_to_rgba(np.linspace(0, 1, 101)[np.newaxis])[:3, 0].T.tolist()]
-    return np.where(np.isnan(fraction), 0, 1 + np.rint(np.nan_to_num(fraction) * 100)).astype(np.uint8), palette
+    """Fractions 0–1 (NaN = no data) → (indices, palette): index 0 transparent, 1 + round(10 × fraction) a FRACTION_COLORS step
+    (10 % steps: the data is speckled, finer steps push the whole-pole PNG far over 1 MB)."""
+    palette = [[0, 0, 0, 0]] + [[*color, 255] for color in fraction_to_rgba(np.linspace(0, 1, FRACTION_STEPS + 1)[np.newaxis])[:3, 0].T.tolist()]
+    return np.where(np.isnan(fraction), 0, 1 + np.rint(np.nan_to_num(fraction) * FRACTION_STEPS)).astype(np.uint8), palette
 
 
 def slope_class_indices(slope_deg, hatch_period_px=8):

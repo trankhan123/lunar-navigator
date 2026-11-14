@@ -24,8 +24,8 @@ def test_steep_class_gets_hatch_stripes_only_on_steep_pixels():
 
 def test_fraction_indices_are_percent_steps_and_missing_is_index_zero():
     indices, palette = fraction_to_palette(np.array([[0.0, 0.5, 1.0, np.nan]]))
-    assert indices.tolist() == [[1, 51, 101, 0]] and len(palette) == 102 and palette[0][3] == 0
-    assert tuple(palette[1]) == (0x44, 0x01, 0x54, 255) and tuple(palette[101]) == (0xfd, 0xe7, 0x25, 255)
+    assert indices.tolist() == [[1, 6, 11, 0]] and len(palette) == 12 and palette[0][3] == 0
+    assert tuple(palette[1]) == (0x44, 0x01, 0x54, 255) and tuple(palette[11]) == (0xfd, 0xe7, 0x25, 255)
 
 
 def test_fraction_to_rgba_uses_the_ramp_and_hides_missing_pixels():
