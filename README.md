@@ -491,7 +491,7 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
   - at start, load the ephemeris, regions and sites;
   - load cells per region on demand with `loadCells(useMock, region.cellsFile)`;
   - `useMock` is true while `/data/regions.json` is missing, or when `?mock=1` is in the URL.
-  - The real `/data/ephemeris.json` already exists. The mock ephemeris only covers 2028-01 → 2028-07.
+  - The real `/data/ephemeris.json` (D1) is loaded even in mock mode, so mock cells get real Sun and Earth positions; the mock ephemeris is only a fallback.
 - **State it holds:** `scenario`, `results`, `landingIndex`, `selectedCellId`, `mode` (`'simple'|'expert'`).
 - **Share link query keys:**
   - `point` (`cell:MAL-r3c4` \| `site:apollo-11` \| `coords:-85.9,-1.2`), `start`, `end`, `stay`, `dark`, `comm`, `panel`, `battery`, `load`, `panelMode`, `scope`, `radius`, `landing`, `cell`, `mode`, `screen`;
@@ -548,22 +548,16 @@ Files: `ScenarioForm.jsx`, `core/scenario.js`.
 
 Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx`.
 
-- **`LandingTimeSlider`** `{landingTimes, value, onChange, playing, onTogglePlay}`:
-  - steps of 6 h;
-  - Play advances one step about every 300 ms;
-  - shows the UTC time.
+- **`LandingTimeSlider`** `{landingTimes, value, onChange(index)}`: steps of 6 h, its own Play/Pause (one step every 300 ms), shows the UTC time.
 - **`RankingTable`** `{rows, sortBy, direction, onSort(key), onSelectRow(row), currentCellId, mode}`:
-  - columns: rank, cell, distance (km), min battery (%), longest dark (h), longest comm loss (h), Sun (%), Earth (%), mean Sun elevation (°), recharge (h), status;
-  - Simple mode hides the last four;
-  - clicking a header calls `onSort`.
-- **`CurrentPointCard`** `{summary, mode}`:
-  - pass or fail, with the reasons in words;
-  - the nearest passing time ("+18 h") and the nearest passing cell with its distance in km.
-- **`CurrentPointStrip`** `{landingTimes, statuses, value, onSelectLanding(index)}`:
-  - an ECharts one-row heatmap of cell 0;
-  - colour = status.
-- **`BestPairsTable`** `{rows, onSelectRow}`: the output of `rankBestPairs`.
-- **While the worker runs:** show a progress bar fed by `onProgress`.
+  - columns: rank, cell, distance (km), lowest battery (%), longest dark (h), longest comm loss (h), Sun (%), Earth (%), mean Sun elevation (°), recharge (h), status;
+  - Simple mode hides Sun %, Earth %, mean Sun elevation and recharge;
+  - the first click on a heading sorts better-first, the next click reverses (`aria-sort` set); "Back to the default order" resets.
+- **`CurrentPointCard`** `{summary, scenario, onSelectLanding(index), onOpenCell(cellId)}`: the `currentPointSentence` verdict, plus buttons "Details of my point", "Go to <nearest passing time>" and "Open <nearest passing cell>".
+- **`CurrentPointStrip`** `{statuses, value, onSelectLanding(index)}`: SVG strip of cell 0 over all landing times (`results.status.subarray(0, landingCount)`), consecutive equal statuses drawn as one rectangle; click jumps.
+- **`BestPairsTable`** `{rows, onSelectRow(row)}`: the output of `rankBestPairs`.
+- **Map:** the Results screen reuses `SouthPoleMap` with `statusByCellId` at the selected landing time (✓ ! ✕ symbols).
+- **While the worker runs:** a progress bar fed by `onProgress`.
 - **Done when:** dragging the slider updates the map colours and the table in under 100 ms for region scope.
 
 ### W5 Detail
@@ -581,32 +575,16 @@ Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `Cur
 
 Files: `DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js`.
 
-- **`DetailView`** `{cell, currentCell, ephemeris, scenario, landingTime, mode, onBack}`:
-  - computes the stay-window tracks of both cells with C1–C4 on the main thread (cheap) and lays out the parts below;
-  - in Expert mode, has a CSV export with one row per hour: `time, sunAzimuthDeg, sunElevationDeg, sunDiskFraction, earthAzimuthDeg, earthElevationDeg, earthDiskFraction, batteryWh`.
-- **`HorizonChart`** `{horizonDeg, compareHorizonDeg, sunPath, earthPath, cursorIndex}`:
-  - `horizonDeg` = `horizon / 10`, or zeros when the horizon is `null`;
-  - the paths are `[azimuthDeg, elevationDeg][]`;
-  - terrain is a filled area, and the Sun and Earth paths cover the whole stay, with big dots at the cursor;
-  - always draw both bodies;
-  - if you exaggerate the vertical scale, say so on the chart;
-  - today's `HorizonChart.jsx` is the old draft: change its props to these.
-- **`CountdownCard`** `{sunTrack, earthTrack, atIndex, mode}`:
-  - big text such as "Sun sets in 3 h 20 min", "Earth sets in 18 h", "Sunlight returns in 2 d 4 h", from `nextSunEvent` / `nextEarthEvent`;
-  - the Sun elevation in large type.
-- **`BatteryChart`** `{batteryWh, capacityWh, chargingMask, sunDiskFraction, earthDiskFraction, startTime}`:
-  - battery % as a line;
-  - background bands for sunlit, dark and comm loss;
-  - the dead hour marked;
-  - shows `minimumCapacityWh` from C3.
-- **`CompareView`** `{current, other}`, each `{cell, metrics, sunTrack, startIndex, lengthHours}`:
-  - the two horizons overlaid;
-  - the `explainDifference` sentence.
-- **`explain.js`:**
-  - `compassName`;
-  - `explainDifference`: find hours that are dark at the current point but sunlit at the other cell, compare the two horizons at those Sun azimuths, and name the direction;
-  - `findMostDifferentNeighbors` (for W7).
-- **Done when:** `explain.test.js` passes, and the detail view of a mock cell renders every part.
+- **`DetailView`** `{cell, currentCell, ephemeris, scenario, landingTime, mode, onLandingTimeChange(time), onBack}` (lazy-loaded, it pulls in ECharts):
+  - computes `buildDetail` for the cell and, when the current point is another cell, for the current point too;
+  - shows the `summarySentence` headline, `CountdownCard`, an hour cursor with Play, `HorizonChart`, `BatteryChart`, `CompareView`;
+  - Expert mode adds the numbers for the whole stay and a CSV download (`toCsv`);
+  - a landing time outside the ephemeris shows a message with the valid range instead of failing.
+- **`HorizonChart`** `{horizonDeg, compareHorizonDeg, compareLabel, sunPath, earthPath, sunNow, earthNow, description}`: terrain as a filled area (N E S W axis), the current point's terrain dashed, Sun and Earth paths for the stay (`pathForChart`), big dots at the cursor, a note that the vertical scale is exaggerated.
+- **`CountdownCard`** `{sunTrack, earthTrack, atIndex, trackHours}`: big `countdownText` for the Sun and the Earth with their elevations.
+- **`BatteryChart`** `{landingTime, stayHours, sunDiskFraction, earthDiskFraction, batteryWh, capacityWh, deadAtHour, cursorIndex, description}`: Sun and Earth disk visible (%) and battery charge (%) over the stay, a line at the cursor and at the hour the battery runs out.
+- **`CompareView`** `{current, other}`, each `{cell, detail}`: the `explainDifference` sentence (C5 `explain.js`) and the stay numbers side by side.
+- **Done when:** `detail.test.js`, the new `format.test.js` cases and `integration.test.js` pass, and the detail of a mock cell renders every part.
 
 ### W6 Globe
 

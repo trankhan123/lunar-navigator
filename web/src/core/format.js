@@ -32,8 +32,12 @@ export function formatUtc(isoTime) {
  *                   earth: 'Earth sets in 18 h' | 'Earth rises in 5 h' |
  *                          'Earth stays in view for at least 9 d' | 'Earth stays hidden for at least 9 d'
  */
+const EVENT_WORDS = { sunset: 'Sun sets in', sunrise: 'Sunlight returns in', earthset: 'Earth sets in', earthrise: 'Earth rises in' }
+const STEADY_WORDS = { sun: ['Sun stays down', 'Sun stays up'], earth: ['Earth stays hidden', 'Earth stays in view'] }
+
 export function countdownText(body, event, isVisibleNow, hoursLeft) {
-  throw new Error('Not implemented yet: W5 countdownText (see README)')
+  if (event) return `${EVENT_WORDS[event.event]} ${formatDuration(event.hoursFromNow)}`
+  return `${STEADY_WORDS[body][isVisibleNow ? 1 : 0]} for at least ${formatDuration(hoursLeft)}`
 }
 
 /**
@@ -52,5 +56,23 @@ export function countdownText(body, event, isVisibleNow, hoursLeft) {
  *     ' Nearest passing cell: <cellId>, <distanceKm, 1 decimal> km away.' or ' No passing cell at this landing time.'
  */
 export function currentPointSentence(summary, scenario) {
-  throw new Error('Not implemented yet: W4 currentPointSentence (see README)')
+  const { metrics, nearestPassingLanding, nearestPassingCell } = summary
+  const landing = `a landing at ${formatUtc(metrics.landingTime)}`
+  if (metrics.status === 'pass') return `${metrics.cellId} meets all limits for ${landing}.`
+  if (metrics.status === 'marginal') {
+    return `${metrics.cellId} meets the limits for ${landing}, but the battery drops to ${Math.round(metrics.minBatteryFraction * 100)} %.`
+  }
+  const reasonWords = {
+    dark: `longest dark period ${metrics.longestDarkHours} h (limit ${scenario.maxDarkHours} h)`,
+    commLoss: `longest comm loss ${metrics.longestCommLossHours} h (limit ${scenario.maxCommLossHours} h)`,
+    battery: `battery runs out after ${metrics.deadAtHour} h`,
+  }
+  const verdict = `${metrics.cellId} fails for ${landing}: ${metrics.failReasons.map((reason) => reasonWords[reason]).join('; ')}.`
+  const nextTime = nearestPassingLanding
+    ? ` Nearest passing landing time: ${formatDuration(Math.abs(nearestPassingLanding.offsetHours))} ${nearestPassingLanding.offsetHours > 0 ? 'later' : 'earlier'} (${formatUtc(nearestPassingLanding.landingTime)}).`
+    : ' No passing landing time in this date range.'
+  const nextCell = nearestPassingCell
+    ? ` Nearest passing cell: ${nearestPassingCell.cellId}, ${nearestPassingCell.distanceKm.toFixed(1)} km away.`
+    : ' No passing cell at this landing time.'
+  return verdict + nextTime + nextCell
 }

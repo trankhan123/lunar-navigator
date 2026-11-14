@@ -1,21 +1,28 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AboutView from './components/AboutView.jsx'
+import BestPairsTable from './components/BestPairsTable.jsx'
 import CellPopup from './components/CellPopup.jsx'
+import CurrentPointCard from './components/CurrentPointCard.jsx'
+import CurrentPointStrip from './components/CurrentPointStrip.jsx'
+import LandingTimeSlider from './components/LandingTimeSlider.jsx'
+import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import { hourIndexOf, loadCells, loadEphemeris, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
-import { selectSearchCells } from './core/optimizer.js'
+import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
 import { startWindowSearch } from './core/startWindowSearch.js'
 
-// The globe pulls in three.js (most of the bundle); load it only when its tab opens.
+// The globe pulls in three.js and the detail screen pulls in ECharts (most of the bundle): load each when first opened.
 const MoonGlobe = lazy(() => import('./components/MoonGlobe.jsx'))
+const DetailView = lazy(() => import('./components/DetailView.jsx'))
 
 const SCREENS = [
   ['map', 'Map & scenario'],
   ['results', 'Results'],
+  ['detail', 'Cell detail'],
   ['globe', 'Globe'],
   ['about', 'About'],
 ]
@@ -23,22 +30,16 @@ const forceMock = new URLSearchParams(window.location.search).get('mock') === '1
 const initialState = decodeShareQuery(window.location.search.slice(1))
 const initialCellId = initialState.selectedCellId ?? initialState.scenario.currentPoint?.cellId ?? null
 const selectClass = 'rounded border border-slate-500 bg-slate-950 px-2 py-1'
+const SMALLER_IS_BETTER = new Set(['distanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours']) // README C5 rule
 
 async function loadAllData() {
-  // Real data is used once module D5 publishes regions.json; until then everything comes from the mock folder.
+  // Real data is used once module D5 publishes regions.json; until then cells and sites come from the mock folder.
   let regionsFile = forceMock ? null : await loadRegions(false).catch(() => null)
   const useMock = regionsFile === null
   if (useMock) regionsFile = await loadRegions(true)
-  const [ephemeris, sitesFile] = await Promise.all([loadEphemeris(useMock), loadSites(useMock)])
+  // The real ephemeris (D1) exists already, so even mock cells get real Sun and Earth positions.
+  const [ephemeris, sitesFile] = await Promise.all([loadEphemeris(false).catch(() => loadEphemeris(true)), loadSites(useMock)])
   return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites }
-}
-
-function checkScenario(scenario, ephemeris) {
-  try {
-    return validateScenario(scenario, ephemeris)
-  } catch {
-    return [] // shortcut: validateScenario (WF4) is still a stub; drop this try once it lands
-  }
 }
 
 /** Regions whose cells the search needs: all of them for radius/all scopes, else the current point's region. */
@@ -62,8 +63,9 @@ export default function App() {
   const [mode, setMode] = useState(initialState.mode)
   const [scenario, setScenario] = useState(initialState.scenario)
   const [selectedCellId, setSelectedCellId] = useState(initialState.selectedCellId)
-  const [landingTime] = useState(initialState.landingTime) // set by the W4 slider
+  const [landingTime, setLandingTime] = useState(initialState.landingTime)
   const [search, setSearch] = useState({ status: 'idle' })
+  const [ranking, setRanking] = useState({ sortBy: undefined, direction: undefined })
   const cellRequests = useRef(new Map()) // region code → pending or finished request, so each file is fetched once
   const latestSearch = useRef(0)
   const cancelSearch = useRef(null)
@@ -136,7 +138,9 @@ export default function App() {
       })
       cancelSearch.current = cancel
       const results = await promise
-      if (isLatest()) setSearch({ status: 'done', results, scenario: searchScenario })
+      if (!isLatest()) return
+      setSearch({ status: 'done', results, scenario: searchScenario })
+      setLandingTime((time) => (results.landingTimes.includes(time) ? time : results.landingTimes[0]))
     } catch (error) {
       if (isLatest()) setSearch({ status: 'error', message: error.message })
     }
@@ -149,20 +153,86 @@ export default function App() {
     runSearch(initialState.scenario)
   }, [data]) // eslint-disable-line react-hooks/exhaustive-deps -- runs once, with the scenario from the link
 
+  const results = search.status === 'done' ? search.results : null
+  const landingIndex = results ? Math.max(0, results.landingTimes.indexOf(landingTime)) : 0
+  const selectLanding = useCallback((index) => setLandingTime(results.landingTimes[index]), [results])
+  const statusByCellId = useMemo(
+    () => results && new Map(results.cellIds.map((cellId, cellIndex) => [cellId, results.status[cellIndex * results.landingCount + landingIndex]])),
+    [results, landingIndex],
+  )
+  const rankedRows = useMemo(() => results && rankCells(results, landingIndex, { ...ranking, limit: 10 }), [results, landingIndex, ranking])
+  const bestPairs = useMemo(() => results && rankBestPairs(results, { limit: 10 }), [results])
+  const currentPointSummary = useMemo(() => results && summarizeCurrentPoint(results, landingIndex), [results, landingIndex])
+
   const selectCell = useCallback((cell) => setSelectedCellId(cell.id), [])
   const selectSite = useCallback((site) => setScenario((current) => ({ ...current, currentPoint: { type: 'site', siteId: site.id } })), [])
-  const errors = useMemo(() => (data ? checkScenario(scenario, data.ephemeris) : []), [data, scenario])
+  const errors = useMemo(() => (data ? validateScenario(scenario, data.ephemeris) : []), [data, scenario])
   const viewHour = useMemo(() => {
     try {
-      return data ? hourIndexOf(data.ephemeris, `${scenario.startDate}T00:00Z`) : null
+      return data ? hourIndexOf(data.ephemeris, landingTime ?? `${scenario.startDate}T00:00Z`) : null
     } catch {
-      return null // start date outside the ephemeris; the form reports it
+      return null // date outside the ephemeris; the form reports it
     }
-  }, [data, scenario.startDate])
+  }, [data, landingTime, scenario.startDate])
+  const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
+  const currentCell = useMemo(() => {
+    try {
+      return data ? resolveCurrentCell(scenario.currentPoint, cellsByRegion, data.sites) : null
+    } catch {
+      return null // no current point chosen yet, or its region is not loaded yet
+    }
+  }, [data, scenario.currentPoint, cellsByRegion])
+
+  // First click sorts a column better-first (README C5 "Sorting by column"), the next click reverses it.
+  function sortRanking(key) {
+    const betterFirst = SMALLER_IS_BETTER.has(key) ? 'asc' : 'desc'
+    const reversed = betterFirst === 'asc' ? 'desc' : 'asc'
+    setRanking((current) => ({ sortBy: key, direction: current.sortBy === key && current.direction === betterFirst ? reversed : betterFirst }))
+  }
+
+  function openDetail(cellId, time) {
+    setSelectedCellId(cellId)
+    if (time) setLandingTime(time)
+    setScreen('detail')
+  }
 
   const cells = activeRegion ? cellsByRegion[activeRegion.code] : null
   const selectedCell = cells?.find((cell) => cell.id === selectedCellId) ?? null
+  const detailCell = cellsById.get(selectedCellId) ?? (currentCell?.id === selectedCellId ? currentCell : null)
+  const detailScenario = search.status === 'done' ? search.scenario : scenario
+  const detailLandingTime = landingTime ?? `${detailScenario.startDate}T00:00Z`
   const currentCellId = scenario.currentPoint?.type === 'cell' ? scenario.currentPoint.cellId : null
+
+  const regionPicker = data && (
+    <label className="text-sm text-slate-300">
+      Region{' '}
+      <select
+        value={activeRegion?.code ?? ''}
+        onChange={(event) => {
+          setRegionCode(event.target.value)
+          setSelectedCellId(null)
+        }}
+        className={selectClass}
+      >
+        {data.regions.map((region) => (
+          <option key={region.code} value={region.code}>{region.name}</option>
+        ))}
+      </select>
+    </label>
+  )
+  const map = cells ? (
+    <SouthPoleMap
+      region={activeRegion}
+      cells={cells}
+      sites={data.sites}
+      statusByCellId={statusByCellId}
+      currentCellId={currentCellId}
+      selectedCellId={selectedCellId}
+      onSelectCell={selectCell}
+    />
+  ) : (
+    <p className="text-slate-400">Loading cells…</p>
+  )
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
@@ -215,21 +285,7 @@ export default function App() {
               <section aria-labelledby="map-title">
                 <div className="mb-2 flex flex-wrap items-center gap-3">
                   <h2 id="map-title" className="font-medium">South pole landing cells</h2>
-                  <label className="text-sm text-slate-300">
-                    Region{' '}
-                    <select
-                      value={activeRegion?.code ?? ''}
-                      onChange={(event) => {
-                        setRegionCode(event.target.value)
-                        setSelectedCellId(null)
-                      }}
-                      className={selectClass}
-                    >
-                      {data.regions.map((region) => (
-                        <option key={region.code} value={region.code}>{region.name}</option>
-                      ))}
-                    </select>
-                  </label>
+                  {regionPicker}
                   <label className="text-sm text-slate-300">
                     Cell{' '}
                     <select value={selectedCell ? selectedCellId : ''} onChange={(event) => setSelectedCellId(event.target.value || null)} className={`${selectClass} font-mono`}>
@@ -243,19 +299,7 @@ export default function App() {
                     </select>
                   </label>
                 </div>
-                {cells ? (
-                  <SouthPoleMap
-                    region={activeRegion}
-                    cells={cells}
-                    sites={data.sites}
-                    statusByCellId={null}
-                    currentCellId={currentCellId}
-                    selectedCellId={selectedCellId}
-                    onSelectCell={selectCell}
-                  />
-                ) : (
-                  <p className="text-slate-400">Loading cells…</p>
-                )}
+                {map}
               </section>
               <aside className="space-y-4">
                 {selectedCell && (
@@ -266,6 +310,7 @@ export default function App() {
                     hour={viewHour}
                     isCurrent={selectedCell.id === currentCellId}
                     onUseAsCurrent={() => setScenario((current) => ({ ...current, currentPoint: { type: 'cell', cellId: selectedCell.id } }))}
+                    onOpenDetail={() => openDetail(selectedCell.id)}
                     onClose={() => setSelectedCellId(null)}
                   />
                 )}
@@ -283,8 +328,8 @@ export default function App() {
           )}
 
           {data && screen === 'results' && (
-            <section aria-labelledby="results-title" aria-busy={search.status === 'running'} className="space-y-2 text-sm">
-              <h2 id="results-title" ref={resultsHeading} tabIndex={-1} className="text-base font-medium">
+            <section aria-labelledby="results-title" aria-busy={search.status === 'running'} className="space-y-4 text-sm">
+              <h2 id="results-title" ref={resultsHeading} tabIndex={-1} className="text-base font-medium focus:outline-none">
                 Results
               </h2>
               {search.status === 'idle' && <p className="text-slate-400">Choose a current point and press "Find landing windows" on the Map screen.</p>}
@@ -295,13 +340,65 @@ export default function App() {
                 </label>
               )}
               {search.status === 'error' && <p role="alert" className="text-red-400">Search could not run: {search.message}</p>}
-              {search.status === 'done' && (
-                <p>
-                  Evaluated {search.results.cellCount} cells × {search.results.landingCount} landing times.
-                </p>
+              {results && (
+                <>
+                  <p className="text-slate-400">
+                    {results.cellCount} cells × {results.landingCount} landing times, staying {search.scenario.stayDays} days each.
+                  </p>
+                  <CurrentPointCard
+                    summary={currentPointSummary}
+                    scenario={search.scenario}
+                    onSelectLanding={selectLanding}
+                    onOpenCell={(cellId) => openDetail(cellId, results.landingTimes[landingIndex])}
+                  />
+                  <LandingTimeSlider landingTimes={results.landingTimes} value={landingIndex} onChange={selectLanding} />
+                  <CurrentPointStrip statuses={results.status.subarray(0, results.landingCount)} value={landingIndex} onSelectLanding={selectLanding} />
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+                    <div className="space-y-2">
+                      {regionPicker}
+                      {map}
+                    </div>
+                    <div className="space-y-2">
+                      {ranking.sortBy && (
+                        <button type="button" onClick={() => setRanking({ sortBy: undefined, direction: undefined })} className="text-xs text-sky-300 hover:underline">
+                          Back to the default order
+                        </button>
+                      )}
+                      <RankingTable
+                        rows={rankedRows}
+                        sortBy={ranking.sortBy}
+                        direction={ranking.direction}
+                        onSort={sortRanking}
+                        onSelectRow={(row) => openDetail(row.cellId, row.landingTime)}
+                        currentCellId={results.cellIds[0]}
+                        mode={mode}
+                      />
+                    </div>
+                  </div>
+                  <BestPairsTable rows={bestPairs} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
+                </>
               )}
             </section>
           )}
+
+          {data && screen === 'detail' &&
+            (detailCell ? (
+              <Suspense fallback={<p className="text-slate-400">Loading cell detail…</p>}>
+              <DetailView
+                key={`${detailCell.id}|${detailLandingTime}`}
+                cell={detailCell}
+                currentCell={currentCell}
+                ephemeris={data.ephemeris}
+                scenario={detailScenario}
+                landingTime={detailLandingTime}
+                mode={mode}
+                onLandingTimeChange={setLandingTime}
+                onBack={() => setScreen(results ? 'results' : 'map')}
+              />
+              </Suspense>
+            ) : (
+              <p className="text-slate-400">Select a cell on the Map screen, or a row in the Results, to see its details.</p>
+            ))}
 
           {data && screen === 'globe' && (
             <section className="space-y-2">

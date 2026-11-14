@@ -31,7 +31,7 @@ function skyLine(name, body) {
 }
 
 // App renders this with key={cell.id}, so the "Copied" state resets and the popup scrolls into view per cell.
-export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCurrent, onClose }) {
+export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCurrent, onOpenDetail, onClose }) {
   const sky = useMemo(() => skyAt(cell, ephemeris, hour), [cell, ephemeris, hour])
   const [copyMessage, setCopyMessage] = useState('')
   const sectionRef = useRef(null)
@@ -93,6 +93,9 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
           className="rounded bg-sky-700 px-3 py-2 font-medium text-white transition-colors hover:bg-sky-800 disabled:cursor-default disabled:opacity-60"
         >
           {isCurrent ? 'This is your current point' : 'Use as current point'}
+        </button>
+        <button type="button" onClick={onOpenDetail} className="rounded border border-slate-500 px-3 py-2 transition-colors hover:bg-slate-800">
+          Open details
         </button>
         {copyMessage && <span className="text-xs text-slate-300">{copyMessage}</span>}
       </div>

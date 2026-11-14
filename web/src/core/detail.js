@@ -1,8 +1,14 @@
 // W5 — data for the detail screen of one cell. Contract: README "W5 Detail".
-/* eslint-disable no-unused-vars -- stub parameters; delete this line when you implement the module */
-import { notImplemented } from './notImplemented.js'
+import { simulateBattery } from './charging.js'
+import { computeEarthTrack, nextEarthEvent, summarizeEarthWindow } from './communication.js'
+import { hourIndexOf, timeAtHour } from './data.js'
+import { summarizeEnergyNeed } from './energyNeed.js'
+import { countdownText } from './format.js'
+import { VISIBLE_THRESHOLD } from './geometry.js'
+import { computeSunTrack, nextSunEvent, summarizeSunWindow } from './sunlight.js'
 
 export const DETAIL_LOOKAHEAD_HOURS = 30 * 24
+const CSV_HEADER = 'time,sunAzimuthDeg,sunElevationDeg,sunDiskFraction,earthAzimuthDeg,earthElevationDeg,earthDiskFraction,batteryWh'
 
 /**
  * Everything the detail screen shows for one cell and one landing time, computed with C1–C4.
@@ -25,7 +31,24 @@ export const DETAIL_LOOKAHEAD_HOURS = 30 * 24
  * }}
  */
 export function buildDetail(cell, ephemeris, scenario, landingTime) {
-  throw notImplemented('W5', 'buildDetail')
+  // C1–C4 are all implemented now, so nothing is null here; a module error reaches the screen's error boundary.
+  const landingHour = hourIndexOf(ephemeris, landingTime)
+  const hoursLeft = ephemeris.hours - landingHour
+  const stayHours = Math.min(scenario.stayDays * 24, hoursLeft)
+  const trackHours = Math.min(stayHours + DETAIL_LOOKAHEAD_HOURS, hoursLeft)
+  const sun = computeSunTrack(cell, ephemeris, landingHour, trackHours, scenario.panelMode)
+  const earth = computeEarthTrack(cell, ephemeris, landingHour, trackHours)
+  return {
+    landingHour,
+    stayHours,
+    trackHours,
+    sun,
+    earth,
+    sunSummary: summarizeSunWindow(sun, 0, stayHours),
+    earthSummary: summarizeEarthWindow(earth, 0, stayHours),
+    battery: simulateBattery(sun.powerFactor, 0, stayHours, scenario),
+    energy: summarizeEnergyNeed(sun, 0, stayHours, scenario),
+  }
 }
 
 /**
@@ -35,8 +58,15 @@ export function buildDetail(cell, ephemeris, scenario, landingTime) {
  * @returns {([number, number]|null)[]}
  */
 export function pathForChart(azimuthDeg, elevationDeg, start, length) {
-  throw notImplemented('W5', 'pathForChart')
+  const points = []
+  for (let i = start; i < start + length; i++) {
+    if (i > start && Math.abs(azimuthDeg[i] - azimuthDeg[i - 1]) > 180) points.push(null)
+    points.push([azimuthDeg[i], elevationDeg[i]])
+  }
+  return points
 }
+
+const rounded = (value, digits) => Number(value.toFixed(digits))
 
 /**
  * CSV of the stay, one row per hour i = 0 … stayHours−1, header first, lines joined with '\n':
@@ -46,7 +76,14 @@ export function pathForChart(azimuthDeg, elevationDeg, start, length) {
  * @returns {string}
  */
 export function toCsv(detail, ephemeris) {
-  throw notImplemented('W5', 'toCsv')
+  const { sun, earth, battery } = detail
+  const bodyFields = (track, i) => (track ? [track.azimuthDeg[i], track.elevationDeg[i], track.diskFraction[i]].map((value) => rounded(value, 3)) : ['', '', ''])
+  const lines = [CSV_HEADER]
+  for (let i = 0; i < detail.stayHours; i++) {
+    const batteryField = battery ? rounded(battery.batteryWh[i], 1) : ''
+    lines.push([timeAtHour(ephemeris, detail.landingHour + i), ...bodyFields(sun, i), ...bodyFields(earth, i), batteryField].join(','))
+  }
+  return lines.join('\n')
 }
 
 /**
@@ -58,5 +95,14 @@ export function toCsv(detail, ephemeris) {
  * @returns {string}
  */
 export function summarySentence(detail, cellLabel, atIndex) {
-  throw notImplemented('W5', 'summarySentence')
+  const { sun, earth } = detail
+  const hoursLeft = detail.trackHours - 1 - atIndex // up to the last sample of the track
+  const sunVisible = sun.diskFraction[atIndex] >= VISIBLE_THRESHOLD
+  const opening = sunVisible ? `Day at ${cellLabel}: Sun ${sun.elevationDeg[atIndex].toFixed(1)}° high.` : `Night at ${cellLabel}.`
+  let sentence = `${opening} ${countdownText('sun', nextSunEvent(sun, atIndex), sunVisible, hoursLeft)}.`
+  if (earth) {
+    const earthVisible = earth.diskFraction[atIndex] >= VISIBLE_THRESHOLD
+    sentence += ` ${countdownText('earth', nextEarthEvent(earth, atIndex), earthVisible, hoursLeft)}.`
+  }
+  return sentence
 }
