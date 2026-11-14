@@ -1,3 +1,4 @@
+import { cellDisplayName } from './format.js'
 import {
   distanceKm,
   horizonElevationAt,
@@ -90,7 +91,7 @@ export function explainDifference(current, other) {
   if (otherDark < curDark) verbPhrase = `cuts the longest dark period from ${curDark} h to ${otherDark} h`
   else if (otherDark > curDark) verbPhrase = `increases the longest dark period from ${curDark} h to ${otherDark} h`
   else verbPhrase = `keeps the longest dark period at ${curDark} h`
-  return `Moving ${distKm} km to ${other.cell.id || other.cell.label || 'target'} ${verbPhrase}${differenceReason(current, other)}`
+  return `Moving ${distKm} km to ${other.cell.id ? cellDisplayName(other.cell) : other.cell.label || 'target'} ${verbPhrase}${differenceReason(current, other)}`
 }
 
 /**

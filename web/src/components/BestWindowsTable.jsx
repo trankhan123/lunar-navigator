@@ -1,7 +1,7 @@
-import { formatDuration, formatUtc } from '../core/format.js'
+import { formatDuration, formatUtc, rowCellName } from '../core/format.js'
 import { useI18n } from '../i18n/index.jsx'
 
-export default function BestWindowsTable({ rows, onSelectRow }) {
+export default function BestWindowsTable({ rows, currentCell, onSelectRow }) {
   const { t } = useI18n()
 
   const statusText = {
@@ -38,7 +38,7 @@ export default function BestWindowsTable({ rows, onSelectRow }) {
               <td className="py-1.5 pr-2 text-slate-400">{row.rank}</td>
               <td className="py-1.5 pr-2">
                 <button type="button" onClick={() => onSelectRow(row)} className="font-mono text-sky-300 underline-offset-2 hover:underline">
-                  {row.cellId}
+                  {rowCellName(row, currentCell)}
                 </button>
               </td>
               <td className="py-1.5 pr-2">{formatUtc(row.windowStartTime)} → {formatUtc(row.windowEndTime)}</td>

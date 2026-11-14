@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cellDisplayName, countdownText, currentPointSentence, formatDuration, formatUtc, hasNoTerrain } from './format.js'
+import { cellDisplayName, countdownText, currentPointSentence, formatDuration, formatUtc, hasNoTerrain, rowCellName } from './format.js'
 import { DEFAULT_SCENARIO } from './scenario.js'
 
 test('formatDuration', () => {
@@ -134,4 +134,11 @@ test('hasNoTerrain: true only without a horizon', () => {
 test('currentPointSentence: uses the given point name', () => {
   const summary = { metrics: { status: 'pass', cellId: 'SITE-apollo-11', landingTime: '2028-01-02T06:00Z' } }
   assert.equal(currentPointSentence(summary, DEFAULT_SCENARIO, 'Apollo 11'), 'Apollo 11 meets all limits for a landing at 2028-01-02 06:00 UTC.')
+})
+
+test('rowCellName: the searched famous site shows its name, grid cells keep their id', () => {
+  const site = { id: 'SITE-apollo-11', label: 'Apollo 11' }
+  assert.equal(rowCellName({ cellId: 'SITE-apollo-11' }, site), 'Apollo 11')
+  assert.equal(rowCellName({ cellId: 'MAL-r1c1' }, site), 'MAL-r1c1')
+  assert.equal(rowCellName({ cellId: 'CAP-x1y2' }, null), 'CAP-x1y2')
 })

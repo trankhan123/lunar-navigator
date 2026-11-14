@@ -509,7 +509,7 @@ export default function App() {
                     </div>
                   </div>
                   )}
-                  <BestWindowsTable rows={bestWindows} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
+                  <BestWindowsTable rows={bestWindows} currentCell={searchedPoint} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
                 </>
               )}
             </section>
@@ -555,7 +555,7 @@ export default function App() {
 
           {data && screen === 'learn' && (
             <Suspense fallback={<p className="text-slate-400">Loading learn mode…</p>}>
-              <LearnView results={results} cellsById={cellsById} ephemeris={data.ephemeris} scenario={search.scenario} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
+              <LearnView results={results} cellsById={searchedPoint ? new Map(cellsById).set(searchedPoint.id, searchedPoint) : cellsById} ephemeris={data.ephemeris} scenario={search.scenario} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
             </Suspense>
           )}
 

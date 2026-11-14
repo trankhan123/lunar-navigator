@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import { CAP_BOUNDS_M, CAP_GRID_SIZE, capPixelLookup, capPixelsRgba, capTileIdsInBounds } from '../core/capGrid.js'
-import { MAP_LAYERS, cellColor } from '../core/mapLayers.js'
+import { CELL_FILL_OPACITY, MAP_LAYERS, cellColor } from '../core/mapLayers.js'
 import { computeSkyAtHour } from '../core/mapSky.js'
 import { viewBoundsM } from '../core/mapView.js'
 import { startVisibilityFractions } from '../core/startWindowSearch.js'
@@ -95,7 +95,7 @@ function MapCapLayer({ capCells, capIndex, layerId, ephemeris, hour, hourRange, 
       width={xMax - xMin}
       height={yMax - yMin}
       preserveAspectRatio="none"
-      opacity={0.8}
+      opacity={CELL_FILL_OPACITY}
       style={{ imageRendering: 'pixelated', cursor: 'pointer' }}
       onClick={(event) => {
         const cell = cellFromEvent(event)

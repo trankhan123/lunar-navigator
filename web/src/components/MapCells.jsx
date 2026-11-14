@@ -1,7 +1,7 @@
+import { CELL_FILL_OPACITY } from '../core/mapLayers.js'
 import { memo } from 'react'
 
 const CELL_DRAW_SIZE_M = 940 // a 1 km square with a 60 m gap
-const CELL_FILL_OPACITY = 0.65 // lets the relief (craters, ridges) show through while the colours stay readable
 
 const LABEL_STYLE = { fill: '#f8fafc', stroke: '#020617', strokeWidth: 40, paintOrder: 'stroke', pointerEvents: 'none' }
 

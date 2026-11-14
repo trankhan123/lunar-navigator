@@ -1,7 +1,7 @@
 // W7 learn mode (README "W7 Learn mode"): plain-English explanations for teachers and the public.
 import { hourIndexOf } from './data.js'
 import { differenceReason, explainDifference, findMostDifferentNeighbors } from './explain.js'
-import { formatDuration } from './format.js'
+import { cellDisplayName, formatDuration } from './format.js'
 import { computeSunTrack } from './sunlight.js'
 
 const percent = (fraction) => `${Math.round(fraction * 100)} %`
@@ -124,9 +124,9 @@ export function neighborLesson(results, cellsById, landingIndex, { ephemeris, sc
   if (scope === 'current') {
     const [from, to] = darkerCell.id === results.cellIds[0] ? [darker, lighter] : [lighter, darker]
     const moving = explainDifference(from, to)
-    sentence = `From your current point ${from.cell.id}: ${moving[0].toLowerCase()}${moving.slice(1)}`
+    sentence = `From your current point ${cellDisplayName(from.cell)}: ${moving[0].toLowerCase()}${moving.slice(1)}`
   } else {
-    sentence = `Elsewhere in this region, ${darkerCell.id} and ${lighterCell.id} are ${pair.distanceKm.toFixed(1)} km apart, yet ${darkerCell.id} has ${darkPeriodWords(darkerHours)} and ${lighterCell.id} has ${darkPeriodWords(lighterHours)}${differenceReason(lighter, darker, `at ${darkerCell.id}`)}`
+    sentence = `Elsewhere in this region, ${cellDisplayName(darkerCell)} and ${cellDisplayName(lighterCell)} are ${pair.distanceKm.toFixed(1)} km apart, yet ${cellDisplayName(darkerCell)} has ${darkPeriodWords(darkerHours)} and ${cellDisplayName(lighterCell)} has ${darkPeriodWords(lighterHours)}${differenceReason(lighter, darker, `at ${cellDisplayName(darkerCell)}`)}`
   }
   return { scope, darkerCell, lighterCell, darkerHours, lighterHours, distanceKm: pair.distanceKm, sentence }
 }

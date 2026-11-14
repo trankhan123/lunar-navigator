@@ -4,6 +4,7 @@ export const PANEL_MODES = ['auto', 'vertical', 'horizontal']
 export const SEARCH_SCOPES = ['region', 'radius', 'all']
 export const MAX_RANGE_DAYS = 183
 export const MAX_STAY_DAYS = 30
+export const MAX_SEARCH_RADIUS_KM = 50 // keeps a radius search on the 17k-cell cap grid small enough for the worker
 
 // Example values only (window-finder.md §3.2), not the specification of any real lander.
 export const DEFAULT_SCENARIO = {
@@ -130,6 +131,8 @@ export function validateScenario(scenario, ephemeris) {
     fail('searchScope', 'Choose region, radius or all.')
   } else if (scenario.searchScope === 'radius' && (!isNumber(scenario.searchRadiusKm) || scenario.searchRadiusKm <= 0)) {
     fail('searchRadiusKm', 'Search radius must be greater than 0 km.')
+  } else if (scenario.searchScope === 'radius' && scenario.searchRadiusKm > MAX_SEARCH_RADIUS_KM) {
+    fail('searchRadiusKm', `Search radius can be at most ${MAX_SEARCH_RADIUS_KM} km.`)
   }
 
   return errors

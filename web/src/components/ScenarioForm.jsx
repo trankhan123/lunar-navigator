@@ -1,5 +1,5 @@
 import { cloneElement } from 'react'
-import { LANDER_PRESETS, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
+import { LANDER_PRESETS, MAX_SEARCH_RADIUS_KM, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
 import { useI18n } from '../i18n/index.jsx'
 
 const PRESET_FIELDS = ['maxDarkHours', 'maxCommLossHours', 'panelMaxW', 'batteryCapacityWh', 'loadW', 'panelMode']
@@ -211,7 +211,7 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
               ))}
             </select>,
           )}
-          {value.searchScope === 'radius' && numberField(t('scenario.searchRadius'), 'searchRadiusKm', 'km')}
+          {value.searchScope === 'radius' && numberField(`${t('scenario.searchRadius')} (${t('scenario.searchRadiusMax', { km: MAX_SEARCH_RADIUS_KM })})`, 'searchRadiusKm', 'km')}
           <p className="col-span-2 text-xs text-slate-400">{t('scenario.scopeTimeNote')} {t('scenario.scopeCapNote')}</p>
         </div>
       )}

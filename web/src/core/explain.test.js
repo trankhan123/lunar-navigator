@@ -3,6 +3,13 @@ import assert from 'node:assert/strict'
 import { assertNear } from './testHelpers.js'
 import { compassName, explainDifference, findMostDifferentNeighbors } from './explain.js'
 
+test('explainDifference: a site or custom point is named by its label, a grid cell by its id', () => {
+  const cell = (id, label, lat) => ({ cell: { id, label, lat, lon: 0 }, metrics: { longestDarkHours: 5 } })
+  assert.match(explainDifference(cell('MAL-a', 'MAL-a', -85), cell('SITE-apollo-11', 'Apollo 11', -85.01)), /^Moving [\d.]+ km to Apollo 11 /)
+  assert.match(explainDifference(cell('MAL-a', 'MAL-a', -85), cell('CUSTOM', 'Custom point', -85.01)), /to Custom point /)
+  assert.match(explainDifference(cell('SITE-x', 'X', -85), cell('MAL-b', 'MAL-b', -85.01)), /to MAL-b /)
+})
+
 test('compassName', () => {
   assert.equal(compassName(0), 'north')
   assert.equal(compassName(45), 'north-east')

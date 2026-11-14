@@ -5,6 +5,9 @@
 export const cellDisplayName = (cell) => (cell.id.startsWith('SITE-') || cell.id === 'CUSTOM' ? cell.label : cell.id)
 
 /** True when the point's terrain is the smooth sphere (no horizon data): sites outside the terrain model and custom points. */
+// Only the searched current point can be a pseudo-cell (famous site, typed coordinates); every other row is a grid cell.
+export const rowCellName = (row, currentCell) => (currentCell && row.cellId === currentCell.id ? cellDisplayName(currentCell) : row.cellId)
+
 export const hasNoTerrain = (cell) => !cell.horizon
 
 /** True when the point's terrain comes from the 2 km whole-cap grid (README D9): a CAP cell, or a point inside one. */

@@ -1,4 +1,5 @@
 import { explainDifference } from '../core/explain.js'
+import { cellDisplayName } from '../core/format.js'
 
 const percent = (fraction) => `${Math.round(fraction * 100)} %`
 const ROWS = [
@@ -23,8 +24,8 @@ export default function CompareView({ current, other }) {
           <thead className="text-slate-400">
             <tr>
               <th scope="col" className="py-1 pr-3 font-normal">Over the stay</th>
-              <th scope="col" className="py-1 pr-3 font-normal">{current.cell.id} (current)</th>
-              <th scope="col" className="py-1 font-normal">{other.cell.id}</th>
+              <th scope="col" className="py-1 pr-3 font-normal">{cellDisplayName(current.cell)} (current)</th>
+              <th scope="col" className="py-1 font-normal">{cellDisplayName(other.cell)}</th>
             </tr>
           </thead>
           <tbody>

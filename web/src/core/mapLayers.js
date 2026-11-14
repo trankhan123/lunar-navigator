@@ -22,6 +22,7 @@ export const MAP_LAYERS = [
   },
   { id: 'feasibility', label: 'Feasibility', needs: null, legend: entries([[INFEASIBLE_COLOR, 'Too steep or in permanent shadow'], ['#0ea5e9', 'Feasible cell']]) },
 ]
+export const CELL_FILL_OPACITY = 0.65 // lets the relief (craters, ridges) show through while the colours stay readable
 const layersById = new Map(MAP_LAYERS.map((layer) => [layer.id, layer]))
 
 /** 0 shadow (< half the disk), 1 partial (half or more: counts as sunlit, as in the ranking), 2 full disk. */

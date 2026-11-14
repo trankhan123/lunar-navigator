@@ -87,6 +87,14 @@ test('neighborLesson: prefers a pair with the current point, names both cells an
   )
 })
 
+test('neighborLesson: a famous-site current point is named by its label, not its SITE- id', () => {
+  const site = { ...lightCell, id: 'SITE-apollo-11', label: 'Apollo 11' }
+  const withSite = new Map([[site.id, site], [darkCell.id, darkCell]])
+  const lesson = neighborLesson(lessonResults([site.id, darkCell.id], [12, 90]), withSite, 0, context)
+  assert.match(lesson.sentence, /^From your current point Apollo 11: moving 1 km to MAL-dark /)
+  assert.doesNotMatch(lesson.sentence, /SITE-/)
+})
+
 test('neighborLesson: of a worse and a better neighbour of the current point, the better one wins', () => {
   const betterCell = makeCell('MAL-better', -1, 10)
   const withBetter = new Map([...cellsById, [betterCell.id, betterCell]])
