@@ -100,10 +100,10 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | | todo |
 | D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | | todo |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
-| C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | | todo |
+| C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | Quoc_Bao | done |
 | C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | | todo |
-| C3 | WF4 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | | todo |
-| C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | | todo |
+| C3 | WF4 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | hoanggbach | done |
+| C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
 | C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | doing |
 | W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx`, `CellPopup.jsx` | W1 (D8 optional) | L | trankhan123 | doing |
