@@ -1,12 +1,13 @@
 // C5 — main-thread client for the worker. Call: const { promise, cancel } = startWindowSearch({...})
 let nextRequestId = 1
 
-export function startWindowSearch({ cells, ephemeris, scenario, onProgress }) {
+// One worker per job, terminated after 'done' or 'error'; cancel() terminates it and rejects with cancelMessage.
+function runWorkerJob(message, onProgress, cancelMessage) {
   const worker = new Worker(new URL('./windowSearchWorker.js', import.meta.url), { type: 'module' })
   const requestId = nextRequestId++
-  let rejectSearch
+  let rejectJob
   const promise = new Promise((resolve, reject) => {
-    rejectSearch = reject
+    rejectJob = reject
     worker.onmessage = ({ data }) => {
       if (data.type === 'progress') onProgress?.(data.doneCells, data.totalCells)
       if (data.type === 'done') resolve(data.results)
@@ -18,10 +19,19 @@ export function startWindowSearch({ cells, ephemeris, scenario, onProgress }) {
       worker.terminate()
     }
   })
-  worker.postMessage({ type: 'run', requestId, cells, ephemeris, scenario })
+  worker.postMessage({ ...message, requestId })
   const cancel = () => {
     worker.terminate()
-    rejectSearch(new Error('Search cancelled'))
+    rejectJob(new Error(cancelMessage))
   }
   return { promise, cancel }
+}
+
+export function startWindowSearch({ cells, ephemeris, scenario, onProgress }) {
+  return runWorkerJob({ type: 'run', cells, ephemeris, scenario }, onProgress, 'Search cancelled')
+}
+
+/** W2 map % layers: share of hours with the Sun / Earth in view per cell, in the same worker. Rejects with 'cancelled' on cancel(). */
+export function startVisibilityFractions({ cells, ephemeris, firstHour, hourCount }) {
+  return runWorkerJob({ type: 'fractions', cells, ephemeris, firstHour, hourCount }, null, 'cancelled')
 }

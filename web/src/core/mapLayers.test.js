@@ -1,7 +1,7 @@
 // W2 map v2 — layers, levels and colours (plan Task 2). Synthetic samples, not real data.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { INFEASIBLE_COLOR, MAP_LAYERS, NOT_SEARCHED_COLOR, NO_VALUE_COLOR, cellColor, cellLevel, earthLevel, sunEarthLevel, sunLevel } from './mapLayers.js'
+import { INFEASIBLE_COLOR, MAP_LAYERS, NOT_SEARCHED_COLOR, NO_VALUE_COLOR, cellColor, cellLevel, earthLevel, fractionColor, sunEarthLevel, sunLevel } from './mapLayers.js'
 
 const legend = (layerId) => MAP_LAYERS.find((layer) => layer.id === layerId).legend
 
@@ -31,9 +31,21 @@ test('cellLevel and cellColor per layer', () => {
 })
 
 test('every layer has a label, every legend colour has text', () => {
-  assert.deepEqual(MAP_LAYERS.map((layer) => layer.id), ['sunNow', 'earthNow', 'sunEarthNow', 'searchResult', 'feasibility'])
+  assert.deepEqual(MAP_LAYERS.map((layer) => layer.id), ['sunNow', 'earthNow', 'sunEarthNow', 'sunPercent', 'earthPercent', 'searchResult', 'feasibility'])
   for (const layer of MAP_LAYERS) {
     assert.ok(layer.label, layer.id)
     for (const entry of layer.legend) assert.ok(entry.label && /^#[0-9a-f]{6}$/.test(entry.color), layer.id)
   }
+})
+
+test('fractionColor interpolates the colour-blind-safe ramp', () => {
+  assert.equal(fractionColor(0), '#440154')
+  assert.equal(fractionColor(0.5), '#21918c')
+  assert.equal(fractionColor(1), '#fde725')
+  assert.equal(fractionColor(0.125), '#402a70')
+  assert.equal(fractionColor(-0.2), '#440154')
+  assert.equal(fractionColor(1.5), '#fde725')
+  assert.equal(fractionColor(Number.NaN), null)
+  assert.equal(cellColor('sunPercent', { fractionSun: 1 }), '#fde725')
+  assert.equal(cellColor('earthPercent', {}), NO_VALUE_COLOR)
 })

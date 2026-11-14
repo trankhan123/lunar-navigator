@@ -472,6 +472,7 @@ Rules:
 - **Worker protocol:**
   - main → worker: `{type:'run', requestId, cells, ephemeris, scenario}`;
   - worker → main: `{type:'progress', requestId, doneCells, totalCells}`, then `{type:'done', requestId, results}` (typed array buffers are transferred) or `{type:'error', requestId, message}`.
+  - the same worker also answers the W2 map's `{type:'fractions', requestId, cells, ephemeris, firstHour, hourCount}` with `{type:'done', requestId, results: {fractionSun, fractionEarth}}` (Float32Array per cell, buffers transferred; no progress messages). `startWindowSearch.js` exports `startVisibilityFractions` next to `startWindowSearch`.
 - **Speed:** region scope (about 225 cells × 730 landings × 144 h) in under 3 s on a laptop.
 
 ## Web UI modules (`web/src/components/`, one component per file)
@@ -510,6 +511,7 @@ Files: `SouthPoleMap.jsx` (+ `MapCells.jsx`, `MapMarks.jsx`, `MapLegend.jsx`), `
 - **`SouthPoleMap` props:** `{regions, activeRegion, maps, cells, sites, statusByCellId, currentCellId, selectedCellId, onSelectCell(cell), onOpenRegion(code|null)}`.
   - `activeRegion` is `null` at the overview: the whole south pole (`south_pole` image, the 9 region frames, pins of the other sites). With a region, its hillshade image and its 1 km cells are drawn. A link with a cell opens that cell's region.
   - `cells` is `null` while the region's file loads.
+  - Layers (`core/mapLayers.js`): Sunlight / Earth in view / Sun and Earth at the map hour (`hour`, C1/C2 with one hour), % sunlight and % Earth in view over the scenario dates (`hourRange`; computed in the search worker, cached per region and date range, started 400 ms after the last date change), Search result, Feasibility.
   - `statusByCellId` is a `Map<cellId, 0|1|2>` at the current landing time, or `null` before Submit;
   - every status also shows a symbol (✓ ! ✕) so it does not rely on colour alone.
 - **Drawing:**

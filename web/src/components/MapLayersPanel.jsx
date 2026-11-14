@@ -1,6 +1,6 @@
 import { MAP_LAYERS } from '../core/mapLayers.js'
 
-const UNAVAILABLE_HINTS = { hour: 'needs dates inside the ephemeris', search: 'run a search first' }
+const UNAVAILABLE_HINTS = { hour: 'needs dates inside the ephemeris', dates: 'fix the dates first', search: 'run a search first' }
 
 // availability: {hour, search} booleans; a layer whose `needs` is unmet stays visible but disabled, with the reason.
 export default function MapLayersPanel({ layerId, onLayerChange, availability }) {

@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
-import { toPolarXY } from '../core/data.js'
+import { timeAtHour, toPolarXY } from '../core/data.js'
 import { MAP_LAYERS, STATUS_SYMBOLS, cellColor, cellLevel } from '../core/mapLayers.js'
 import { computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
 import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap, viewBoundsM } from '../core/mapView.js'
+import { startVisibilityFractions } from '../core/startWindowSearch.js'
 import MapCells from './MapCells.jsx'
 import MapLayersPanel from './MapLayersPanel.jsx'
 import MapLegend from './MapLegend.jsx'
@@ -12,6 +13,9 @@ import MapMarks from './MapMarks.jsx'
 import MapMinimap from './MapMinimap.jsx'
 
 const MINIMAP_MIN_ZOOM = 1.5
+const FRACTIONS_WAIT_MS = 400 // typing a date must not start one worker job per keystroke
+// "% over your dates" results, keyed `${code}|${firstHour}|${lastHour}`; kept for the session so going back is instant.
+const fractionsCache = new Map()
 
 const ZOOM_STEP = 1.6
 const OUTLINE_SIZE_M = 940
@@ -31,13 +35,16 @@ function MapImage({ entry }) {
  * activeRegion null = the overview; otherwise that region's cells are drawn.
  */
 function SouthPoleMap({
-  regions, activeRegion, maps, cells, sites, ephemeris, hour, defaultLayerId, timeBar = null, statusByCellId, currentCellId, selectedCellId, onSelectCell, onOpenRegion,
+  regions, activeRegion, maps, cells, sites, ephemeris, hour, hourRange = null, defaultLayerId, timeBar = null, statusByCellId, currentCellId, selectedCellId,
+  onSelectCell, onOpenRegion,
 }) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
   const isFirstFit = useRef(true)
   const [transform, setTransform] = useState(zoomIdentity)
   const [chosenLayerId, setChosenLayerId] = useState(defaultLayerId)
+  const [, setFractionsDone] = useState(0) // bumped when a worker result lands in fractionsCache
+  const [fractionsError, setFractionsError] = useState(null)
   const regionCode = activeRegion?.code ?? null
 
   useEffect(() => {
@@ -68,18 +75,61 @@ function SouthPoleMap({
   }
 
   // A chosen layer that cannot draw yet (no valid hour, no search) draws as Feasibility; the radio keeps the choice.
-  const availability = { hour: hour !== null && hour !== undefined, search: Boolean(statusByCellId) }
+  const availability = { hour: hour !== null && hour !== undefined, dates: Boolean(hourRange), search: Boolean(statusByCellId) }
   const chosenLayer = layerById(chosenLayerId)
   const layerId = !chosenLayer.needs || availability[chosenLayer.needs] ? chosenLayerId : 'feasibility'
   const layerNeedsHour = layerById(layerId).needs === 'hour'
+  const layerNeedsDates = layerById(layerId).needs === 'dates'
   const sky = useMemo(
     () => (layerNeedsHour && cells && availability.hour ? computeSkyAtHour(cells, ephemeris, hour) : null),
     [layerNeedsHour, cells, ephemeris, hour, availability.hour],
   )
+
+  const fractionsKey = layerNeedsDates && regionCode && cells ? `${regionCode}|${hourRange.firstHour}|${hourRange.lastHour}` : null
+  const fractions = fractionsKey ? fractionsCache.get(fractionsKey) : undefined
+  useEffect(() => {
+    if (!fractionsKey || fractionsCache.has(fractionsKey)) return
+    const [, firstHour, lastHour] = fractionsKey.split('|').map(Number)
+    let job = null
+    const timer = setTimeout(() => {
+      setFractionsError(null)
+      job = startVisibilityFractions({ cells, ephemeris, firstHour, hourCount: lastHour - firstHour + 1 })
+      job.promise
+        .then((result) => {
+          fractionsCache.set(fractionsKey, result)
+          setFractionsDone((count) => count + 1)
+        })
+        .catch((error) => error.message !== 'cancelled' && setFractionsError(error.message))
+    }, FRACTIONS_WAIT_MS)
+    return () => {
+      clearTimeout(timer)
+      job?.cancel() // a newer date range always wins
+    }
+  }, [fractionsKey]) // eslint-disable-line react-hooks/exhaustive-deps -- keyed on the string key: a region's cells and the ephemeris are fixed for a key
+
   const colors = useMemo(
-    () => (cells ?? []).map((cell, index) => cellColor(layerId, { feasible: cell.feasible, status: statusByCellId?.get(cell.id), ...skySample(sky, index) })),
-    [cells, layerId, statusByCellId, sky],
+    () =>
+      (cells ?? []).map((cell, index) =>
+        cellColor(layerId, {
+          feasible: cell.feasible,
+          status: statusByCellId?.get(cell.id),
+          ...skySample(sky, index),
+          fractionSun: fractions?.fractionSun[index],
+          fractionEarth: fractions?.fractionEarth[index],
+        }),
+      ),
+    [cells, layerId, statusByCellId, sky, fractions],
   )
+  const dateRangeText = hourRange ? `${timeAtHour(ephemeris, hourRange.firstHour).slice(0, 10)} to ${timeAtHour(ephemeris, hourRange.lastHour).slice(0, 10)}` : ''
+  const statusText = !activeRegion
+    ? ''
+    : !cells
+      ? `Loading ${activeRegion.name} cells…`
+      : layerNeedsDates && fractionsError
+        ? `Could not compute the % layer: ${fractionsError}`
+        : layerNeedsDates && !fractions
+          ? 'Computing the % of hours for your dates…'
+          : ''
   // Region-centre dots (their sites carry D4 horizons) show the Sun/Earth at the map hour at every zoom.
   const dotLayerId = layerNeedsHour ? layerId : 'sunEarthNow'
   const centreCells = useMemo(() => regionCentreCells(regions, sites), [regions, sites])
@@ -183,13 +233,13 @@ function SouthPoleMap({
       )}
       </div>
       <p aria-live="polite" className="mt-1 min-h-4 text-xs text-slate-400">
-        {activeRegion && !cells ? `Loading ${activeRegion.name} cells…` : ''}
+        {statusText}
       </p>
       </div>
       <MapLayersPanel layerId={chosenLayerId} onLayerChange={setChosenLayerId} availability={availability} />
       </div>
       {timeBar}
-      {activeRegion ? <MapLegend layerId={layerId} /> : <MapLegend layerId={dotLayerId} showsCentreDots />}
+      {activeRegion ? <MapLegend layerId={layerId} dateRangeText={dateRangeText} /> : <MapLegend layerId={dotLayerId} showsCentreDots />}
     </figure>
   )
 }

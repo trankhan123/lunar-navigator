@@ -214,6 +214,11 @@ export default function App() {
   )
   // The Results map's hour is the landing time its ✓ ! ✕ colours describe; an off-grid time set in Detail makes landingIndex fall back to 0.
   const resultsHour = useMemo(() => (results ? hourIndexOf(data.ephemeris, results.landingTimes[landingIndex]) : null), [data, results, landingIndex])
+  // Memoised: a fresh object on every render would restart the % layer's 400 ms wait each time Play re-renders the app.
+  const resultsRange = useMemo(
+    () => (search.status === 'done' ? mapHourRange(data.ephemeris, search.scenario.startDate, search.scenario.endDate) : null),
+    [data, search],
+  )
   const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
   const currentCell = useMemo(() => {
     try {
@@ -335,7 +340,7 @@ export default function App() {
                     </label>
                   )}
                 </div>
-                <SouthPoleMap {...mapProps} hour={shownMapHour} defaultLayerId="sunNow" timeBar={mapTimeBar} />
+                <SouthPoleMap {...mapProps} hour={shownMapHour} hourRange={mapRange} defaultLayerId="sunNow" timeBar={mapTimeBar} />
               </section>
               <aside className="space-y-4">
                 {selectedCell && (
@@ -392,7 +397,7 @@ export default function App() {
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                     <div className="space-y-2">
                       {regionPicker}
-                      <SouthPoleMap {...mapProps} hour={resultsHour} defaultLayerId="searchResult" />
+                      <SouthPoleMap {...mapProps} hour={resultsHour} hourRange={resultsRange} defaultLayerId="searchResult" />
                     </div>
                     <div className="space-y-2">
                       {ranking.sortBy && (

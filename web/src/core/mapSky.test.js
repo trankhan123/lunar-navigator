@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear, constantEphemeris, equatorCell } from './testHelpers.js'
-import { clampHour, computeSkyAtHour, mapHourRange, nextPlayHour, regionCentreCells } from './mapSky.js'
+import { clampHour, computeSkyAtHour, computeVisibilityFractions, mapHourRange, nextPlayHour, regionCentreCells } from './mapSky.js'
 
 test('computeSkyAtHour: one Sun and Earth value per cell at that hour', () => {
   const ephemeris = { ...constantEphemeris({ hours: 3 }), sunSubLonDeg: [0, 180, 0] }
@@ -43,4 +43,12 @@ test('regionCentreCells: a pseudo-cell for each region whose centre site exists'
   assert.equal(centres[0].regionCode, 'MAL')
   assert.equal(centres[0].cell.id, 'SITE-malapert-massif')
   assert.equal(centres[0].cell.heightM, 0)
+})
+
+test('computeVisibilityFractions: share of hours with half the disk or more in view', () => {
+  const ephemeris = { ...constantEphemeris({ hours: 6 }), sunSubLonDeg: [0, 0, 180, 180, 180, 0] }
+  const result = computeVisibilityFractions([equatorCell], ephemeris, 1, 4)
+  assert.ok(result.fractionSun instanceof Float32Array && result.fractionEarth instanceof Float32Array)
+  assertNear(result.fractionSun[0], 0.25)
+  assertNear(result.fractionEarth[0], 1)
 })

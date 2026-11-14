@@ -1,8 +1,10 @@
 // W2 map v2 — Sun and Earth numbers for the map, built on C1 (sunlight.js) and C2 (communication.js).
 import { computeEarthTrack } from './communication.js'
 import { hourIndexOf, resolveCurrentCell } from './data.js'
+import { VISIBLE_THRESHOLD } from './geometry.js'
 import { countDays } from './scenario.js'
 import { computeSunTrack } from './sunlight.js'
+import { fractionAtLeast } from './timeSeries.js'
 
 const SKY_FIELDS = ['sunAzimuthDeg', 'sunElevationDeg', 'sunDiskFraction', 'earthAzimuthDeg', 'earthElevationDeg', 'earthDiskFraction']
 
@@ -51,6 +53,20 @@ export function clampHour(hour, { firstHour, lastHour }) {
 export function nextPlayHour(hour, stepHours, { firstHour, lastHour }) {
   const next = hour + stepHours
   return next > lastHour ? firstHour : next
+}
+
+/**
+ * Share of hours with half the disk or more in view (the ranking's rule), per cell, over firstHour … firstHour + hourCount − 1.
+ * @returns {{fractionSun: Float32Array, fractionEarth: Float32Array}}
+ */
+export function computeVisibilityFractions(cells, ephemeris, firstHour, hourCount) {
+  const fractionSun = new Float32Array(cells.length)
+  const fractionEarth = new Float32Array(cells.length)
+  cells.forEach((cell, index) => {
+    fractionSun[index] = fractionAtLeast(computeSunTrack(cell, ephemeris, firstHour, hourCount).diskFraction, VISIBLE_THRESHOLD, 0, hourCount)
+    fractionEarth[index] = fractionAtLeast(computeEarthTrack(cell, ephemeris, firstHour, hourCount).diskFraction, VISIBLE_THRESHOLD, 0, hourCount)
+  })
+  return { fractionSun, fractionEarth }
 }
 
 /** One pseudo-cell per region whose centre site exists (the 9 centre sites carry D4 horizons). */

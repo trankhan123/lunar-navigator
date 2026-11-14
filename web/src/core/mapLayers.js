@@ -13,6 +13,8 @@ export const MAP_LAYERS = [
   { id: 'sunNow', label: 'Sunlight now', needs: 'hour', legend: entries([['#1f2937', 'In shadow'], ['#e69f00', 'Partial Sun (half the disk or more, counts as sunlit)'], ['#f0e442', 'Full Sun']]) },
   { id: 'earthNow', label: 'Earth in view now', needs: 'hour', legend: entries([['#1f2937', 'Earth hidden'], ['#56b4e9', 'Earth in view']]) },
   { id: 'sunEarthNow', label: 'Sun and Earth now', needs: 'hour', legend: entries([['#1f2937', 'Neither'], ['#56b4e9', 'Earth only'], ['#f0e442', 'Sun only'], ['#009e73', 'Sun and Earth']]) },
+  { id: 'sunPercent', label: '% sunlight (your dates)', needs: 'dates', legend: [] },
+  { id: 'earthPercent', label: '% Earth in view (your dates)', needs: 'dates', legend: [] },
   {
     id: 'searchResult', label: 'Search result', needs: 'search',
     legend: entries([['#ef4444', 'Fails a limit'], ['#f59e0b', 'Meets limits, battery below 20 %'], ['#10b981', 'Meets all limits']]),
@@ -44,8 +46,25 @@ export function cellLevel(layerId, sample) {
   return null
 }
 
+/** Viridis, 0 → 1: the % layers here and D8's NASA images (pipeline FRACTION_COLORS) share it. */
+export const FRACTION_RAMP = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']
+const RAMP_RGB = FRACTION_RAMP.map((color) => [1, 3, 5].map((start) => parseInt(color.slice(start, start + 2), 16)))
+
+/** Linear RGB interpolation between equally spaced ramp stops, clamped to 0…1; null for a non-finite fraction. */
+export function fractionColor(fraction) {
+  if (!Number.isFinite(fraction)) return null
+  const position = Math.min(1, Math.max(0, fraction)) * (RAMP_RGB.length - 1)
+  const lower = Math.min(Math.floor(position), RAMP_RGB.length - 2)
+  const share = position - lower
+  const channels = RAMP_RGB[lower].map((value, channel) => Math.round(value + (RAMP_RGB[lower + 1][channel] - value) * share))
+  return `#${channels.map((value) => value.toString(16).padStart(2, '0')).join('')}`
+}
+
+const FRACTION_FIELDS = { sunPercent: 'fractionSun', earthPercent: 'fractionEarth' }
+
 /** Fill colour of a cell on a layer; always a colour. */
 export function cellColor(layerId, sample) {
+  if (FRACTION_FIELDS[layerId]) return fractionColor(sample[FRACTION_FIELDS[layerId]]) ?? NO_VALUE_COLOR
   const layer = layersById.get(layerId)
   if (layerId === 'searchResult') {
     if (!sample.feasible) return INFEASIBLE_COLOR
