@@ -4,11 +4,14 @@ import { zoom, zoomIdentity } from 'd3-zoom'
 import { toPolarXY } from '../core/data.js'
 import { MAP_LAYERS, STATUS_SYMBOLS, cellColor, cellLevel } from '../core/mapLayers.js'
 import { computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
-import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap } from '../core/mapView.js'
+import { MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, WHOLE_MAP_BOUNDS_M, fitTransform, isOnPolarMap, viewBoundsM } from '../core/mapView.js'
 import MapCells from './MapCells.jsx'
 import MapLayersPanel from './MapLayersPanel.jsx'
 import MapLegend from './MapLegend.jsx'
 import MapMarks from './MapMarks.jsx'
+import MapMinimap from './MapMinimap.jsx'
+
+const MINIMAP_MIN_ZOOM = 1.5
 
 const ZOOM_STEP = 1.6
 const OUTLINE_SIZE_M = 940
@@ -139,13 +142,14 @@ function SouthPoleMap({
       </div>
       <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]">
       <div>
+      <div className="relative mx-auto w-full max-w-[75vh]">
       <svg
         ref={svgRef}
         viewBox={VIEW_BOX}
         role="img"
         aria-label={ariaLabel}
         tabIndex={0}
-        className="mx-auto block aspect-square w-full max-w-[75vh] touch-none select-none rounded-lg bg-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+        className="block aspect-square w-full touch-none select-none rounded-lg bg-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
       >
         <defs>
           <pattern id="infeasible-hatch" patternUnits="userSpaceOnUse" width={200} height={200} patternTransform="rotate(45)">
@@ -174,6 +178,10 @@ function SouthPoleMap({
           </g>
         </g>
       </svg>
+      {transform.k >= MINIMAP_MIN_ZOOM && (
+        <MapMinimap regions={regions} activeRegionCode={regionCode} background={southPoleImage} viewBoundsM={viewBoundsM(transform)} />
+      )}
+      </div>
       <p aria-live="polite" className="mt-1 min-h-4 text-xs text-slate-400">
         {activeRegion && !cells ? `Loading ${activeRegion.name} cells…` : ''}
       </p>
