@@ -32,8 +32,9 @@ BACKGROUND_RGB = (15, 23, 42)  # slate-900, the map's own background, where the 
 SUN_ALTITUDE_DEG = 35
 SUN_AZIMUTHS_DEG = [225, 270, 315, 360]  # multidirectional: the mean of four lights, so no slope direction is lost in shadow
 VERTICAL_EXAGGERATION = 2.0  # the Moon's relief is gentle at these scales
-# Muted, colour-blind-safe (cividis) elevation ramp, metres above the 1737.4 km reference sphere → colour. Clamped outside.
-ELEVATION_STOPS = [(-6000, "#00204d"), (-4000, "#31446b"), (-2000, "#666970"), (0, "#958f78"), (2500, "#cbba69"), (5000, "#ffea46")]
+# Neutral slate ramp (Tailwind slate 800 → 200), metres above the 1737.4 km reference sphere → colour. Clamped outside.
+# No yellow, orange or green: those are the map's data colours (Sun, Earth, feasibility), so terrain must not look like data.
+ELEVATION_STOPS = [(-6000, "#1e293b"), (-4000, "#334155"), (-2000, "#475569"), (0, "#64748b"), (2500, "#94a3b8"), (5000, "#e2e8f0")]
 
 
 def contour_interval_m(level):

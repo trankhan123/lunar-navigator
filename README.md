@@ -262,7 +262,7 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 
 - Pyramid of 512 px JPEG tiles `relief/<z>/<x>_<y>.jpg`: level `z` splits the ±304 km square into 2^z × 2^z tiles, `x` grows east, `y` grows south (row 0 = north edge). Levels 0–4, level 4 is about 74 m/px and is written only for tiles that touch the 85°S disk or a region frame; tiles without DEM data are not written.
 - Index: `{tileSizePx, boundsM, levels: [{z, tileSizeM, metersPerPixel, contourIntervalM, tiles: ["x_y", …]}], elevationLegend: [{elevationM, color}], contourIntervalsM: [500, 250]}`.
-- Each tile is multidirectional shaded relief (4 lights, altitude 35°, 2× vertical exaggeration) times a muted colour-blind-safe (cividis) elevation tint, with thin contour lines every 500 m (levels 0–2) or 250 m (levels 3–4), no labels. Each tile ≤ 300 kB, checked by `check_web_data.py`.
+- Each tile is multidirectional shaded relief (4 lights, altitude 35°, 2× vertical exaggeration) times a neutral slate elevation tint (dark slate low to light grey-blue high, no data colours), with thin contour lines every 500 m (levels 0–2) or 250 m (levels 3–4), no labels. Each tile ≤ 300 kB, checked by `check_web_data.py`.
 
 ### Pipeline intermediate files (`pipeline/out/`, committed so others can build without raw data)
 
