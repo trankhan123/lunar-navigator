@@ -113,7 +113,10 @@ test('mission quantities cannot become coordinates and latitude signs cannot fli
   for (const [message, point, allowed] of [
     ['Stay 6 days, battery 10 kWh.', { type: 'coordinates', lat: 6, lon: 10 }, false],
     ['lat: -89.5, lon: 10', { type: 'coordinates', lat: 89.5, lon: 10 }, false],
+    ['lat: -89.5, lon: 10.5° E', { type: 'coordinates', lat: -89.5, lon: 10 }, false],
+    ['lat: -89.5, lon: 10.5e1', { type: 'coordinates', lat: -89.5, lon: 10 }, false],
     ['lat: -89.5, lon: 10', { type: 'coordinates', lat: -89.5, lon: 10 }, true],
+    ['lat: -89.5, lon: 10.5.', { type: 'coordinates', lat: -89.5, lon: 10.5 }, true],
   ]) {
     let calls = 0
     const call = await fixture(t, async () => {

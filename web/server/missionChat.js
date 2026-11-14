@@ -112,7 +112,7 @@ Canonical numeric fields/units: ${JSON.stringify(Object.fromEntries(Object.entri
   if (point?.type === 'coordinates' && JSON.stringify(point) !== JSON.stringify(body.scenario.currentPoint)) {
     const userMessages = [...body.history.filter(({ role }) => role === 'user').map(({ content }) => content), body.message]
     // Require labeled coordinates: mission quantities and hemisphere signs must never become a location.
-    const coordinates = userMessages.reverse().map((message) => message.match(/\blat(?:itude)?\s*[:=]\s*([+-]?\d+(?:\.\d+)?)\s*[,;]\s*lon(?:gitude)?\s*[:=]\s*([+-]?\d+(?:\.\d+)?)(?=\s*(?:$|[.;\n]))/i)).find(Boolean)
+    const coordinates = userMessages.reverse().map((message) => message.match(/\blat(?:itude)?\s*[:=]\s*([+-]?\d+(?:\.\d+)?)\s*[,;]\s*lon(?:gitude)?\s*[:=]\s*([+-]?\d+(?:\.\d+)?)(?=\s*(?:$|[;\n]|\.(?:\s|$)))/i)).find(Boolean)
     if (!coordinates || Number(coordinates[1]) !== point.lat || Number(coordinates[2]) !== point.lon) {
       delete reply.patch.currentPoint
       reply.questions = ['Please enter signed coordinates as "lat: -89.5, lon: 10", or choose a point in the form.', ...(Array.isArray(reply.questions) ? reply.questions : [])].slice(0, 2)
