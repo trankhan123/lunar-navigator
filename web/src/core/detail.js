@@ -13,7 +13,7 @@ const CSV_HEADER = 'time,sunAzimuthDeg,sunElevationDeg,sunDiskFraction,earthAzim
 /**
  * Everything the detail screen shows for one cell and one landing time, computed with C1–C4.
  * Tracks cover the stay plus up to 30 days more (so countdowns near the end of the stay still work);
- * both are cut at the end of the ephemeris. Parts whose module is still a stub are null.
+ * both are cut at the end of the ephemeris. C1–C4 are all implemented, so every part is filled; module errors are thrown.
  * @param {import('./data.js').Cell} cell
  * @param {import('./data.js').Ephemeris} ephemeris
  * @param {Object} scenario  uses stayDays, panelMode, panelMaxW, loadW, batteryCapacityWh
@@ -23,15 +23,14 @@ const CSV_HEADER = 'time,sunAzimuthDeg,sunElevationDeg,sunDiskFraction,earthAzim
  *   stayHours: number,          min(stayDays × 24, hours left in the ephemeris)
  *   trackHours: number,         min(stayHours + DETAIL_LOOKAHEAD_HOURS, hours left in the ephemeris)
  *   sun: Object,                SunTrack (C1) with trackHours values; required, errors are thrown
- *   earth: Object|null,         EarthTrack (C2) with trackHours values, null while C2 is a stub
+ *   earth: Object,              EarthTrack (C2) with trackHours values
  *   sunSummary: Object,         summarizeSunWindow(sun, 0, stayHours)
- *   earthSummary: Object|null,  summarizeEarthWindow(earth, 0, stayHours), null without earth
- *   battery: Object|null,       simulateBattery(sun.powerFactor, 0, stayHours, scenario) (C4), null while C4 is a stub
- *   energy: Object|null         summarizeEnergyNeed(sun, 0, stayHours, scenario) (C3), null while C3 is a stub
+ *   earthSummary: Object,       summarizeEarthWindow(earth, 0, stayHours)
+ *   battery: Object,            simulateBattery(sun.powerFactor, 0, stayHours, scenario) (C4)
+ *   energy: Object              summarizeEnergyNeed(sun, 0, stayHours, scenario) (C3)
  * }}
  */
 export function buildDetail(cell, ephemeris, scenario, landingTime) {
-  // C1–C4 are all implemented now, so nothing is null here; a module error reaches the screen's error boundary.
   const landingHour = hourIndexOf(ephemeris, landingTime)
   const hoursLeft = ephemeris.hours - landingHour
   const stayHours = Math.min(scenario.stayDays * 24, hoursLeft)

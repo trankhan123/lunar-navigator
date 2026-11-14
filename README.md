@@ -566,7 +566,7 @@ Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `Cur
 
 | Function | Returns |
 |---|---|
-| `buildDetail(cell, ephemeris, scenario, landingTime)` | `{landingHour, stayHours, trackHours, sun, earth, sunSummary, earthSummary, battery, energy}`; tracks cover the stay + 30 days (cut at the ephemeris end); parts whose module is a stub are `null` |
+| `buildDetail(cell, ephemeris, scenario, landingTime)` | `{landingHour, stayHours, trackHours, sun, earth, sunSummary, earthSummary, battery, energy}`; tracks cover the stay + 30 days (cut at the ephemeris end); `toCsv` and `summarySentence` also accept a detail whose `earth`/`battery` is `null` |
 | `pathForChart(azimuthDeg, elevationDeg, start, length)` | `[az, el]` points with `null` where the path wraps across 0°/360° |
 | `toCsv(detail, ephemeris)` | CSV text, one row per stay hour (columns below) |
 | `summarySentence(detail, cellLabel, atIndex)` | e.g. "Night at MAL-r5c4. Sunlight returns in 3 d 12 h. Earth sets in 18 h." |
