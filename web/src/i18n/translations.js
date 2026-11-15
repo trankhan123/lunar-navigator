@@ -14,6 +14,13 @@ export const LANGUAGES = {
 
 export const TRANSLATIONS = {
   en: {
+    'seasonal.show': 'Show 2-year calendar',
+    'seasonal.title': 'Seasonal Calendar (2027–2028)',
+    'seasonal.sunlight': 'Sunlight',
+    'seasonal.earth': 'Earth in view',
+    'seasonal.sunPercent': '% Sunlight',
+    'seasonal.earthPercent': '% Earth in view',
+    'seasonal.hoursUnit': 'h',
     // Header
     'header.title': 'Lunar Landing Site Navigator',
     'header.subtitle': "Tell us your landing spot and your mission's limits. We find the best nearby sites and dates.",
@@ -205,6 +212,13 @@ export const TRANSLATIONS = {
   },
 
   vi: {
+    'seasonal.show': 'Hiện lịch 2 năm',
+    'seasonal.title': 'Lịch theo mùa (2027–2028)',
+    'seasonal.sunlight': 'Ánh nắng',
+    'seasonal.earth': 'Thấy Trái Đất',
+    'seasonal.sunPercent': '% Ánh nắng',
+    'seasonal.earthPercent': '% Thấy Trái Đất',
+    'seasonal.hoursUnit': 'giờ',
     // Header
     'header.title': 'Bộ định vị bãi đáp Mặt Trăng',
     'header.subtitle': 'Nhập điểm hạ cánh dự kiến và giới hạn sứ mệnh. Chúng tôi tìm các vị trí và thời điểm hạ cánh tối ưu nhất lân cận.',

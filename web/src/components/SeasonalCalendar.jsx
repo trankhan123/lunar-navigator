@@ -1,20 +1,31 @@
 import { useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { computeSeasonalCalendar } from '../core/seasonalCalendar.js'
+import { useI18n } from '../i18n/index.jsx'
+
+// Last 20 cells only; Map keeps insertion order so the first key is the oldest.
+const calendarCache = new Map()
+function cachedCalendar(cell, ephemeris) {
+  if (!calendarCache.has(cell.id)) {
+    calendarCache.set(cell.id, computeSeasonalCalendar(cell, ephemeris))
+    if (calendarCache.size > 20) calendarCache.delete(calendarCache.keys().next().value)
+  }
+  return calendarCache.get(cell.id)
+}
 
 export default function SeasonalCalendar({ cell, ephemeris }) {
+  const { t } = useI18n()
   const [mode, setMode] = useState('sun')
+  const [isOpen, setIsOpen] = useState(false)
 
-  const calendarData = useMemo(() => {
-    return computeSeasonalCalendar(cell, ephemeris)
-  }, [cell, ephemeris])
+  const calendarData = useMemo(() => (isOpen && cell && ephemeris ? cachedCalendar(cell, ephemeris) : null), [isOpen, cell, ephemeris])
 
   const isSun = mode === 'sun'
-  const data2027 = isSun ? calendarData.sun2027 : calendarData.earth2027
-  const data2028 = isSun ? calendarData.sun2028 : calendarData.earth2028
+  const data2027 = calendarData && (isSun ? calendarData.sun2027 : calendarData.earth2027)
+  const data2028 = calendarData && (isSun ? calendarData.sun2028 : calendarData.earth2028)
 
   const option = useMemo(() => {
-    const label = isSun ? 'Sunlight' : 'Earth in view'
+    const label = isSun ? t('seasonal.sunlight') : t('seasonal.earth')
     const colorRange = isSun
       ? ['#0f172a', '#78350f', '#ca8a04', '#facc15', '#fef08a']
       : ['#0f172a', '#0c4a6e', '#0284c7', '#38bdf8', '#bae6fd']
@@ -31,7 +42,7 @@ export default function SeasonalCalendar({ cell, ephemeris }) {
           if (!params.value || !params.value[0]) return ''
           const [date, pct] = params.value
           const hours = Math.round((pct * 24) / 100)
-          return `<div style="font-weight:600;margin-bottom:2px">${date}</div><div>${label}: <b>${pct}%</b> (${hours}/24 h)</div>`
+          return `<div style="font-weight:600;margin-bottom:2px">${date}</div><div>${label}: <b>${pct}%</b> (${hours}/24 ${t('seasonal.hoursUnit')})</div>`
         },
       },
       visualMap: {
@@ -88,14 +99,22 @@ export default function SeasonalCalendar({ cell, ephemeris }) {
         },
       ],
     }
-  }, [isSun, data2027, data2028])
+  }, [isSun, data2027, data2028, t])
 
   if (!cell || !ephemeris) return null
+
+  if (!isOpen) {
+    return (
+      <button type="button" onClick={() => setIsOpen(true)} className="rounded border border-slate-500 px-3 py-2 text-xs transition-colors hover:bg-slate-800">
+        {t('seasonal.show')}
+      </button>
+    )
+  }
 
   return (
     <figure className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <figcaption className="text-xs font-semibold text-slate-300">Seasonal Calendar (2027–2028)</figcaption>
+        <figcaption className="text-xs font-semibold text-slate-300">{t('seasonal.title')}</figcaption>
         <div className="inline-flex rounded-md bg-slate-800 p-0.5 text-xs">
           <button
             type="button"
@@ -106,7 +125,7 @@ export default function SeasonalCalendar({ cell, ephemeris }) {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            % Sunlight
+            {t('seasonal.sunPercent')}
           </button>
           <button
             type="button"
@@ -117,7 +136,7 @@ export default function SeasonalCalendar({ cell, ephemeris }) {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            % Earth in view
+            {t('seasonal.earthPercent')}
           </button>
         </div>
       </div>

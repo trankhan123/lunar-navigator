@@ -125,3 +125,11 @@ test('rankBestWindows: near-duplicate landings of one cell collapse to one row',
   const results = makeResults({ status: [2, 2, 2, 2, 2, 2, 2, 2], minBatteryFraction: [0.5, 0.6, 0.5, 0.4, 0.3, 0.3, 0.3, 0.3], distanceKm: [0, 1], landingCount: 4 })
   assert.deepEqual(rankBestWindows(results).map((row) => [row.cellId, row.slipHours]), [['TEST-0', 18], ['TEST-1', 18]])
 })
+
+test('rankBestWindows: limit 10 over 12 cells gives 10 rows with distinct cellIds', () => {
+  const status = Array.from({ length: 12 * 3 }, () => 2) // every cell passes at all 3 landing times
+  const results = makeResults({ status, minBatteryFraction: status.map(() => 0.5), distanceKm: Array.from({ length: 12 }, (_, i) => i), landingCount: 3 })
+  const rows = rankBestWindows(results, { limit: 10 })
+  assert.equal(rows.length, 10)
+  assert.equal(new Set(rows.map((row) => row.cellId)).size, 10)
+})

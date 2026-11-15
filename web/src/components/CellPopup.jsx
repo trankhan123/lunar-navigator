@@ -82,9 +82,6 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
           </p>
         )}
       </div>
-      <div className="mt-3 border-t border-slate-800 pt-3">
-        <SeasonalCalendar cell={cell} ephemeris={ephemeris} />
-      </div>
       <div className="mt-3 flex flex-wrap items-center gap-2" aria-live="polite">
         <button type="button" onClick={copyId} className="rounded border border-slate-500 px-3 py-2 transition-colors hover:bg-slate-800">
           Copy ID
@@ -101,6 +98,9 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
           Open details
         </button>
         {copyMessage && <span className="text-xs text-slate-300">{copyMessage}</span>}
+      </div>
+      <div className="mt-3 border-t border-slate-800 pt-3">
+        <SeasonalCalendar cell={cell} ephemeris={ephemeris} />
       </div>
       {!cell.feasible && <p className="mt-2 text-xs text-slate-400">You can still use it as your current point to find the nearest good cells.</p>}
     </section>
