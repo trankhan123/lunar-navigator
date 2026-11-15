@@ -318,6 +318,8 @@ def check_cap(folder):
     index = load(cap_folder, "index.json", False)
     if index is None:
         return
+    if not (isinstance(index.get("gridSize"), int) and isinstance(index.get("southOfLatDeg"), (int, float)) and index["southOfLatDeg"] <= -80):
+        problem("cap/index.json", "gridSize must be an integer and southOfLatDeg a number <= -80")
     regions = json.loads((Path(folder) / "regions.json").read_text(encoding="utf-8"))["regions"]
     region_bounds = [region["boundsM"] for region in regions]
     seen_ids, total, feasible_total = set(), 0, 0

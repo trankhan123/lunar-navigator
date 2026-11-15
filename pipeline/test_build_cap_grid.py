@@ -48,4 +48,5 @@ def test_split_into_tiles_and_index_counts():
     assert (index["cellCount"], index["feasibleCount"]) == (3, 2)
     assert index["tiles"][1] == {"id": "cap_0_0", "boundsM": [0, 0, 40000, 40000], "cellCount": 2, "feasibleCount": 1}
     assert index["cellSizeM"] == 2000 and index["tileSizeM"] == 40000 and index["southOfLatDeg"] == -85
+    assert index["gridSize"] == 3  # x centres -1000..3000 m
     assert index["excludedRegionCodes"] == ["MAL"]

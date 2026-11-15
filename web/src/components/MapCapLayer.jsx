@@ -1,20 +1,19 @@
 import { memo, useEffect, useMemo, useState } from 'react'
-import { CAP_BOUNDS_M, CAP_GRID_SIZE, capPixelLookup, capPixelsRgba, capTileIdsInBounds } from '../core/capGrid.js'
+import { CAP_GRID_SIZE, capBoundsM, capPixelLookup, capPixelsRgba, capTileIdsInBounds } from '../core/capGrid.js'
 import { CELL_FILL_OPACITY, MAP_LAYERS, cellColor } from '../core/mapLayers.js'
 import { computeSkyAtHour } from '../core/mapSky.js'
 import { viewBoundsM } from '../core/mapView.js'
 import { startVisibilityFractions } from '../core/startWindowSearch.js'
 
 const FRACTIONS_WAIT_MS = 400 // typing a date must not start one worker job per keystroke
-const PHONE_MIN_ZOOM_SCALE = 4 // on phones the CAP tiles in view load only from this zoom on
+const PHONE_MIN_ZOOM_SCALE = 4 // CAP tiles in view load from this zoom on (all screens; wide ones preload the 85°S circle in App)
 const TILE_WAIT_MS = 250
 const fractionsCache = new Map() // `${first}|${last}|${cellCount}` → {fractionSun, fractionEarth}, kept for the session
-const [xMin, yMin, xMax, yMax] = CAP_BOUNDS_M
 
-function rasterUrl(capCells, colors) {
+function rasterUrl(capCells, colors, gridSize) {
   const canvas = document.createElement('canvas')
-  canvas.width = canvas.height = CAP_GRID_SIZE
-  canvas.getContext('2d').putImageData(new ImageData(capPixelsRgba(capCells, colors), CAP_GRID_SIZE, CAP_GRID_SIZE), 0, 0)
+  canvas.width = canvas.height = gridSize
+  canvas.getContext('2d').putImageData(new ImageData(capPixelsRgba(capCells, colors, gridSize), gridSize, gridSize), 0, 0)
   return canvas.toDataURL()
 }
 
@@ -24,6 +23,8 @@ function rasterUrl(capCells, colors) {
  */
 function MapCapLayer({ capCells, capIndex, layerId, ephemeris, hour, hourRange, statusByCellId, transform, onSelectCell, onHoverCell, onNeedCapTiles, onStatusChange }) {
   const [, setFractionsDone] = useState(0)
+  const gridSize = capIndex?.gridSize ?? CAP_GRID_SIZE // cells per side of the raster, from the data
+  const [xMin, yMin, xMax, yMax] = capBoundsM(gridSize)
   const needs = MAP_LAYERS.find((layer) => layer.id === layerId).needs
   const sky = useMemo(
     () => (needs === 'hour' && capCells.length > 0 ? computeSkyAtHour(capCells, ephemeris, hour) : null),
@@ -69,22 +70,22 @@ function MapCapLayer({ capCells, capIndex, layerId, ephemeris, hour, hourRange, 
         fractionEarth: fractions?.fractionEarth[index],
       }),
     )
-    return rasterUrl(capCells, colors)
-  }, [capCells, layerId, statusByCellId, sky, fractions])
-  const pixelLookup = useMemo(() => capPixelLookup(capCells), [capCells])
+    return rasterUrl(capCells, colors, gridSize)
+  }, [capCells, layerId, statusByCellId, sky, fractions, gridSize])
+  const pixelLookup = useMemo(() => capPixelLookup(capCells, gridSize), [capCells, gridSize])
 
-  // Phones load only the tiles in view, once zoomed in; wider screens load everything in the background (App).
+  // Tiles in view load once zoomed in; wide screens already preloaded the 85°S circle (App).
   useEffect(() => {
-    if (!capIndex || transform.k < PHONE_MIN_ZOOM_SCALE || window.matchMedia('(min-width: 768px)').matches) return
+    if (!capIndex || transform.k < PHONE_MIN_ZOOM_SCALE) return
     const timer = setTimeout(() => onNeedCapTiles(capTileIdsInBounds(capIndex, viewBoundsM(transform))), TILE_WAIT_MS)
     return () => clearTimeout(timer)
   }, [capIndex, transform, onNeedCapTiles])
 
   function cellFromEvent(event) {
     const box = event.currentTarget.getBoundingClientRect()
-    const column = Math.floor(((event.clientX - box.left) / box.width) * CAP_GRID_SIZE)
-    const row = Math.floor(((event.clientY - box.top) / box.height) * CAP_GRID_SIZE)
-    return capCells[pixelLookup[row * CAP_GRID_SIZE + column]] ?? null
+    const column = Math.floor(((event.clientX - box.left) / box.width) * gridSize)
+    const row = Math.floor(((event.clientY - box.top) / box.height) * gridSize)
+    return capCells[pixelLookup[row * gridSize + column]] ?? null
   }
 
   if (!url) return null

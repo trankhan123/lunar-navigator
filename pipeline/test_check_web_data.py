@@ -56,7 +56,7 @@ def write_cap_folder(folder, cell_overrides=None, region_bounds=(5e5, 5e5, 6e5, 
     (folder / "regions.json").write_text(json.dumps({"regions": [{"boundsM": list(region_bounds)}]}))
     (folder / "cap" / "cap_0_3.json").write_text(json.dumps({"tileId": "cap_0_3", "cells": [cell]}))
     tile = {"id": "cap_0_3", "boundsM": [0, 120000, 40000, 160000], "cellCount": 1, "feasibleCount": 1}
-    (folder / "cap" / "index.json").write_text(json.dumps({"cellCount": 1, "feasibleCount": 1, "tiles": [tile]}))
+    (folder / "cap" / "index.json").write_text(json.dumps({"gridSize": 152, "southOfLatDeg": -85, "cellCount": 1, "feasibleCount": 1, "tiles": [tile]}))
 
 
 def test_check_cap_accepts_a_valid_folder(tmp_path):

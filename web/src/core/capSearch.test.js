@@ -14,7 +14,7 @@ test('searchAnchor: site, coordinates, CAP cell id, loaded LGRS cell, point off 
   const expected = toPolarXY(-87.5, 45)
   assert.deepEqual(searchAnchor({ type: 'site', siteId: 's' }, sites, {}), expected)
   assert.deepEqual(searchAnchor({ type: 'coordinates', lat: -87.5, lon: 45 }, [], {}), expected)
-  assert.deepEqual(searchAnchor({ type: 'cell', cellId: 'CAP-r076c076' }, [], {}), { xM: 1000, yM: 1000 })
+  assert.deepEqual(searchAnchor({ type: 'cell', cellId: 'CAP-r076c076' }, [], {}), { xM: -149000, yM: -149000 })
   assert.deepEqual(searchAnchor({ type: 'cell', cellId: 'AAA-x' }, [], { AAA: [{ id: 'AAA-x', xM: 5, yM: 6 }] }), { xM: 5, yM: 6 })
   assert.equal(searchAnchor({ type: 'cell', cellId: 'AAA-x' }, [], {}), null)
   assert.equal(searchAnchor({ type: 'coordinates', lat: 10, lon: 0 }, [], {}), null)

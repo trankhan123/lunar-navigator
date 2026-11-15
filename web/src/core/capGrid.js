@@ -1,15 +1,17 @@
 // D9 whole-cap 2 km grid (CAP): pure helpers for tiles, ids and the one-pixel-per-cell raster. Contract: README "D9".
 export const CAP_CELL_SIZE_M = 2000
-export const CAP_GRID_SIZE = 152 // cells per side; centres run from -151 km to +151 km
-const CAP_ORIGIN = CAP_GRID_SIZE / 2 // id row/col 076 is the cell whose centre is at 1 km
-export const CAP_BOUNDS_M = [-CAP_ORIGIN * CAP_CELL_SIZE_M, -CAP_ORIGIN * CAP_CELL_SIZE_M, CAP_ORIGIN * CAP_CELL_SIZE_M, CAP_ORIGIN * CAP_CELL_SIZE_M]
+// Cells per side of the shipped grid (index.json `gridSize`; centres run from -301 km to +301 km, built to 80°S). Ids only
+// carry row/col from the corner, so reading an id needs this; the raster functions take the index value as gridSize.
+export const CAP_GRID_SIZE = 302
+/** Square [xMin, yMin, xMax, yMax] (PGDA metres) covered by a gridSize x gridSize raster. */
+export const capBoundsM = (gridSize) => [-gridSize / 2, -gridSize / 2, gridSize / 2, gridSize / 2].map((cells) => cells * CAP_CELL_SIZE_M)
 export const CAP_ID_PATTERN = /^CAP-r(\d{3})c(\d{3})$/i
 
-/** Centre of a CAP cell read from its id (`CAP-r075c112`); null for any other id. */
-export function capCellCenterFromId(cellId) {
+/** Centre of a CAP cell read from its id (`CAP-r150c187`); null for any other id. */
+export function capCellCenterFromId(cellId, gridSize = CAP_GRID_SIZE) {
   const match = CAP_ID_PATTERN.exec(cellId ?? '')
   if (!match) return null
-  return { xM: (Number(match[2]) - CAP_ORIGIN + 0.5) * CAP_CELL_SIZE_M, yM: (Number(match[1]) - CAP_ORIGIN + 0.5) * CAP_CELL_SIZE_M }
+  return { xM: (Number(match[2]) - gridSize / 2 + 0.5) * CAP_CELL_SIZE_M, yM: (Number(match[1]) - gridSize / 2 + 0.5) * CAP_CELL_SIZE_M }
 }
 
 const overlaps = ([xMin, yMin, xMax, yMax], [otherXMin, otherYMin, otherXMax, otherYMax]) =>
@@ -32,16 +34,16 @@ export function capCellContaining(capCells, xM, yM) {
 }
 
 /** Pixel of a cell in the raster: one pixel per cell, north (+y) at the top. */
-export const capPixelIndex = ({ xM, yM }) => {
-  const clampToGrid = (index) => Math.min(CAP_GRID_SIZE - 1, Math.max(0, index)) // a pointer exactly on the far edge stays inside
-  return clampToGrid(CAP_GRID_SIZE - 1 - (Math.floor(yM / CAP_CELL_SIZE_M) + CAP_ORIGIN)) * CAP_GRID_SIZE + clampToGrid(Math.floor(xM / CAP_CELL_SIZE_M) + CAP_ORIGIN)
+export const capPixelIndex = ({ xM, yM }, gridSize = CAP_GRID_SIZE) => {
+  const clampToGrid = (index) => Math.min(gridSize - 1, Math.max(0, index)) // a pointer exactly on the far edge stays inside
+  return clampToGrid(gridSize - 1 - (Math.floor(yM / CAP_CELL_SIZE_M) + gridSize / 2)) * gridSize + clampToGrid(Math.floor(xM / CAP_CELL_SIZE_M) + gridSize / 2)
 }
 
 /** Cell index (into capCells) of every pixel, -1 where no loaded cell: used to find the cell under the pointer. */
-export function capPixelLookup(capCells) {
-  const lookup = new Int32Array(CAP_GRID_SIZE * CAP_GRID_SIZE).fill(-1)
+export function capPixelLookup(capCells, gridSize = CAP_GRID_SIZE) {
+  const lookup = new Int32Array(gridSize * gridSize).fill(-1)
   capCells.forEach((cell, index) => {
-    lookup[capPixelIndex(cell)] = index
+    lookup[capPixelIndex(cell, gridSize)] = index
   })
   return lookup
 }
@@ -53,10 +55,10 @@ function hexToRgb(hex) {
 }
 
 /** RGBA bytes of the raster (alpha 255 where a cell is loaded, 0 elsewhere); colors[i] is the '#rrggbb' of capCells[i]. */
-export function capPixelsRgba(capCells, colors) {
-  const rgba = new Uint8ClampedArray(CAP_GRID_SIZE * CAP_GRID_SIZE * 4)
+export function capPixelsRgba(capCells, colors, gridSize = CAP_GRID_SIZE) {
+  const rgba = new Uint8ClampedArray(gridSize * gridSize * 4)
   capCells.forEach((cell, index) => {
-    const offset = capPixelIndex(cell) * 4
+    const offset = capPixelIndex(cell, gridSize) * 4
     rgba.set(hexToRgb(colors[index]), offset)
     rgba[offset + 3] = 255
   })
