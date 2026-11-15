@@ -71,7 +71,7 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - `DetailView` và globe tải lười.
   - WF3 (PR #5, #6) đã sửa `rankBestWindows` (quét một lượt giữ top 10: 138 ms ở 225 ô × 728 lần hạ cánh) và chiều câu `explainDifference`.
   - Lỗi trắng trang Apollo (`selectSearchCells` trả `[]` khi không có ô nào trong 1 km) đã được Quoc_Bao sửa trên nhánh `PathAndFuel` (f939da2), merge vào `main` ở 66fdf5d ngày 15/11.
-  - Vercel production deploy lại lúc 04:01 ngày 15/11 từ efc1beb (`main` = `web`, có bản đồ v2), thay cho bản 02:25 từ 66fdf5d. Đã kiểm tra link công khai không đăng nhập: dữ liệu thật, đủ 35 ảnh lớp phủ, lớp "% sunlight" ở MAL tính trong 2 s, giao diện 1280 px và 390 px, console 0 lỗi.
+  - Vercel production: từ 15/11 project đã nối GitHub, **push `main` là tự deploy production** (Root Directory = `web`). Bản 09:40 ngày 15/11 từ f8279b4 (gồm bản đồ v3, lưới CAP, 3D, globe, PR #12, WF2 với DSN tuỳ chọn và chat ẩn) đã kiểm tra trên link công khai: 0 lỗi console. Chạy `vercel deploy` từ `web/` giờ lỗi "Root Directory web does not exist"; không cần chạy tay nữa.
 - **WF5 (14/11 tối, Claude Code làm theo yêu cầu của trankhan123):** dữ liệu thật đã có cho 8 vùng.
   - Chạy lại toàn bộ theo thứ tự: `build_grid.py` → `compute_feasibility.py` (12 s) → `compute_horizon.py --region ALL --sites` (của WF1, ~10 phút) → `build_site_data.py` → `export_map_background.py` → `check_web_data.py`.
   - Shapefile đọc thẳng từ zip trong `pipeline/raw/lgrs/`, không cần giải nén. Nhãn là thuộc tính `LGRS_ACC`, luôn 5 ký tự; khoảng 10 % nhãn có `-` (ví dụ `AYR--`), nên chỉ lấy phần trước dấu `-` đầu tiên làm mã vùng.
@@ -128,7 +128,7 @@ python pipeline/make_mock_data.py
 cd web && npm run dev          # dev server
 cd web && npm run lint && npm run build
 source ~/python/math_env/bin/activate && python pipeline/<script>.py
-cd web && vercel deploy --prod # deploy (Root Directory = web)
+git push origin web:main      # deploy: Vercel builds production from main itself (Root Directory = web); do not run vercel deploy from web/
 ```
 
 ### Bài học đã rút ra
@@ -233,6 +233,10 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 - `astronomy-engine` đã cài nhưng chỉ còn là module tuỳ chọn X1: dùng cho ngày nằm ngoài ephemeris.
 
 ## 3. Kiến trúc: tính trước, phục vụ tĩnh
+
+Ngoại lệ được yêu cầu cho chat UX: `web/api/mission-chat.js` là Node Vercel Function
+gọi Gemini để chuẩn bị form, có Redis hạn mức; mọi tính toán khoa học vẫn ở browser.
+Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay training.
 
 ```
 [Python, chạy trên máy, một lần]
