@@ -1,8 +1,9 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
-import { timeAtHour, toPolarXY } from '../core/data.js'
-import { MAP_LAYERS, MAP_OVERLAYS, STATUS_SYMBOLS, cellColor, cellLevel, nasaCoverageNote } from '../core/mapLayers.js'
+import { capTileIdsInCircle } from '../core/capGrid.js'
+import { loadReliefIndex, timeAtHour, toPolarXY } from '../core/data.js'
+import { MAP_LAYERS, MAP_OVERLAYS, STATUS_SYMBOLS, cellColor, cellLevel, nasaCoverageNote, overlayEntry } from '../core/mapLayers.js'
 import { bodyDirections, computeSkyAtHour, regionCentreCells } from '../core/mapSky.js'
 import {
   MAX_ZOOM_SCALE, VIEW_BOX, VIEW_HALF_WIDTH_M, VIEW_SIZE_M, WHOLE_MAP_BOUNDS_M, cellLabelsVisible, fitTransform, isOnPolarMap, mapAngleDeg, viewBoundsM,
@@ -10,12 +11,16 @@ import {
 import { startVisibilityFractions } from '../core/startWindowSearch.js'
 import CellHoverCard from './CellHoverCard.jsx'
 import DirectionCard from './DirectionCard.jsx'
+import MapCapLayer from './MapCapLayer.jsx'
 import MapCells from './MapCells.jsx'
 import MapLayersPanel from './MapLayersPanel.jsx'
 import MapLegend from './MapLegend.jsx'
 import MapMarks from './MapMarks.jsx'
 import MapMinimap from './MapMinimap.jsx'
+import MapReliefTiles from './MapReliefTiles.jsx'
 import MapSearch from './MapSearch.jsx'
+
+const TerrainView3D = lazy(() => import('./TerrainView3D.jsx'))
 
 const SITE_FOCUS_HALF_M = 5000
 const CELL_FOCUS_HALF_M = 3000
@@ -29,14 +34,14 @@ const FRACTIONS_WAIT_MS = 400 // typing a date must not start one worker job per
 const fractionsCache = new Map()
 
 const ZOOM_STEP = 1.6
-const OUTLINE_SIZE_M = 940
+const outlineSizeM = (cell) => (cell.id.startsWith('CAP-') ? 1880 : 940) // a CAP cell is 2 km, an LGRS cell 1 km
 const toolbarButton = 'grid size-9 place-items-center rounded border border-slate-600 text-lg leading-none transition-colors hover:bg-slate-800'
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const layerById = (layerId) => MAP_LAYERS.find((layer) => layer.id === layerId)
 const skySample = (sky, index) => ({ sunDiskFraction: sky?.sunDiskFraction[index], earthDiskFraction: sky?.earthDiskFraction[index] })
 
-const NASA_KINDS = ['sun-visibility', 'earth-visibility', 'psr'] // drawn over the cells, in this order
+const NASA_KINDS = ['sun-visibility', 'earth-visibility', 'psr', 'slope'] // drawn over the cells, in this order
 const initialOverlays = () => Object.fromEntries(MAP_OVERLAYS.map((overlay) => [overlay.kind, { enabled: overlay.defaultEnabled, opacity: overlay.defaultOpacity }]))
 
 function MapImage({ entry, opacity = 1 }) {
@@ -52,7 +57,7 @@ function MapImage({ entry, opacity = 1 }) {
  */
 function SouthPoleMap({
   regions, activeRegion, maps, cells, sites, ephemeris, hour, hourRange = null, stayDays = null, defaultLayerId, timeBar = null, statusByCellId, currentCellId,
-  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells,
+  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells, capIndex = null, capCells = [], onNeedCapTiles,
 }) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
@@ -62,10 +67,17 @@ function SouthPoleMap({
   const [, setFractionsDone] = useState(0) // bumped when a worker result lands in fractionsCache
   const [fractionsError, setFractionsError] = useState(null)
   const [hoveredCell, setHoveredCell] = useState(null)
+  const [view3d, setView3d] = useState(false)
   const [overlays, setOverlays] = useState(initialOverlays)
+  const [capStatus, setCapStatus] = useState('') // from the cap raster, e.g. while its % layer is computing
+  const [reliefIndex, setReliefIndex] = useState(null) // relief tile pyramid; null = not loaded (or none): the single hillshade image shows
   const [labelsFit, setLabelsFit] = useState(false) // a 1 km cell is wide enough on screen for its LGRS label
   const regionCode = activeRegion?.code ?? null
   const changeOverlay = (kind, changes) => setOverlays((current) => ({ ...current, [kind]: { ...current[kind], ...changes } }))
+
+  useEffect(() => {
+    if (maps.length) loadReliefIndex().then(setReliefIndex)
+  }, [maps.length])
 
   useEffect(() => {
     if (!hoveredCell) return
@@ -169,14 +181,14 @@ function SouthPoleMap({
 
   const dateRangeText = hourRange ? `${timeAtHour(ephemeris, hourRange.firstHour).slice(0, 10)} to ${timeAtHour(ephemeris, hourRange.lastHour).slice(0, 10)}` : ''
   const statusText = !activeRegion
-    ? ''
+    ? capStatus
     : !cells
       ? `Loading ${activeRegion.name} cells…`
       : layerNeedsDates && fractionsError
         ? `Could not compute the % layer: ${fractionsError}`
         : layerNeedsDates && !fractions
           ? 'Computing the % of hours for your dates…'
-          : ''
+          : capStatus
   // Region-centre dots (their sites carry D4 horizons) show the Sun/Earth at the map hour at every zoom.
   const dotLayerId = layerNeedsHour ? layerId : 'sunEarthNow'
   const centreCells = useMemo(() => regionCentreCells(regions, sites), [regions, sites])
@@ -209,6 +221,7 @@ function SouthPoleMap({
   const selectedInRegion = cells?.find((cell) => cell.id === selectedCellId)
   const measuredCell = activeRegion && availability.hour ? (selectedInRegion ?? centreCells.find((centre) => centre.regionCode === regionCode)?.cell) : null
   const directions = useMemo(() => (measuredCell ? bodyDirections(measuredCell, ephemeris, hour) : null), [measuredCell, ephemeris, hour])
+  const show3d = view3d && Boolean(activeRegion && cells)
   const placeLabel = selectedInRegion ? `At ${selectedInRegion.id}` : `At the centre of ${activeRegion?.name}`
   const arrowStart = measuredCell && transform.apply([measuredCell.xM, -measuredCell.yM])
 
@@ -218,18 +231,18 @@ function SouthPoleMap({
   const overlayKinds = ['relief', ...NASA_KINDS.filter((kind) => maps.some((entry) => entry.kind === kind)), 'labels']
   const enabledNasaKinds = NASA_KINDS.filter((kind) => overlayKinds.includes(kind) && overlays[kind].enabled)
   const nasaImages = activeRegion
-    ? enabledNasaKinds.map((kind) => ({ kind, entry: maps.find((entry) => entry.id === activeRegion.code && entry.kind === kind) })).filter(({ entry }) => entry)
-    : []
+    ? enabledNasaKinds.map((kind) => ({ kind, entry: overlayEntry(maps, kind, regionCode) })).filter(({ entry }) => entry)
+    : enabledNasaKinds.map((kind) => ({ kind, entry: overlayEntry(maps, kind, null) })).filter(({ entry }) => entry)
   const coverageNotes = enabledNasaKinds
-    .filter((kind) => kind !== 'psr')
+    .filter((kind) => kind !== 'psr' && kind !== 'slope')
     .map((kind) =>
       activeRegion
         ? cells && nasaCoverageNote(activeRegion.name, cells, maps.find((entry) => entry.id === activeRegion.code && entry.kind === kind))
-        : 'Open a region to see the NASA layers.',
+        : 'NASA % layers cover only about 85°S to the pole.',
     )
   const coverageNote = [...new Set(coverageNotes.filter(Boolean))].join(' ')
   const outlines = [[currentCellId, '#fbbf24', 3], [selectedCellId, '#f8fafc', 2]]
-    .map(([cellId, color, width]) => ({ cell: cells?.find((cell) => cell.id === cellId), color, width }))
+    .map(([cellId, color, width]) => ({ cell: cells?.find((cell) => cell.id === cellId) ?? capCells.find((cell) => cell.id === cellId), color, width }))
     .filter(({ cell }) => cell)
   const ariaLabel = activeRegion
     ? `Map of ${activeRegion.name}: ${cells?.length ?? 0} cells of 1 km, ${cells?.filter((cell) => cell.feasible).length ?? 0} feasible. Use the Cell list above the map to select a cell with the keyboard.`
@@ -254,14 +267,29 @@ function SouthPoleMap({
             </>
           )}
         </nav>
-        <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} onNeedRegionCells={onNeedRegionCells} onPick={pickSearchMatch} />
-        <span className="ml-auto text-xs text-slate-400">Click the map, then scroll to zoom</span>
+        <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} capCells={capIndex ? capCells : null} onNeedRegionCells={onNeedRegionCells} onNeedCapPoint={(point) => onNeedCapTiles(capTileIdsInCircle(capIndex, point.xM, point.yM, 0))} onPick={pickSearchMatch} />
+        <span className="ml-auto text-xs text-slate-400">{show3d ? 'Drag to rotate, scroll or pinch to zoom' : 'Click the map, then scroll to zoom'}</span>
+        {activeRegion && (
+          <button type="button" aria-pressed={view3d} onClick={() => setView3d(!view3d)} className="h-9 rounded border border-slate-600 px-3 transition-colors hover:bg-slate-800 aria-pressed:bg-slate-700">
+            {view3d ? '2D' : '3D'}
+          </button>
+        )}
         <button type="button" aria-label="Zoom in" onClick={() => zoomBy(ZOOM_STEP)} className={toolbarButton}>+</button>
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)} className={toolbarButton}>−</button>
       </div>
       <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]">
       <div>
-      <div className="relative mx-auto w-full max-w-[75vh]">
+      {show3d && (
+        <div className="mx-auto w-full max-w-[75vh]">
+          <Suspense fallback={<p className="p-4 text-sm text-slate-400">Loading 3D view…</p>}>
+            <TerrainView3D
+              regionCode={regionCode} cells={cells} colors={colors} maps={maps} ephemeris={ephemeris} hour={hour}
+              directions={directions} lonDeg={measuredCell?.lon} focusCell={measuredCell}
+            />
+          </Suspense>
+        </div>
+      )}
+      <div className={`relative mx-auto w-full max-w-[75vh] ${show3d ? 'hidden' : ''}`}>
       <svg
         ref={svgRef}
         viewBox={VIEW_BOX}
@@ -276,8 +304,25 @@ function SouthPoleMap({
           </pattern>
         </defs>
         <g transform={transform.toString()}>
-          {overlays.relief.enabled && southPoleImage && <MapImage entry={southPoleImage} opacity={overlays.relief.opacity} />}
-          {overlays.relief.enabled && regionImage && <MapImage entry={regionImage} opacity={overlays.relief.opacity} />}
+          {overlays.relief.enabled && reliefIndex && <MapReliefTiles index={reliefIndex} transform={transform} opacity={overlays.relief.opacity} />}
+          {overlays.relief.enabled && !reliefIndex && southPoleImage && <MapImage entry={southPoleImage} opacity={overlays.relief.opacity} />}
+          {overlays.relief.enabled && !reliefIndex && regionImage && <MapImage entry={regionImage} opacity={overlays.relief.opacity} />}
+          {capIndex && (
+            <MapCapLayer
+              capCells={capCells}
+              capIndex={capIndex}
+              layerId={layerId}
+              ephemeris={ephemeris}
+              hour={hour}
+              hourRange={hourRange}
+              statusByCellId={statusByCellId}
+              transform={transform}
+              onSelectCell={onSelectCell}
+              onHoverCell={setHoveredCell}
+              onNeedCapTiles={onNeedCapTiles}
+              onStatusChange={setCapStatus}
+            />
+          )}
           {activeRegion && cells && (
             <MapCells
               cells={cells}
@@ -296,10 +341,10 @@ function SouthPoleMap({
             {outlines.map(({ cell, color, width }) => (
               <rect
                 key={color}
-                x={cell.xM - OUTLINE_SIZE_M / 2}
-                y={-cell.yM - OUTLINE_SIZE_M / 2}
-                width={OUTLINE_SIZE_M}
-                height={OUTLINE_SIZE_M}
+                x={cell.xM - outlineSizeM(cell) / 2}
+                y={-cell.yM - outlineSizeM(cell) / 2}
+                width={outlineSizeM(cell)}
+                height={outlineSizeM(cell)}
                 fill="none"
                 stroke={color}
                 strokeWidth={width}
@@ -330,7 +375,7 @@ function SouthPoleMap({
         )}
       </svg>
       {directions && <DirectionCard directions={directions} placeLabel={placeLabel} />}
-      {hoveredCell && cells?.includes(hoveredCell) && <CellHoverCard cell={hoveredCell} ephemeris={ephemeris} hour={hour} stayDays={stayDays} />}
+      {hoveredCell && (cells?.includes(hoveredCell) || capCells.includes(hoveredCell)) && <CellHoverCard cell={hoveredCell} ephemeris={ephemeris} hour={hour} stayDays={stayDays} />}
       {transform.k >= MINIMAP_MIN_ZOOM && (
         <MapMinimap regions={regions} activeRegionCode={regionCode} background={southPoleImage} viewBoundsM={viewBoundsM(transform)} />
       )}
@@ -351,9 +396,9 @@ function SouthPoleMap({
       </div>
       {timeBar}
       {activeRegion ? (
-        <MapLegend layerId={layerId} dateRangeText={dateRangeText} enabledOverlayKinds={enabledNasaKinds} />
+        <MapLegend layerId={layerId} dateRangeText={dateRangeText} enabledOverlayKinds={enabledNasaKinds} reliefIndex={overlays.relief.enabled ? reliefIndex : null} />
       ) : (
-        <MapLegend layerId={dotLayerId} showsCentreDots enabledOverlayKinds={enabledNasaKinds} />
+        <MapLegend layerId={dotLayerId} showsCentreDots enabledOverlayKinds={enabledNasaKinds} reliefIndex={overlays.relief.enabled ? reliefIndex : null} />
       )}
     </figure>
   )

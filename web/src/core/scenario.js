@@ -4,6 +4,7 @@ export const PANEL_MODES = ['auto', 'vertical', 'horizontal']
 export const SEARCH_SCOPES = ['region', 'radius', 'all']
 export const MAX_RANGE_DAYS = 183
 export const MAX_STAY_DAYS = 30
+export const MAX_SEARCH_RADIUS_KM = 50 // keeps a radius search on the 17k-cell cap grid small enough for the worker
 
 // Example values only (window-finder.md §3.2), not the specification of any real lander.
 export const DEFAULT_SCENARIO = {
@@ -19,6 +20,7 @@ export const DEFAULT_SCENARIO = {
   panelMode: 'auto',
   searchScope: 'region',
   searchRadiusKm: 10,
+  requireDsn: false, // opt-in: Earth also needs a DSN station that sees the Moon (README C2)
 }
 
 // Simple mode fills these fields from a preset and asks only point, dates and stay length.
@@ -126,10 +128,15 @@ export function validateScenario(scenario, ephemeris) {
   if (!PANEL_MODES.includes(scenario.panelMode)) {
     fail('panelMode', 'Choose auto, vertical or horizontal.')
   }
+  if (typeof scenario.requireDsn !== 'boolean') {
+    fail('requireDsn', 'DSN requirement must be on or off.')
+  }
   if (!SEARCH_SCOPES.includes(scenario.searchScope)) {
     fail('searchScope', 'Choose region, radius or all.')
   } else if (scenario.searchScope === 'radius' && (!isNumber(scenario.searchRadiusKm) || scenario.searchRadiusKm <= 0)) {
     fail('searchRadiusKm', 'Search radius must be greater than 0 km.')
+  } else if (scenario.searchScope === 'radius' && scenario.searchRadiusKm > MAX_SEARCH_RADIUS_KM) {
+    fail('searchRadiusKm', `Search radius can be at most ${MAX_SEARCH_RADIUS_KM} km.`)
   }
 
   return errors

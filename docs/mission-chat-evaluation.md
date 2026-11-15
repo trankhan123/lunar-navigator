@@ -26,7 +26,8 @@ mission scenarios, not specifications of real spacecraft.
 
 ## Local checks and corrections
 
-- All 137 Node tests, lint and production build pass. A clean build with
+- All 197 Node tests, lint and production build pass on the branch integrated
+  with current main. A clean build with
   `NODE_ENV=production` and `npm ci --include=dev` also passed.
 - Actual Redis Lua concurrency test: 20 simultaneous reservations at a cap of 3
   accepted exactly 3; replay denial and expiry were checked.
@@ -72,6 +73,9 @@ tracking. Chromium regressions cover guide-to-chat-to-Apply, untouched defaults,
 invalid guide and draft values, source persistence, no call when generating a
 message, the header shortcut and a 390 px viewport. No new service or dependency
 is required. These new UI checks use synthetic API responses.
+The guided labels and status badges support English and Vietnamese through the
+team's translation layer. The existing `VITE_CHAT_UI=true` build-time flag must
+be set to show chat; the server still requires `AI_CHAT_ENABLED=true` and secrets.
 
 ## Practical limits
 

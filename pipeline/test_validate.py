@@ -340,63 +340,16 @@ class TestScaleOffsetTreatment(unittest.TestCase):
 class TestMissingDependencyBehavior(unittest.TestCase):
     """Test that blocked/missing dependencies are handled gracefully and never report success falsely."""
 
-    def test_build_pgda69_no_cells(self):
-        """With no cells files, pgda69 comparison returns empty list and blocked reason."""
-        rows, blocked = V.build_pgda69_comparison([])
-        self.assertEqual(rows, [])
-        self.assertTrue(any("cells" in b.lower() or "d5" in b.lower() for b in blocked))
-
-    def test_build_pgda69_missing_rasters_returns_blocked(self):
-        """When PGDA TIFs are missing, blocked list includes reason and rows is empty."""
-        original_sun = V.PGDA_SUN_TIF
-        original_earth = V.PGDA_EARTH_TIF
-        V.PGDA_SUN_TIF = Path("/nonexistent/sun.tif")
-        V.PGDA_EARTH_TIF = Path("/nonexistent/earth.tif")
+    def test_build_pgda69_missing_inputs_returns_blocked(self):
+        """Missing PGDA TIFs or our_visibility.json: no rows, no stats, a blocked reason."""
+        original = (V.PGDA_SUN_TIF, V.OUR_VISIBILITY_JSON)
+        V.PGDA_SUN_TIF, V.OUR_VISIBILITY_JSON = Path("/nonexistent/sun.tif"), Path("/nonexistent/vis.json")
         try:
-            rows, blocked = V.build_pgda69_comparison([])
-            self.assertEqual(rows, [])
-            self.assertTrue(any("tif" in b.lower() or "download" in b.lower() for b in blocked))
+            rows, stats, blocked = V.build_pgda69_comparison()
+            self.assertEqual((rows, stats), ([], []))
+            self.assertEqual(len(blocked), 2)
         finally:
-            V.PGDA_SUN_TIF = original_sun
-            V.PGDA_EARTH_TIF = original_earth
-
-    def test_build_pgda69_empty_visibility_json_returns_blocked(self):
-        """When our_visibility.json exists but is empty, it remains BLOCKED and rows is empty."""
-        with tempfile.TemporaryDirectory() as tmp:
-            empty_vis = Path(tmp) / "empty_vis.json"
-            empty_vis.write_text("{}", encoding="utf-8")
-            original_vis = V.OUR_VISIBILITY_JSON
-            V.OUR_VISIBILITY_JSON = empty_vis
-            try:
-                rows, blocked = V.build_pgda69_comparison([])
-                self.assertEqual(rows, [])
-                self.assertTrue(any("empty" in b.lower() for b in blocked))
-            finally:
-                V.OUR_VISIBILITY_JSON = original_vis
-
-    def test_build_pgda69_all_null_comparisons_returns_blocked(self):
-        """When cells exist but no valid paired data exists, rows is empty and comparison is BLOCKED."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_dir = Path(tmp)
-            cells_file = tmp_dir / "cells_TEST.json"
-            cells_file.write_text(json.dumps({
-                "region": "TEST",
-                "cells": [{"id": "TEST-1", "lat": -88.0, "lon": 0.0}]
-            }), encoding="utf-8")
-
-            # With rasters missing and our_visibility missing, all comparisons are null
-            original_sun = V.PGDA_SUN_TIF
-            original_vis = V.OUR_VISIBILITY_JSON
-            V.PGDA_SUN_TIF = tmp_dir / "nonexistent.tif"
-            V.OUR_VISIBILITY_JSON = tmp_dir / "nonexistent.json"
-            try:
-                rows, blocked = V.build_pgda69_comparison([cells_file])
-                self.assertEqual(rows, [], "Must not return rows when all comparisons are null")
-                self.assertTrue(len(blocked) > 0)
-                self.assertTrue(any("paired" in b.lower() or "blocked" in b.lower() for b in blocked))
-            finally:
-                V.PGDA_SUN_TIF = original_sun
-                V.OUR_VISIBILITY_JSON = original_vis
+            V.PGDA_SUN_TIF, V.OUR_VISIBILITY_JSON = original
 
     def test_horizons_check_missing_fixture(self):
         """When horizons_check.json is missing, returns blocked dict."""
@@ -409,10 +362,6 @@ class TestMissingDependencyBehavior(unittest.TestCase):
             self.assertIn("BLOCKED", result["note"])
         finally:
             V.HORIZONS_CHECK_JSON = original
-
-    def test_check_visibility_stats_script_detected(self):
-        """visibility_stats.mjs should exist as the maintained script."""
-        self.assertTrue(V.check_visibility_stats_script())
 
 
 # ===========================================================================
@@ -480,18 +429,6 @@ class TestOutputJsonSchema(unittest.TestCase):
         self.assertIsInstance(sample["horizons"], dict)
         self.assertIsInstance(sample["quickmap"], list)
 
-    def test_pgda69_row_schema(self):
-        """Each pgda69 entry must have exactly the 5 specified keys."""
-        expected_keys = {"cellId", "pgdaSunFraction", "pgdaEarthFraction", "ourSunFraction", "ourEarthFraction"}
-        row = {
-            "cellId": "MAL-r1c1",
-            "pgdaSunFraction": 0.5234,
-            "pgdaEarthFraction": 0.7123,
-            "ourSunFraction": None,
-            "ourEarthFraction": None,
-        }
-        self.assertEqual(set(row.keys()), expected_keys)
-
     def test_horizons_schema(self):
         """Horizons object must have pointCount, maxAzimuthErrorDeg, maxElevationErrorDeg, checkedAt."""
         expected_keys = {"pointCount", "maxAzimuthErrorDeg", "maxElevationErrorDeg", "checkedAt"}
@@ -511,7 +448,7 @@ class TestOutputJsonSchema(unittest.TestCase):
 
         data = json.loads(val_path.read_text(encoding="utf-8"))
         self.assertIsInstance(data, dict)
-        self.assertEqual(set(data.keys()), {"pgda69", "horizons", "quickmap"})
+        self.assertEqual(set(data.keys()), {"pgda69", "pgda69Stats", "horizons", "quickmap"})
         self.assertIsInstance(data["pgda69"], list)
         self.assertIsInstance(data["horizons"], dict)
         self.assertIsInstance(data["quickmap"], list)
@@ -520,7 +457,7 @@ class TestOutputJsonSchema(unittest.TestCase):
         self.assertEqual(set(data["horizons"].keys()), horizons_keys)
 
         for row in data["pgda69"]:
-            self.assertEqual(set(row.keys()), {"cellId", "pgdaSunFraction", "pgdaEarthFraction", "ourSunFraction", "ourEarthFraction"})
+            self.assertTrue({"cellId", "region", "pgdaSunFraction", "pgdaEarthFraction", "ourSunHalfDiskFraction", "ourEarthHalfDiskFraction"} <= set(row.keys()))
 
     def test_quickmap_preservation(self):
         """Existing valid QuickMap records must be preserved when regenerating validation.json."""

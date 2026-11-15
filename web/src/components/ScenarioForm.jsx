@@ -1,26 +1,9 @@
 import { cloneElement } from 'react'
-import { LANDER_PRESETS, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
+import { LANDER_PRESETS, MAX_SEARCH_RADIUS_KM, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
+import { useI18n } from '../i18n/index.jsx'
 
 const PRESET_FIELDS = ['maxDarkHours', 'maxCommLossHours', 'panelMaxW', 'batteryCapacityWh', 'loadW', 'panelMode']
-const POINT_TYPES = [
-  ['cell', 'Grid cell'],
-  ['site', 'Famous site'],
-  ['coordinates', 'Coordinates'],
-]
-const SCOPE_LABELS = { region: 'Same region', radius: 'Within a radius', all: 'All 9 regions' }
-const PANEL_LABELS = { auto: 'Automatic', vertical: 'Vertical, Sun-tracking', horizontal: 'Horizontal' }
-// Fields Simple mode shows; errors on any other field are listed above the Submit button there.
 const SIMPLE_MODE_FIELDS = new Set(['currentPoint', 'startDate', 'endDate', 'stayDays'])
-const FIELD_LABELS = {
-  maxDarkHours: 'Longest dark period allowed',
-  maxCommLossHours: 'Longest comm loss allowed',
-  panelMaxW: 'Panel power',
-  batteryCapacityWh: 'Battery capacity',
-  loadW: 'Average load',
-  panelMode: 'Solar panel',
-  searchScope: 'Search',
-  searchRadiusKm: 'Search radius',
-}
 const inputClass = 'w-full rounded border border-slate-500 bg-slate-950 px-2 py-1.5 tabular-nums aria-invalid:border-red-400'
 
 function toNumberOrNull(text) {
@@ -35,6 +18,7 @@ function isPointComplete(point) {
 }
 
 export default function ScenarioForm({ mode, value, errors, sites, busy, onChange, onSubmit }) {
+  const { t } = useI18n()
   const point = value.currentPoint
   const pointType = point?.type ?? 'cell'
   const update = (changes) => onChange({ ...value, ...changes })
@@ -42,6 +26,32 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
   const matchingPreset = LANDER_PRESETS.find((preset) => PRESET_FIELDS.every((field) => preset[field] === value[field]))
   const pointReady = isPointComplete(point)
   const canSubmit = !busy && errors.length === 0 && pointReady
+
+  const pointTypes = [
+    ['cell', t('scenario.pointTypes.cell')],
+    ['site', t('scenario.pointTypes.site')],
+    ['coordinates', t('scenario.pointTypes.coordinates')],
+  ]
+  const scopeLabels = {
+    region: `${t('scenario.scopes.region')} ${t('scenario.scopeTime', { seconds: 5 })}`,
+    radius: t('scenario.scopes.radius'),
+    all: `${t('scenario.scopes.all')} ${t('scenario.scopeTime', { seconds: 20 })}`,
+  }
+  const panelLabels = {
+    auto: t('scenario.panels.auto'),
+    vertical: t('scenario.panels.vertical'),
+    horizontal: t('scenario.panels.horizontal'),
+  }
+  const fieldLabels = {
+    maxDarkHours: t('scenario.maxDarkHours'),
+    maxCommLossHours: t('scenario.maxCommLossHours'),
+    panelMaxW: t('scenario.panelMaxW'),
+    batteryCapacityWh: t('scenario.batteryCapacityWh'),
+    loadW: t('scenario.loadW'),
+    panelMode: t('scenario.panelMode'),
+    searchScope: t('scenario.searchScope'),
+    searchRadiusKm: t('scenario.searchRadius'),
+  }
 
   // The error sits inside the <label>, so screen readers read it with the field; aria-invalid marks the field itself.
   function field(label, name, input, hint) {
@@ -103,12 +113,12 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
       className="space-y-4 rounded-lg border border-slate-800 bg-slate-900 p-4"
       aria-labelledby="scenario-title"
     >
-      <h2 id="scenario-title" className="font-medium">Mission scenario</h2>
+      <h2 id="scenario-title" className="font-medium">{t('scenario.title')}</h2>
 
       <fieldset className="space-y-2">
-        <legend className="mb-1 text-sm text-slate-300">Current landing point</legend>
+        <legend className="mb-1 text-sm text-slate-300">{t('scenario.currentPoint')}</legend>
         <div className="flex flex-wrap gap-1" role="group" aria-label="How to give the point">
-          {POINT_TYPES.map(([type, label]) => (
+          {pointTypes.map(([type, label]) => (
             <button
               key={type}
               type="button"
@@ -122,44 +132,44 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
         </div>
         {pointType === 'cell' &&
           field(
-            'Cell ID',
+            t('scenario.cellId'),
             'currentPoint',
             <input
               value={point?.cellId ?? ''}
               onChange={(event) => update({ currentPoint: { type: 'cell', cellId: event.target.value.trim() } })}
-              placeholder="e.g. MAL-r5c4"
+              placeholder={t('scenario.cellPlaceholder')}
               className={`${inputClass} font-mono`}
             />,
-            'Select a cell on the map, or type its ID.',
+            t('scenario.cellHint'),
           )}
         {pointType === 'site' &&
           field(
-            'Site',
+            t('scenario.site'),
             'currentPoint',
             <select value={point?.siteId ?? ''} onChange={(event) => update({ currentPoint: { type: 'site', siteId: event.target.value } })} className={inputClass}>
               {sites.map((site) => (
                 <option key={site.id} value={site.id}>{site.name}</option>
               ))}
             </select>,
-            'Sites without terrain data use a smooth-sphere horizon.',
+            t('scenario.siteHint'),
           )}
         {pointType === 'coordinates' && (
           <div className="grid grid-cols-2 gap-2">
-            {field('Latitude (°N)', 'currentPoint', coordinateInput('lat'))}
-            {field('Longitude (°E)', 'currentPoint', coordinateInput('lon'))}
+            {field(t('scenario.lat'), 'currentPoint', coordinateInput('lat'))}
+            {field(t('scenario.lon'), 'currentPoint', coordinateInput('lon'))}
           </div>
         )}
       </fieldset>
 
       <div className="grid grid-cols-2 items-end gap-2">
-        {field('First landing date (UTC)', 'startDate', <input type="date" value={value.startDate} onChange={(event) => update({ startDate: event.target.value })} className={inputClass} />)}
-        {field('Last landing date (UTC)', 'endDate', <input type="date" value={value.endDate} onChange={(event) => update({ endDate: event.target.value })} className={inputClass} />)}
+        {field(t('scenario.startDate'), 'startDate', <input type="date" value={value.startDate} onChange={(event) => update({ startDate: event.target.value })} className={inputClass} />)}
+        {field(t('scenario.endDate'), 'endDate', <input type="date" value={value.endDate} onChange={(event) => update({ endDate: event.target.value })} className={inputClass} />)}
       </div>
-      {numberField('Stay on the surface', 'stayDays', 'days', { step: 1 })}
+      {numberField(t('scenario.stayDays'), 'stayDays', t('scenario.days'), { step: 1 })}
 
       {mode === 'simple' ? (
         field(
-          'Lander',
+          t('scenario.lander'),
           'preset',
           <select
             value={matchingPreset?.id ?? 'custom'}
@@ -172,58 +182,63 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
             {LANDER_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>{preset.label}</option>
             ))}
-            {!matchingPreset && <option value="custom">Custom (set in Expert mode)</option>}
+            {!matchingPreset && <option value="custom">{t('scenario.customPreset')}</option>}
           </select>,
-          'Switch to Expert mode to set every limit.',
+          t('scenario.landerHint'),
         )
       ) : (
         <div className="grid grid-cols-2 items-end gap-2">
-          {numberField('Longest dark period allowed', 'maxDarkHours', 'h')}
-          {numberField('Longest comm loss allowed', 'maxCommLossHours', 'h')}
-          {numberField('Panel power at full Sun', 'panelMaxW', 'W')}
-          {numberField('Battery capacity', 'batteryCapacityWh', 'kWh', { scale: 1000 })}
-          {numberField('Average load', 'loadW', 'W')}
+          {numberField(t('scenario.maxDarkHours'), 'maxDarkHours', 'h')}
+          {numberField(t('scenario.maxCommLossHours'), 'maxCommLossHours', 'h')}
+          {numberField(t('scenario.panelMaxW'), 'panelMaxW', 'W')}
+          {numberField(t('scenario.batteryCapacityWh'), 'batteryCapacityWh', 'kWh', { scale: 1000 })}
+          {numberField(t('scenario.loadW'), 'loadW', 'W')}
           {field(
-            'Solar panel',
+            t('scenario.panelMode'),
             'panelMode',
             <select value={value.panelMode} onChange={(event) => update({ panelMode: event.target.value })} className={inputClass}>
               {PANEL_MODES.map((panelMode) => (
-                <option key={panelMode} value={panelMode}>{PANEL_LABELS[panelMode]}</option>
+                <option key={panelMode} value={panelMode}>{panelLabels[panelMode]}</option>
               ))}
             </select>,
           )}
           {field(
-            'Search',
+            t('scenario.searchScope'),
             'searchScope',
             <select value={value.searchScope} onChange={(event) => update({ searchScope: event.target.value })} className={inputClass}>
               {SEARCH_SCOPES.map((scope) => (
-                <option key={scope} value={scope}>{SCOPE_LABELS[scope]}</option>
+                <option key={scope} value={scope}>{scopeLabels[scope]}</option>
               ))}
             </select>,
           )}
-          {value.searchScope === 'radius' && numberField('Search radius', 'searchRadiusKm', 'km')}
+          {value.searchScope === 'radius' && numberField(`${t('scenario.searchRadius')} (${t('scenario.searchRadiusMax', { km: MAX_SEARCH_RADIUS_KM })})`, 'searchRadiusKm', 'km')}
+          <label className="col-span-2 flex items-start gap-2 text-xs text-slate-300">
+            <input type="checkbox" checked={value.requireDsn} onChange={(event) => update({ requireDsn: event.target.checked })} className="mt-0.5 accent-amber-400" />
+            {t('scenario.requireDsn')}
+          </label>
+          <p className="col-span-2 text-xs text-slate-400">{t('scenario.scopeTimeNote')} {t('scenario.scopeCapNote')}</p>
         </div>
       )}
 
-      <p className="text-xs text-slate-400">Example values are illustrative, not the specification of any real lander.</p>
+      <p className="text-xs text-slate-400">{t('scenario.exampleNote')}</p>
       {mode === 'simple' && errors.some((error) => !SIMPLE_MODE_FIELDS.has(error.field)) && (
         <ul className="space-y-0.5 text-xs text-red-400">
           {errors
             .filter((error) => !SIMPLE_MODE_FIELDS.has(error.field))
             .map((error) => (
               <li key={error.field}>
-                {FIELD_LABELS[error.field] ?? error.field}: {error.message} (change it in Expert mode)
+                {fieldLabels[error.field] ?? error.field}: {error.message} (change it in Expert mode)
               </li>
             ))}
         </ul>
       )}
-      {!pointReady && <p className="text-xs text-slate-300">Choose a cell, a site or coordinates first.</p>}
+      {!pointReady && <p className="text-xs text-slate-300">{t('scenario.choosePointPrompt')}</p>}
       <button
         type="submit"
         disabled={!canSubmit}
         className="w-full rounded bg-amber-400 px-3 py-2.5 font-semibold text-slate-950 transition hover:bg-amber-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {busy ? 'Searching…' : 'Find landing windows'}
+        {busy ? t('scenario.searching') : t('scenario.findWindows')}
       </button>
     </form>
   )

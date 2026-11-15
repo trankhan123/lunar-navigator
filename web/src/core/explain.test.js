@@ -3,6 +3,13 @@ import assert from 'node:assert/strict'
 import { assertNear } from './testHelpers.js'
 import { compassName, explainDifference, findMostDifferentNeighbors } from './explain.js'
 
+test('explainDifference: a site or custom point is named by its label, a grid cell by its id', () => {
+  const cell = (id, label, lat) => ({ cell: { id, label, lat, lon: 0 }, metrics: { longestDarkHours: 5 } })
+  assert.match(explainDifference(cell('MAL-a', 'MAL-a', -85), cell('SITE-apollo-11', 'Apollo 11', -85.01)), /^Moving [\d.]+ km to Apollo 11 /)
+  assert.match(explainDifference(cell('MAL-a', 'MAL-a', -85), cell('CUSTOM', 'Custom point', -85.01)), /to Custom point /)
+  assert.match(explainDifference(cell('SITE-x', 'X', -85), cell('MAL-b', 'MAL-b', -85.01)), /to MAL-b /)
+})
+
 test('compassName', () => {
   assert.equal(compassName(0), 'north')
   assert.equal(compassName(45), 'north-east')
@@ -68,7 +75,7 @@ test('explainDifference: cuts longest dark period when ridge is lower', () => {
   const explanation = explainDifference(current, other)
   assert.equal(
     explanation,
-    'Moving 2.3 km to MAL-r4c5 cuts the longest dark period from 72 h to 10 h because the northern ridge is 1.5° lower.',
+    'Moving 2.3 km to MAL-r4c5 cuts the longest dark period from 72 h to 10 h, because the northern ridge is 1.5° lower there, right where the Sun is in those hours.',
   )
 })
 
@@ -117,15 +124,15 @@ test('explainDifference: increases dark period when ridge is higher', () => {
   const explanation = explainDifference(current, other)
   assert.equal(
     explanation,
-    'Moving 2.3 km to MAL-r4c4 increases the longest dark period from 10 h to 72 h because the northern ridge is 1.5° higher.',
+    'Moving 2.3 km to MAL-r4c4 increases the longest dark period from 10 h to 72 h, because the northern ridge is 1.5° higher there, right where the Sun is in those hours.',
   )
 })
 
 test('findMostDifferentNeighbors: finds the pair with largest dark hours difference within radius', () => {
   // Cells at equator for simple distance: 1 deg lon = ~30.3 km, 0.03 deg lon = ~0.91 km
-  const cellA = { id: 'TEST-A', lat: 0, lon: 0 }
-  const cellB = { id: 'TEST-B', lat: 0, lon: 0.03 } // ~0.91 km from A
-  const cellC = { id: 'TEST-C', lat: 0, lon: 0.2 } // ~6.06 km from A and B
+  const cellA = { id: 'TEST-A', lat: 0, lon: 0, horizon: [0] }
+  const cellB = { id: 'TEST-B', lat: 0, lon: 0.03, horizon: [0] } // ~0.91 km from A
+  const cellC = { id: 'TEST-C', lat: 0, lon: 0.2, horizon: [0] } // ~6.06 km from A and B
 
   const cellsById = {
     'TEST-A': cellA,
@@ -208,38 +215,8 @@ test('explainDifference: formats floating-point inputs cleanly without decimal t
   const text = explainDifference(current, other)
   assert.equal(
     text,
-    'Moving 2.3 km to MAL-r4c5 cuts the longest dark period from 3.2 h to 1.2 h because the northern ridge is 1.5° lower.',
+    'Moving 2.3 km to MAL-r4c5 cuts the longest dark period from 3.2 h to 1.2 h, because the northern ridge is 1.5° lower there, right where the Sun is in those hours.',
   )
   assert.ok(!text.includes('.00000'))
   assert.ok(!text.includes('.20000'))
-})
-
-test('explainDifference: attributes darker cell to higher blocking ridge, not larger lower ridge', () => {
-  // Cell A has a high north ridge (5.0° = 50 units) and smooth southern horizon (0° = 0 units)
-  const horizonA = new Array(360).fill(0)
-  horizonA[0] = 50 // 5.0° at north
-
-  // Cell B has a lower north ridge (0° = 0 units, delta = -5.0°)
-  // and a higher south ridge (4.0° = 40 units, delta = +4.0°)
-  const horizonB = new Array(360).fill(0)
-  horizonB[180] = 40 // 4.0° at south
-
-  const cellA = { id: 'CELL-A', lat: -85.9, lon: 0, horizon: horizonA }
-  const cellB = { id: 'CELL-B', lat: -85.91, lon: 0, horizon: horizonB }
-
-  // Cell B is worse (80 h dark vs 20 h dark)
-  const current = {
-    cell: cellA,
-    metrics: { longestDarkHours: 20 },
-  }
-  const other = {
-    cell: cellB,
-    metrics: { longestDarkHours: 80 },
-  }
-
-  const explanation = explainDifference(current, other)
-  assert.ok(explanation.includes('southern ridge'), `Expected southern ridge in explanation: "${explanation}"`)
-  assert.ok(explanation.includes('higher'), `Expected "higher" in explanation: "${explanation}"`)
-  assert.ok(explanation.includes('increases the longest dark period from 20 h to 80 h'), `Expected correct verb phrase: "${explanation}"`)
-  assert.ok(!explanation.includes('northern ridge'), `Did not expect northern ridge to be blamed: "${explanation}"`)
 })

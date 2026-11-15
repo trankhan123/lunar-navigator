@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { computeEarthTrack, nextEarthEvent } from '../core/communication.js'
 import { timeAtHour } from '../core/data.js'
 import { INFEASIBLE_REASON_TEXT, formatDuration, formatUtc } from '../core/format.js'
 import { computeSunTrack, nextSunEvent } from '../core/sunlight.js'
+// Lazy: the calendar pulls in ECharts, which must stay out of the main bundle.
+const SeasonalCalendar = lazy(() => import('./SeasonalCalendar.jsx'))
 
 const LOOK_AHEAD_HOURS = 30 * 24
 const EVENT_WORDS = { sunset: 'sets', sunrise: 'rises', earthset: 'sets', earthrise: 'rises' }
@@ -97,6 +99,11 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
           Open details
         </button>
         {copyMessage && <span className="text-xs text-slate-300">{copyMessage}</span>}
+      </div>
+      <div className="mt-3 border-t border-slate-800 pt-3">
+        <Suspense fallback={null}>
+          <SeasonalCalendar cell={cell} ephemeris={ephemeris} />
+        </Suspense>
       </div>
       {!cell.feasible && <p className="mt-2 text-xs text-slate-400">You can still use it as your current point to find the nearest good cells.</p>}
     </section>

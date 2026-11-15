@@ -1,28 +1,16 @@
-import {
-  AU_KM,
-  EARTH_DISK_RADIUS_DEG,
-  SUN_DISK_RADIUS_DEG,
-  VISIBLE_THRESHOLD,
-  bodyAzimuthElevation,
-  distanceKm,
-  horizonElevationAt,
-  visibleDiskFraction,
-} from './geometry.js'
-import {
-  firstIndexBelow,
-  fractionAtLeast,
-  fractionBothAtLeast,
-  longestRunBelow,
-  meanWhereAtLeast,
-} from './timeSeries.js'
+import { VISIBLE_THRESHOLD, distanceKm } from './geometry.js'
+import { fractionBothAtLeast } from './timeSeries.js'
 import { countDays } from './scenario.js'
 import { hourIndexOf, timeAtHour } from './data.js'
 import { computeSunTrack, summarizeSunWindow } from './sunlight.js'
 import { computeEarthTrack, summarizeEarthWindow } from './communication.js'
 import { simulateBattery } from './charging.js'
 
-// Landing opportunity epoch step (6 hours matches orbital ground-track repetition).
+// Landing times are tried every 6 hours.
 export const LANDING_STEP_HOURS = 6
+
+// "Same region" for a point outside the 9 regions: the 2 km CAP cells within this distance.
+export const CAP_REGION_SEARCH_KM = 15
 
 // Minimum battery state-of-charge below which a window is flagged marginal.
 export const MARGINAL_BATTERY_FRACTION = 0.2
@@ -33,177 +21,9 @@ export const FAIL_REASON_BITS = { dark: 1, commLoss: 2, battery: 4 }
 const SMALLER_IS_BETTER_KEYS = new Set(['distanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours'])
 
 /**
- * Topocentric solar track fallback computing illumination and panel incidence
- * when upstream solar telemetry modules are pending integration.
- */
-function safeComputeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode) {
-  try {
-    return computeSunTrack(cell, ephemeris, firstHour, hourCount, panelMode)
-  } catch {
-    const DEG = Math.PI / 180
-    const resolvedMode = panelMode === 'auto'
-      ? (Math.abs(cell.lat) >= 60 ? 'vertical' : 'horizontal')
-      : panelMode
-
-    const azimuthDeg = new Float32Array(hourCount)
-    const elevationDeg = new Float32Array(hourCount)
-    const diskFraction = new Float32Array(hourCount)
-    const powerFactor = new Float32Array(hourCount)
-
-    for (let i = 0; i < hourCount; i++) {
-      const h = firstHour + i
-      const subLon = ephemeris.sunSubLonDeg[h]
-      const subLat = ephemeris.sunSubLatDeg[h]
-      const distAu = ephemeris.sunDistanceAu[h]
-      const distKm = distAu * AU_KM
-
-      const { azimuthDeg: az, elevationDeg: el } = bodyAzimuthElevation(cell, subLon, subLat, distKm)
-      azimuthDeg[i] = az
-      elevationDeg[i] = el
-
-      const horDeg = horizonElevationAt(cell.horizon, az)
-      const frac = visibleDiskFraction(el, horDeg, SUN_DISK_RADIUS_DEG)
-      diskFraction[i] = frac
-
-      const pFactor = resolvedMode === 'vertical'
-        ? Math.cos(el * DEG)
-        : Math.max(Math.sin(el * DEG), 0)
-
-      powerFactor[i] = (1 / distAu) ** 2 * frac * pFactor
-    }
-
-    return {
-      firstHour,
-      panelType: resolvedMode,
-      azimuthDeg,
-      elevationDeg,
-      diskFraction,
-      powerFactor,
-    }
-  }
-}
-
-/**
- * Topocentric Earth track fallback computing line-of-sight and apparent disk visibility.
- */
-function safeComputeEarthTrack(cell, ephemeris, firstHour, hourCount) {
-  try {
-    return computeEarthTrack(cell, ephemeris, firstHour, hourCount)
-  } catch {
-    const azimuthDeg = new Float32Array(hourCount)
-    const elevationDeg = new Float32Array(hourCount)
-    const diskFraction = new Float32Array(hourCount)
-
-    for (let i = 0; i < hourCount; i++) {
-      const h = firstHour + i
-      const subLon = ephemeris.earthSubLonDeg[h]
-      const subLat = ephemeris.earthSubLatDeg[h]
-      const distKm = ephemeris.earthDistanceKm[h]
-
-      const { azimuthDeg: az, elevationDeg: el } = bodyAzimuthElevation(cell, subLon, subLat, distKm)
-      azimuthDeg[i] = az
-      elevationDeg[i] = el
-
-      const horDeg = horizonElevationAt(cell.horizon, az)
-      diskFraction[i] = visibleDiskFraction(el, horDeg, EARTH_DISK_RADIUS_DEG)
-    }
-
-    return {
-      firstHour,
-      azimuthDeg,
-      elevationDeg,
-      diskFraction,
-    }
-  }
-}
-
-function safeSummarizeSunWindow(sunTrack, startIndex, lengthHours) {
-  try {
-    return summarizeSunWindow(sunTrack, startIndex, lengthHours)
-  } catch {
-    return {
-      longestDarkHours: longestRunBelow(sunTrack.diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
-      fractionSun: fractionAtLeast(sunTrack.diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
-      meanSunElevationDeg: meanWhereAtLeast(sunTrack.elevationDeg, sunTrack.diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
-      hoursToSunset: firstIndexBelow(sunTrack.diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
-    }
-  }
-}
-
-function safeSummarizeEarthWindow(earthTrack, startIndex, lengthHours) {
-  try {
-    return summarizeEarthWindow(earthTrack, startIndex, lengthHours)
-  } catch {
-    return {
-      longestCommLossHours: longestRunBelow(earthTrack.diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
-      fractionEarth: fractionAtLeast(earthTrack.diskFraction, VISIBLE_THRESHOLD, startIndex, lengthHours),
-    }
-  }
-}
-
-function safeSimulateBattery(powerFactor, startIndex, lengthHours, scenario) {
-  try {
-    return simulateBattery(powerFactor, startIndex, lengthHours, scenario)
-  } catch {
-    const { panelMaxW, loadW, batteryCapacityWh } = scenario
-    const capacity = batteryCapacityWh
-    let currentWh = capacity
-    let minBatteryWh = capacity
-    let deadAtHour = null
-
-    const batteryWh = new Float32Array(lengthHours + 1)
-    batteryWh[0] = capacity
-
-    for (let h = 0; h < lengthHours; h++) {
-      const gen = panelMaxW * powerFactor[startIndex + h]
-      const raw = currentWh + gen - loadW
-      if (raw <= 0 && deadAtHour === null) {
-        deadAtHour = h + 1
-      }
-      currentWh = Math.min(capacity, Math.max(0, raw))
-      batteryWh[h + 1] = currentWh
-      if (currentWh < minBatteryWh) {
-        minBatteryWh = currentWh
-      }
-    }
-
-    const minBatteryFraction = minBatteryWh / capacity
-
-    let rechargeHours = null
-    if (minBatteryWh >= capacity) {
-      rechargeHours = 0
-    } else {
-      let minIdx = -1
-      for (let i = 0; i <= lengthHours; i++) {
-        if (batteryWh[i] === minBatteryWh) {
-          minIdx = i
-          break
-        }
-      }
-      if (minIdx !== -1) {
-        for (let i = minIdx + 1; i <= lengthHours; i++) {
-          if (batteryWh[i] >= capacity) {
-            rechargeHours = i - minIdx
-            break
-          }
-        }
-      }
-    }
-
-    return {
-      batteryWh,
-      minBatteryWh,
-      minBatteryFraction,
-      deadAtHour,
-      rechargeHours,
-    }
-  }
-}
-
-/**
  * Flat typed-array slot comparator for high-throughput candidate selection.
  */
-function compareResultSlots(results, c1, k1, c2, k2) {
+function compareResultSlots(results, c1, k1, c2, k2, slipHours1 = 0, slipHours2 = 0) {
   const lc = results.landingCount
   const idx1 = c1 * lc + k1
   const idx2 = c2 * lc + k2
@@ -231,6 +51,8 @@ function compareResultSlots(results, c1, k1, c2, k2) {
   const dark1 = results.longestDarkHours?.[idx1] ?? 0
   const dark2 = results.longestDarkHours?.[idx2] ?? 0
   if (dark1 !== dark2) return dark1 - dark2
+
+  if (slipHours1 !== slipHours2) return slipHours2 - slipHours1 // a longer window ranks first
 
   const id1 = results.cellIds?.[c1] ?? ''
   const id2 = results.cellIds?.[c2] ?? ''
@@ -290,8 +112,8 @@ function defaultCompare(a, b) {
 export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
   const lengthHours = scenario.stayDays * 24
 
-  const sunSummary = safeSummarizeSunWindow(sunTrack, startIndex, lengthHours)
-  const earthSummary = safeSummarizeEarthWindow(earthTrack, startIndex, lengthHours)
+  const sunSummary = summarizeSunWindow(sunTrack, startIndex, lengthHours)
+  const earthSummary = summarizeEarthWindow(earthTrack, startIndex, lengthHours)
   const fractionBoth = fractionBothAtLeast(
     sunTrack.diskFraction,
     earthTrack.diskFraction,
@@ -299,7 +121,7 @@ export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
     startIndex,
     lengthHours,
   )
-  const batterySummary = safeSimulateBattery(sunTrack.powerFactor, startIndex, lengthHours, scenario)
+  const batterySummary = simulateBattery(sunTrack.powerFactor, startIndex, lengthHours, scenario)
 
   const { longestDarkHours, fractionSun, meanSunElevationDeg, hoursToSunset } = sunSummary
   const { longestCommLossHours, fractionEarth } = earthSummary
@@ -335,11 +157,13 @@ export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
   }
 }
 
+const positionKey = (cell) => (Number.isFinite(cell.xM) ? `${cell.xM},${cell.yM}` : cell.id)
+
 /**
  * Filters feasible lunar surface cells within target search boundary,
  * ensuring the nominal landing target resides at index 0.
  */
-export function selectSearchCells(scenario, currentCell, cellsByRegion) {
+export function selectSearchCells(scenario, currentCell, cellsByRegion, capCells = [], regionCode = null) {
   if (!currentCell || currentCell.lat == null || currentCell.lon == null) {
     return []
   }
@@ -348,82 +172,32 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion) {
   const allCells = Array.isArray(cellsByRegion)
     ? cellsByRegion
     : Object.values(cellsByRegion || {}).flat()
+  const withinKm = (cells, radiusKm) => cells.filter((cell) => cell.feasible === true && distanceKm(currentCell, cell) <= radiusKm)
 
   let candidates = []
 
   if (scope === 'region') {
-    let closestCell = null
-    let minDist = Infinity
-    let closestRegionKey = null
-
-    if (cellsByRegion && !Array.isArray(cellsByRegion)) {
-      for (const [code, rCells] of Object.entries(cellsByRegion)) {
-        for (const c of rCells) {
-          if (c.lat != null && c.lon != null) {
-            const d = distanceKm(currentCell, c)
-            if (d < minDist) {
-              minDist = d
-              closestCell = c
-              closestRegionKey = code
-            }
-          }
-        }
-      }
-    } else {
-      for (const c of allCells) {
-        if (c.lat != null && c.lon != null) {
-          const d = distanceKm(currentCell, c)
-          if (d < minDist) {
-            minDist = d
-            closestCell = c
-          }
-        }
-      }
-    }
-
-    if (!closestCell || minDist > 1) {
-      candidates = []
-    } else {
-      const targetRegion =
-        closestCell.region ||
-        closestCell.regionId ||
-        closestRegionKey ||
-        (closestCell.id ? closestCell.id.split('-')[0] : null)
-      if (
-        cellsByRegion &&
-        !Array.isArray(cellsByRegion) &&
-        targetRegion &&
-        cellsByRegion[targetRegion]
-      ) {
-        candidates = cellsByRegion[targetRegion]
-      } else {
-        candidates = allCells.filter(
-          (c) =>
-            (c.region && c.region === targetRegion) ||
-            (c.regionId && c.regionId === targetRegion) ||
-            (targetRegion && c.id?.startsWith(targetRegion + '-')),
-        )
-      }
-    }
+    // The caller decides the point's region (pointRegionCode) and loads it; only that region's cells count, whatever else is loaded.
+    const regionOf = (cell) => cell.region || cell.regionId || cell.id?.split('-')[0]
+    const distanceTo = (cell) => (cell.lat == null || cell.lon == null ? Infinity : distanceKm(currentCell, cell))
+    const code = regionCode ?? (allCells.length > 0 ? regionOf(allCells.reduce((best, cell) => (distanceTo(cell) < distanceTo(best) ? cell : best))) : null)
+    const regionCells = allCells.filter((cell) => regionOf(cell) === code)
+    // Not on an LGRS cell (none within 1 km): search the 2 km CAP cells around the point (README D9); none loaded = nothing to search.
+    candidates = regionCells.some((cell) => distanceTo(cell) <= 1) ? regionCells : withinKm(capCells, CAP_REGION_SEARCH_KM)
   } else if (scope === 'radius') {
     const radius = scenario?.searchRadiusKm ?? 10
-    candidates = allCells.filter((cell) => {
-      if (cell.feasible !== true) return false
-      return distanceKm(currentCell, cell) <= radius
-    })
+    candidates = withinKm([...allCells, ...capCells], radius) // CAP leaves out the region interiors: no duplicates
   } else if (scope === 'all') {
     candidates = allCells
   }
 
   const result = [currentCell]
-  const seen = new Set()
-  if (currentCell && currentCell.id) {
-    seen.add(currentCell.id)
-  }
-
+  const seen = new Set([currentCell.id, positionKey(currentCell)])
   for (const cell of candidates) {
-    if (cell.feasible === true && cell.id && !seen.has(cell.id)) {
+    // MMO and NR1 overlap: one place under two ids is kept once (the first, the current point's region first).
+    if (cell.feasible === true && cell.id && !seen.has(cell.id) && !seen.has(positionKey(cell))) {
       seen.add(cell.id)
+      seen.add(positionKey(cell))
       result.push(cell)
     }
   }
@@ -495,8 +269,8 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
 
   for (let c = 0; c < cellCount; c++) {
     const cell = cells[c]
-    const sunTrack = safeComputeSunTrack(cell, ephemeris, firstHour, hourCount, scenario.panelMode)
-    const earthTrack = safeComputeEarthTrack(cell, ephemeris, firstHour, hourCount)
+    const sunTrack = computeSunTrack(cell, ephemeris, firstHour, hourCount, scenario.panelMode)
+    const earthTrack = computeEarthTrack(cell, ephemeris, firstHour, hourCount, scenario.requireDsn)
 
     for (let k = 0; k < landingCount; k++) {
       const startIndex = LANDING_STEP_HOURS * k
@@ -677,49 +451,37 @@ export function rankCells(results, landingIndex, options = {}) {
 }
 
 /**
- * Identifies optimal global (cell, landing epoch) opportunities across the entire mission horizon
- * using a single-pass top-K buffer.
+ * Best landing window of every cell, ranked: a window is a run of consecutive passing (pass or marginal)
+ * landing times; slipHours is how long the landing can slip inside it. Cells that never pass are left out.
  */
-export function rankBestPairs(results, options = {}) {
-  const { limit = 10 } = options
-  const cellCount = results?.cellCount ?? 0
-  const landingCount = results?.landingCount ?? 0
-  const totalSlots = cellCount * landingCount
-  if (totalSlots === 0) return []
-
-  const effectiveLimit = limit != null && limit > 0 ? limit : totalSlots
-  const top = []
-
+export function rankBestWindows(results, { limit = 10 } = {}) {
+  const { cellCount = 0, landingCount = 0, status, landingTimes } = results ?? {}
+  const bestPerCell = []
   for (let c = 0; c < cellCount; c++) {
+    let best = null
     for (let k = 0; k < landingCount; k++) {
-      if (top.length === effectiveLimit) {
-        const worst = top[effectiveLimit - 1]
-        if (compareResultSlots(results, c, k, worst.cellIndex, worst.landingIndex) >= 0) {
-          continue
-        }
+      if (status[c * landingCount + k] === STATUS.fail) continue
+      let endIndex = k
+      let bestIndex = k
+      while (endIndex + 1 < landingCount && status[c * landingCount + endIndex + 1] !== STATUS.fail) {
+        endIndex++
+        if (compareResultSlots(results, c, endIndex, c, bestIndex) < 0) bestIndex = endIndex
       }
-
-      let low = 0
-      let high = top.length
-      while (low < high) {
-        const mid = (low + high) >> 1
-        if (compareResultSlots(results, c, k, top[mid].cellIndex, top[mid].landingIndex) < 0) {
-          high = mid
-        } else {
-          low = mid + 1
-        }
+      const slipHours = LANDING_STEP_HOURS * (endIndex - k)
+      if (!best || compareResultSlots(results, c, bestIndex, c, best.landingIndex, slipHours, best.slipHours) < 0) {
+        best = { cellIndex: c, landingIndex: bestIndex, startIndex: k, endIndex, slipHours }
       }
-
-      top.splice(low, 0, { cellIndex: c, landingIndex: k })
-      if (top.length > effectiveLimit) {
-        top.pop()
-      }
+      k = endIndex // the run is done, the next one starts after a failing landing
     }
+    if (best) bestPerCell.push(best)
   }
-
-  return top.map((entry, i) => ({
-    ...metricsAt(results, entry.cellIndex, entry.landingIndex),
+  bestPerCell.sort((a, b) => compareResultSlots(results, a.cellIndex, a.landingIndex, b.cellIndex, b.landingIndex, a.slipHours, b.slipHours))
+  return bestPerCell.slice(0, limit > 0 ? limit : undefined).map((window, i) => ({
+    ...metricsAt(results, window.cellIndex, window.landingIndex),
     rank: i + 1,
+    windowStartTime: landingTimes[window.startIndex],
+    windowEndTime: landingTimes[window.endIndex],
+    slipHours: window.slipHours,
   }))
 }
 

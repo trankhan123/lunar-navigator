@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { describeChatScenario } from '../core/missionChat.js'
 import { validateScenario } from '../core/scenario.js'
-import { GUIDE_FIELDS, missionFieldStatus, recordEnteredFields } from '../core/missionGuide.js'
+import { missionFieldStatus, recordEnteredFields } from '../core/missionGuide.js'
 import MissionGuide, { ParameterStatus } from './MissionGuide.jsx'
+import { useI18n } from '../i18n/index.jsx'
 
 const buttonClass = 'rounded border border-slate-500 px-3 py-2 text-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40'
 const EXAMPLE = 'At Malapert Massif, January 1–7, 2028, stay 6 days. Battery 10 kWh, panel 1 kW, load 300 W.'
@@ -16,6 +17,7 @@ function boundedHistory(messages) {
 }
 
 export default function MissionChat({ value, sites, ephemeris, busy, useMock, enteredFields = {}, onApply }) {
+  const { t } = useI18n()
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([])
   const [proposal, setProposal] = useState(null)
@@ -81,9 +83,9 @@ export default function MissionChat({ value, sites, ephemeris, busy, useMock, en
         <h2 id="mission-chat-title" className="text-lg font-semibold text-sky-100">Describe your mission</h2>
         <span className="rounded bg-sky-950 px-2 py-0.5 text-xs text-sky-200">AI assist</span>
       </div>
-      <p className="text-sm text-slate-200">Start with what you know. Use the guided template or chat in English or Vietnamese — we’ll help with the details.</p>
+      <p className="text-sm text-slate-200">{t('chat.intro')}</p>
       <ol aria-label="How the mission assistant works" className="flex flex-wrap gap-2 text-xs text-sky-100">
-        <li className="rounded-full bg-sky-900 px-2 py-1">1 · Describe</li><li className="rounded-full bg-sky-900 px-2 py-1">2 · Review</li><li className="rounded-full bg-sky-900 px-2 py-1">3 · Apply & search</li>
+        <li className="rounded-full bg-sky-900 px-2 py-1">{t('chat.describe')}</li><li className="rounded-full bg-sky-900 px-2 py-1">{t('chat.review')}</li><li className="rounded-full bg-sky-900 px-2 py-1">{t('chat.apply')}</li>
       </ol>
       {useMock ? <p className="text-sm text-amber-300">The assistant is available with the real site catalog. Use the form with mock data.</p> : <>
         <MissionGuide scenario={stale ? value : shownScenario} sites={sites} ephemeris={ephemeris} entered={stale ? entered : shownEntered} disabled={pending || busy} onUse={(message) => {
@@ -114,7 +116,7 @@ export default function MissionChat({ value, sites, ephemeris, busy, useMock, en
         {error && <p role="alert" className="text-sm text-amber-300">{error}</p>}
         {notice && <p role="status" className="text-sm text-sky-200">{notice}</p>}
         {!draft && <div className="space-y-2 border-t border-sky-900 pt-3">
-          <h3 className="text-sm font-medium">Your starting settings</h3>
+          <h3 className="text-sm font-medium">{t('chat.starting')}</h3>
           <ParameterReview scenario={value} sites={sites} entered={entered} errors={shownErrors} />
         </div>}
         {draft && <div className="space-y-2 border-t border-slate-700 pt-3">
@@ -139,16 +141,17 @@ export default function MissionChat({ value, sites, ephemeris, busy, useMock, en
 }
 
 function ParameterReview({ scenario, sites, entered, errors }) {
+  const { t } = useI18n()
   return <div>
     <dl className="space-y-2 text-xs">
-      {describeChatScenario(scenario, sites).map(([label, text, field]) => {
+      {describeChatScenario(scenario, sites).map(([, text, field]) => {
         const status = missionFieldStatus(field, scenario, entered, errors)
         return <div key={field} data-review-field={field} className={`rounded border bg-slate-950/50 p-2 ${status.kind === 'invalid' ? 'border-red-700' : 'border-slate-700'}`}>
-          <div className="flex flex-wrap items-center justify-between gap-1"><dt className="text-slate-300">{GUIDE_FIELDS[field]?.[0] ?? label}</dt><ParameterStatus status={status} /></div>
+          <div className="flex flex-wrap items-center justify-between gap-1"><dt className="text-slate-300">{t(`chat.field.${field}`)}</dt><ParameterStatus status={status} /></div>
           <dd className={`mt-1 break-words font-medium ${status.kind === 'default' ? 'text-slate-400' : status.kind === 'entered' ? 'text-emerald-200' : status.kind === 'invalid' ? 'text-red-200' : ''}`}>{text}</dd>
         </div>
       })}
     </dl>
-    <p className="mt-2 text-xs text-slate-400">Default = example value kept. Entered · valid = supplied and passes form checks, not a guarantee of mission success. From form = an existing custom value.</p>
+    <p className="mt-2 text-xs text-slate-400">{t('chat.legend')}</p>
   </div>
 }

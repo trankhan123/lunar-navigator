@@ -1,4 +1,4 @@
-// Run against npm run dev. Supply a locally installed Playwright module path;
+// Run against VITE_CHAT_UI=true npm run dev. Supply a locally installed Playwright module path;
 // this regression check adds no application dependency and makes no Gemini calls.
 import assert from 'node:assert/strict'
 import { prepareChatDraft } from '../src/core/missionChat.js'
@@ -132,4 +132,15 @@ try {
   if (process.env.CHAT_SCREENSHOT) await page.screenshot({ path: process.env.CHAT_SCREENSHOT, fullPage: true })
   await page.close()
   console.log('PASS: guided request, explicit units, no extra API call, default/entered/invalid badges, Apply and mobile width')
+  const vietnamese = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await vietnamese.addInitScript(() => localStorage.setItem('lunar_lang', 'vi'))
+  await vietnamese.goto(process.env.CHAT_TEST_URL || 'http://127.0.0.1:5187/?screen=map')
+  await vietnamese.getByRole('button', { name: 'Lập kế hoạch với AI', exact: true }).click()
+  await vietnamese.getByRole('button', { name: /Hướng dẫn tôi bắt đầu/ }).click()
+  await vietnamese.locator('#guide-batteryCapacityWh').fill('abc')
+  assert.match(await vietnamese.locator('[data-guide-field="batteryCapacityWh"]').innerText(), /Không hợp lệ/)
+  assert.equal(await vietnamese.getByRole('button', { name: 'Đưa thông tin này vào chat' }).isDisabled(), true)
+  assert.ok(await vietnamese.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1))
+  await vietnamese.close()
+  console.log('PASS: Vietnamese guided labels, invalid input and mobile layout')
 } finally { await browser.close() }

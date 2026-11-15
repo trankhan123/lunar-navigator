@@ -8,6 +8,9 @@ import {
 } from './geometry.js'
 import { fractionAtLeast, longestRunBelow, nextCrossing } from './timeSeries.js'
 
+const DSN_STATIONS = ['goldstone', 'madrid', 'canberra']
+const DSN_MIN_ELEVATION_DEG = 10 // elevation mask, see README C2 for the source
+
 /**
  * @typedef {Object} EarthTrack  one value per hour; index i ↔ ephemeris hour firstHour + i
  * @property {number} firstHour
@@ -17,13 +20,14 @@ import { fractionAtLeast, longestRunBelow, nextCrossing } from './timeSeries.js'
  */
 
 /** @returns {EarthTrack} */
-export function computeEarthTrack(cell, ephemeris, firstHour, hourCount) {
+export function computeEarthTrack(cell, ephemeris, firstHour, hourCount, requireDsn = false) {
   const azimuthDeg = new Float32Array(hourCount)
   const elevationDeg = new Float32Array(hourCount)
   const diskFraction = new Float32Array(hourCount)
 
-  const dsn = ephemeris?.dsn
-  const minDsnElev = dsn ? (dsn.elevationUnitDeg != null ? 10 / dsn.elevationUnitDeg : 100) : 0
+  // Opt-in (scenario.requireDsn): Earth counts as visible only while a DSN station also sees the Moon.
+  const dsn = requireDsn ? ephemeris.dsn : null
+  const minDsnElevationUnits = dsn ? DSN_MIN_ELEVATION_DEG / dsn.elevationUnitDeg : 0
 
   for (let i = 0; i < hourCount; i++) {
     const ephHour = firstHour + i
@@ -38,15 +42,7 @@ export function computeEarthTrack(cell, ephemeris, firstHour, hourCount) {
     const horizonDeg = horizonElevationAt(cell.horizon, az)
     let fraction = visibleDiskFraction(el, horizonDeg, EARTH_DISK_RADIUS_DEG)
 
-    if (dsn) {
-      const g = dsn.goldstone?.[ephHour] ?? dsn.stations?.goldstone?.elevation?.[ephHour] ?? -Infinity
-      const m = dsn.madrid?.[ephHour] ?? dsn.stations?.madrid?.elevation?.[ephHour] ?? -Infinity
-      const c = dsn.canberra?.[ephHour] ?? dsn.stations?.canberra?.elevation?.[ephHour] ?? -Infinity
-      const dsnAvailable = g >= minDsnElev || m >= minDsnElev || c >= minDsnElev
-      if (!dsnAvailable) {
-        fraction = 0
-      }
-    }
+    if (dsn && !DSN_STATIONS.some((station) => dsn[station][ephHour] >= minDsnElevationUnits)) fraction = 0
 
     diskFraction[i] = fraction
   }

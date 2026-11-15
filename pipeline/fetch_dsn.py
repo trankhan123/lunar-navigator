@@ -6,6 +6,15 @@ ground stations on Earth (CENTER='coord@399'):
   - Madrid (DSS-63):    lat 40.4314, lon -4.2480,   alt 0.834 km
   - Canberra (DSS-43):  lat -35.4014, lon 148.9813, alt 0.689 km
 
+Source: NASA/JPL DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and
+Geometry", Rev. K (2016), https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf
+  - Table 5 (WGS 84 geodetic coordinates) agrees with the numbers above to 0.001 deg (about 100 m, far
+    below what matters for Moon elevation), except heights: DSS-63 is 0.865 km in the table, the code has 0.834 km
+    (DSS-65's value); DSS-43 latitude is -35.4024 in the table. The numbers were deliberately left unchanged.
+  - The 10 deg mask: sec. 2.2.1 and 2.2.4 give 10.0 deg as the absolute lower elevation limit of the DSN antennas
+    (transmit; the handbook gives no separate receive minimum), raised where terrain requires it.
+    Per-station horizon masks (Figures 11, 19, 23) are not used here.
+
 Contract:
   Time range matches ephemeris.json: 2027-01-01T00:00Z to 2029-01-31T23:00Z, step 1h (18288 hours).
   Raw responses cached in: pipeline/raw/horizons_dsn/ (gitignored).

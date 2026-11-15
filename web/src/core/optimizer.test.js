@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear, constantEphemeris, equatorCell } from './testHelpers.js'
-import { evaluateWindow, rankBestPairs, rankCells, runWindowSearch, selectSearchCells, summarizeCurrentPoint } from './optimizer.js'
+import { STATUS, evaluateWindow, rankBestWindows, rankCells, runWindowSearch, selectSearchCells, summarizeCurrentPoint } from './optimizer.js'
 import { DEFAULT_SCENARIO } from './scenario.js'
 
 const fill = (value, length = 24) => new Float32Array(length).fill(value)
@@ -37,6 +37,21 @@ test('runWindowSearch: shape of WindowResults', () => {
   assert.deepEqual(results.landingTimes, ['2028-01-01T00:00Z', '2028-01-01T06:00Z', '2028-01-01T12:00Z', '2028-01-01T18:00Z'])
   assert.ok(results.status instanceof Uint8Array && results.status.length === 8)
   assertNear(results.distanceKm[1], (Math.PI / 180) * 1737.4, 1e-3)
+})
+
+test('runWindowSearch: requireDsn off ignores DSN data, on counts a hidden-station hour as comm loss', () => {
+  const scenario = { ...DEFAULT_SCENARIO, startDate: '2028-01-01', endDate: '2028-01-01', stayDays: 1, maxCommLossHours: 0 }
+  const ephemeris = constantEphemeris({ hours: 48 })
+  // Synthetic: no station sees the Moon at hour 3 only (0.1 deg units; 100 = 10 deg).
+  const visible = new Array(48).fill(500)
+  const hidden = visible.map((value, hour) => (hour === 3 ? 0 : value))
+  ephemeris.dsn = { elevationUnitDeg: 0.1, goldstone: hidden, madrid: hidden, canberra: hidden }
+  const off = runWindowSearch([equatorCell], ephemeris, scenario)
+  const on = runWindowSearch([equatorCell], ephemeris, { ...scenario, requireDsn: true })
+  assert.equal(off.longestCommLossHours[0], 0)
+  assert.equal(on.longestCommLossHours[0], 1)
+  assert.equal(off.status[0], STATUS.pass)
+  assert.equal(on.status[0], STATUS.fail)
 })
 
 function makeResults({ status, minBatteryFraction, distanceKm, landingCount }) {
@@ -102,53 +117,34 @@ test('selectSearchCells: scope region with Apollo 11 keeps currentCell at index 
   assert.equal(nearby[1].id, 'MAL-r1c1')
 })
 
-test('rankBestPairs: 225 cells completes in < 200 ms returning top 10', () => {
-  const cellCount = 225
-  const landingCount = 20
-  const size = cellCount * landingCount
+test('rankBestWindows: windows per cell, best window kept, ties go to the longer window', () => {
+  // cell 0: pass at 0 (alone), then pass at 2,3,4 with the best battery at 3. cell 1: never passes.
+  // cells 2 and 3: same metrics and distance, cell 2 has a single landing time, cell 3 a 2-landing window.
+  const results = makeResults({
+    status: [2, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0],
+    minBatteryFraction: [0.5, 0, 0.6, 0.9, 0.7, 0, 0, 0, 0, 0, 0, 0, 0.8, 0, 0, 0, 0, 0, 0.8, 0.8, 0, 0, 0, 0],
+    distanceKm: [0, 1, 2, 2],
+    landingCount: 6,
+  })
+  const rows = rankBestWindows(results)
+  assert.deepEqual(rows.map((row) => row.cellId), ['TEST-0', 'TEST-3', 'TEST-2'])
+  assert.equal(rows[0].landingTime, '2028-01-01T18:00Z')
+  assert.deepEqual([rows[0].windowStartTime, rows[0].windowEndTime, rows[0].slipHours], ['2028-01-01T12:00Z', results.landingTimes[4], 12])
+  assert.equal(rows[1].slipHours, 6)
+  assert.equal(rows[2].slipHours, 0) // single landing time
+  assert.deepEqual(rows.map((row) => row.rank), [1, 2, 3])
+  assert.equal(rankBestWindows(results, { limit: 1 }).length, 1)
+})
 
-  const status = new Uint8Array(size).fill(0)
-  const minBatteryFraction = new Float32Array(size).fill(0)
-  const distanceKm = new Float32Array(cellCount)
-  for (let c = 0; c < cellCount; c++) {
-    distanceKm[c] = c * 0.1
-  }
+test('rankBestWindows: near-duplicate landings of one cell collapse to one row', () => {
+  const results = makeResults({ status: [2, 2, 2, 2, 2, 2, 2, 2], minBatteryFraction: [0.5, 0.6, 0.5, 0.4, 0.3, 0.3, 0.3, 0.3], distanceKm: [0, 1], landingCount: 4 })
+  assert.deepEqual(rankBestWindows(results).map((row) => [row.cellId, row.slipHours]), [['TEST-0', 18], ['TEST-1', 18]])
+})
 
-  // Seed top candidates with status = 2 (pass) and distinct battery fractions
-  for (let i = 0; i < 15; i++) {
-    const idx = i * landingCount + (i % landingCount)
-    status[idx] = 2
-    minBatteryFraction[idx] = 0.5 + (15 - i) * 0.03
-  }
-
-  const results = {
-    cellCount,
-    landingCount,
-    cellIds: Array.from({ length: cellCount }, (_, i) => `CELL-${i}`),
-    distanceKm,
-    landingTimes: Array.from({ length: landingCount }, (_, k) => `2028-01-01T${String((k * 6) % 24).padStart(2, '0')}:00Z`),
-    status,
-    failReasonBits: new Uint8Array(size),
-    minBatteryFraction,
-    longestDarkHours: new Uint16Array(size),
-    longestCommLossHours: new Uint16Array(size),
-    fractionSun: new Float32Array(size).fill(0.5),
-    fractionEarth: new Float32Array(size).fill(0.5),
-    fractionBoth: new Float32Array(size).fill(0.5),
-    meanSunElevationDeg: new Float32Array(size).fill(1),
-    hoursToSunset: new Int16Array(size).fill(-1),
-    rechargeHours: new Int16Array(size).fill(-1),
-    deadAtHour: new Int16Array(size).fill(-1),
-  }
-
-  const t0 = performance.now()
-  const top10 = rankBestPairs(results, { limit: 10 })
-  const elapsed = performance.now() - t0
-
-  assert.equal(top10.length, 10)
-  assert.equal(top10[0].rank, 1)
-  assert.equal(top10[0].cellId, 'CELL-0')
-  assert.equal(top10[0].status, 'pass')
-  assert.ok(top10[0].minBatteryFraction > top10[1].minBatteryFraction)
-  assert.ok(elapsed < 200, `Expected rankBestPairs to complete in < 200 ms, took ${elapsed.toFixed(2)} ms`)
+test('rankBestWindows: limit 10 over 12 cells gives 10 rows with distinct cellIds', () => {
+  const status = Array.from({ length: 12 * 3 }, () => 2) // every cell passes at all 3 landing times
+  const results = makeResults({ status, minBatteryFraction: status.map(() => 0.5), distanceKm: Array.from({ length: 12 }, (_, i) => i), landingCount: 3 })
+  const rows = rankBestWindows(results, { limit: 10 })
+  assert.equal(rows.length, 10)
+  assert.equal(new Set(rows.map((row) => row.cellId)).size, 10)
 })

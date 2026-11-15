@@ -79,5 +79,6 @@ export function describeChatScenario(scenario, sites) {
     ...Object.entries(CHAT_FIELDS).filter(([field]) => field !== 'searchRadiusKm' || scenario.searchScope === 'radius')
       .map(([field, { label, unit }]) => [label, `${scenario[field] ?? '—'} ${unit}`, field]),
     ['Panel mode', scenario.panelMode, 'panelMode'], ['Search scope', scenario.searchScope, 'searchScope'],
+    ['Require DSN station', scenario.requireDsn ? 'Required' : 'Not required', 'requireDsn'],
   ]
 }

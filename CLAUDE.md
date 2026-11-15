@@ -34,7 +34,8 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 | Tính toán trong trình duyệt | JS thuần trong `web/src/core/`, chạy tìm kiếm trong **Web Worker** |
 | Test | `node --test` có sẵn trong Node (không thêm thư viện test) và `pipeline/check_web_data.py` |
 | Bản đồ 2D cực Nam | SVG + d3-zoom 3.0.0 (kéo/phóng; cả chuỗi d3 ghim bằng overrides trong web/package.json), ảnh nền hillshade PNG |
-| Quả cầu 3D | `globe.gl` (không dùng three.js thuần) |
+| Quả cầu 3D | `globe.gl` (quả cầu W6 dùng globe.gl) |
+| Địa hình 3D | `three` 0.187.0, ghim chính xác, tải lười (globe.gl dùng cùng bản) |
 | Biểu đồ | ECharts (`echarts` + `echarts-for-react`) |
 | CSS | Tailwind |
 | Deploy | Vercel, web tĩnh, không backend |
@@ -56,6 +57,8 @@ Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay 
   PGDA 90 slope, PSR ─ D3 ─> feasibility_<CODE>.json ────┼─ D5 ─> cells_<CODE>.json, regions.json, sites.json
   PGDA 90 DEM ─── D4 ─> horizon_<CODE>.json ─────────────┘
   PGDA 69 ─────── D7 ─> validation.json        hillshade ─ D8 ─> maps/*.png
+  PGDA 90 DEM ─── D8b ─> maps/relief/*.jpg     PGDA 90 DEM ─ D10 ─> terrain/*.bin
+  D2–D4 + PGDA 90 ─ D9 ─> data/cap/*.json (lưới 2 km ngoài 9 vùng)
 [Trình duyệt, Vercel]
   core/ C0 hình học · C1 nắng · C2 liên lạc · C3 năng lượng cần · C4 sạc pin · C5 tối ưu (Worker)
   UI W1–W7: bản đồ, form, kết quả, chi tiết, globe, chế độ học
@@ -64,10 +67,10 @@ Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay 
 - **Vị trí Mặt Trời/Trái Đất** tại bất kỳ ô hay toạ độ nào đều tính từ điểm dưới thiên thể bằng một công thức vector (README mục C0). Nhờ vậy toạ độ tuỳ ý cũng chạy được, không cần gọi Horizons cho từng ô.
 - **Chân trời địa hình** chỉ có cho ô lưới và cho site có lat ≤ −60°. Điểm khác dùng chân trời mặt cầu (0°), và giao diện ghi "terrain not included".
 - **Thư mục:**
-  - `pipeline/`: D1–D8, `common.py`, `check_web_data.py`, `make_mock_data.py`, `out/` (file trung gian, có commit), `raw/` (gitignore);
+  - `pipeline/`: D1–D10 (kể cả D8b), `common.py`, `check_web_data.py`, `make_mock_data.py`, `out/` (file trung gian, có commit), `raw/` (gitignore);
   - `web/src/core/`: module JS thuần kèm `*.test.js`;
   - `web/src/components/`: mỗi component một file;
-  - `web/public/data/` (`mock/` là dữ liệu giả).
+  - `web/public/data/` (`mock/` là dữ liệu giả, `cap/` là lưới 2 km toàn cực), `web/public/terrain/` (khối địa hình 3D), `web/public/maps/relief/` (ảnh địa hình nhiều mức).
 
 ## 4. Data contract và hợp đồng module
 
@@ -136,7 +139,7 @@ Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay 
 
 ## 8. Giao diện (chi tiết: `docs/window-finder.md` §3)
 
-Tất cả chữ trên giao diện bằng **tiếng Anh**. Chạy tốt trên laptop, dùng được trên điện thoại.
+Chữ trên giao diện mặc định bằng **tiếng Anh**; có bộ chọn 7 ngôn ngữ (i18n, chữ mới dùng `t()`, xem §9). Chạy tốt trên laptop, dùng được trên điện thoại.
 
 1. **Bản đồ 2D cực Nam** (W2): tô ô khả thi, ô không khả thi để xám. Bấm ô sẽ mở popup có ID, độ dốc, Mặt Trời/Trái Đất và nút "Use as current point".
 2. **Form kịch bản** (W3): có chế độ Simple và Expert.
@@ -167,6 +170,7 @@ Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi 
 - Mỗi khi thêm thư viện, nguồn dữ liệu, ảnh: thêm một dòng vào `REFERENCES.md` và `DATA_SOURCES.md`.
 - Ghi vào `AI_USAGE.md` một dòng cho mỗi phần việc lớn do Claude Code làm (luật cuộc thi yêu cầu khai báo AI).
 - Nhận module: ghi tên vào bảng module trong README. Chỉ sửa file của module mình.
+- Chữ mới trên giao diện dùng khoá `t()` và có cả khối `en` lẫn `vi` trong `web/src/i18n/translations.js`. Khoá thiếu thì rơi về tiếng Anh.
 
 ## 10. Deploy Vercel
 

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/core/*.test.js server/*.test.js",
+    "test": "node --test src/core/*.test.js src/i18n/*.test.js server/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,7 +20,8 @@
     "globe.gl": "^2.46.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "tailwindcss": "^4.3.5"
+    "tailwindcss": "^4.3.5",
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

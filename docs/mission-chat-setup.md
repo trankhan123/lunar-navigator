@@ -61,6 +61,7 @@ Changes require a new deployment.
 
 | Variable | Value |
 |---|---|
+| `VITE_CHAT_UI` | `true` to show the assistant and header shortcut; public build-time flag, requires rebuild |
 | `AI_CHAT_ENABLED` | `false` initially; `true` after configuration and preview checks |
 | `GEMINI_API_KEY` | Dedicated AI Studio API key |
 | `GEMINI_MODEL` | Exact available free-tier model ID, beginning `gemini-` |
@@ -130,7 +131,7 @@ assistant does not disable the mission form.
 
 ## Validation recorded during implementation
 
-137 Node tests pass, including actual Redis Lua with 20 concurrent requests
+197 Node tests pass on the branch integrated with current main, including actual Redis Lua with 20 concurrent requests
 against a cap of 3: 3 accepted, 17 denied, duplicate requests denied and TTLs
 present. Synthetic-response browser tests cover stale drafts and unavailable
 service. Live tests through the owner's Preview sharing link confirmed Gemini

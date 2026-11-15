@@ -1,6 +1,18 @@
 // Plain-English formatting shared by the UI (countdowns, popups).
 
 /** 0.5 → '30 min', 3.33 → '3 h 20 min', 76 → '3 d 4 h'. */
+/** Name shown for a point: a site's or custom point's label, a grid cell's id ('MAL-r5c4'; its label is the same text). */
+export const cellDisplayName = (cell) => (cell.id.startsWith('SITE-') || cell.id === 'CUSTOM' ? cell.label : cell.id)
+
+/** True when the point's terrain is the smooth sphere (no horizon data): sites outside the terrain model and custom points. */
+// Only the searched current point can be a pseudo-cell (famous site, typed coordinates); every other row is a grid cell.
+export const rowCellName = (row, currentCell) => (currentCell && row.cellId === currentCell.id ? cellDisplayName(currentCell) : row.cellId)
+
+export const hasNoTerrain = (cell) => !cell.horizon
+
+/** True when the point's terrain comes from the 2 km whole-cap grid (README D9): a CAP cell, or a point inside one. */
+export const usesCapGrid = (cell) => cell.id.startsWith('CAP-') || cell.horizonSource === 'cap'
+
 /** Why a cell is not feasible, in the UI's words (cell popup and map hover card). */
 export const INFEASIBLE_REASON_TEXT = { slope: 'slope above the limit', psr: 'mostly in permanent shadow' }
 
@@ -58,19 +70,19 @@ export function countdownText(body, event, isVisibleNow, hoursLeft) {
  *     ' Nearest passing landing time: <formatDuration(|offsetHours|)> later|earlier (<time>).' or ' No passing landing time in this date range.'
  *     ' Nearest passing cell: <cellId>, <distanceKm, 1 decimal> km away.' or ' No passing cell at this landing time.'
  */
-export function currentPointSentence(summary, scenario) {
+export function currentPointSentence(summary, scenario, pointName = summary.metrics.cellId) {
   const { metrics, nearestPassingLanding, nearestPassingCell } = summary
   const landing = `a landing at ${formatUtc(metrics.landingTime)}`
-  if (metrics.status === 'pass') return `${metrics.cellId} meets all limits for ${landing}.`
+  if (metrics.status === 'pass') return `${pointName} meets all limits for ${landing}.`
   if (metrics.status === 'marginal') {
-    return `${metrics.cellId} meets the limits for ${landing}, but the battery drops to ${Math.round(metrics.minBatteryFraction * 100)} %.`
+    return `${pointName} meets the limits for ${landing}, but the battery drops to ${Math.round(metrics.minBatteryFraction * 100)} %.`
   }
   const reasonWords = {
     dark: `longest dark period ${metrics.longestDarkHours} h (limit ${scenario.maxDarkHours} h)`,
     commLoss: `longest comm loss ${metrics.longestCommLossHours} h (limit ${scenario.maxCommLossHours} h)`,
     battery: `battery runs out after ${metrics.deadAtHour} h`,
   }
-  const verdict = `${metrics.cellId} fails for ${landing}: ${metrics.failReasons.map((reason) => reasonWords[reason]).join('; ')}.`
+  const verdict = `${pointName} fails for ${landing}: ${metrics.failReasons.map((reason) => reasonWords[reason]).join('; ')}.`
   const nextTime = nearestPassingLanding
     ? ` Nearest passing landing time: ${formatDuration(Math.abs(nearestPassingLanding.offsetHours))} ${nearestPassingLanding.offsetHours > 0 ? 'later' : 'earlier'} (${formatUtc(nearestPassingLanding.landingTime)}).`
     : ' No passing landing time in this date range.'

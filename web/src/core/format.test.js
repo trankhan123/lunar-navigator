@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { countdownText, currentPointSentence, formatDuration, formatUtc } from './format.js'
+import { cellDisplayName, countdownText, currentPointSentence, formatDuration, formatUtc, hasNoTerrain, rowCellName } from './format.js'
 import { DEFAULT_SCENARIO } from './scenario.js'
 
 test('formatDuration', () => {
@@ -118,4 +118,27 @@ test('currentPointSentence: fail with no passing landing time and no passing cel
     'MAL-r5c4 fails for a landing at 2028-01-02 06:00 UTC: longest dark period 30 h (limit 24 h); battery runs out after 34 h.' +
       ' No passing landing time in this date range. No passing cell at this landing time.',
   )
+})
+
+test('cellDisplayName: site and custom points show their label, grid cells their id', () => {
+  assert.equal(cellDisplayName({ id: 'SITE-apollo-11', label: 'Apollo 11' }), 'Apollo 11')
+  assert.equal(cellDisplayName({ id: 'CUSTOM', label: 'Custom point' }), 'Custom point')
+  assert.equal(cellDisplayName({ id: 'MAL-r5c4', label: 'r5c4' }), 'MAL-r5c4')
+})
+
+test('hasNoTerrain: true only without a horizon', () => {
+  assert.equal(hasNoTerrain({ horizon: null }), true)
+  assert.equal(hasNoTerrain({ horizon: [0, 1] }), false)
+})
+
+test('currentPointSentence: uses the given point name', () => {
+  const summary = { metrics: { status: 'pass', cellId: 'SITE-apollo-11', landingTime: '2028-01-02T06:00Z' } }
+  assert.equal(currentPointSentence(summary, DEFAULT_SCENARIO, 'Apollo 11'), 'Apollo 11 meets all limits for a landing at 2028-01-02 06:00 UTC.')
+})
+
+test('rowCellName: the searched famous site shows its name, grid cells keep their id', () => {
+  const site = { id: 'SITE-apollo-11', label: 'Apollo 11' }
+  assert.equal(rowCellName({ cellId: 'SITE-apollo-11' }, site), 'Apollo 11')
+  assert.equal(rowCellName({ cellId: 'MAL-r1c1' }, site), 'MAL-r1c1')
+  assert.equal(rowCellName({ cellId: 'CAP-x1y2' }, null), 'CAP-x1y2')
 })

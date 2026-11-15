@@ -18,7 +18,9 @@ from common import (EPHEMERIS_START, EPHEMERIS_STOP, MOON_LONLAT_CRS, PGDA_CRS, 
 
 MAX_FILE_BYTES = 2_000_000
 MAX_IMAGE_BYTES = 1_000_000
-MAP_KINDS = {"hillshade", "sun-visibility", "earth-visibility", "psr"}
+MAX_TERRAIN_BYTES = 300_000
+MAX_TILE_BYTES = 300_000
+MAP_KINDS = {"hillshade", "sun-visibility", "earth-visibility", "psr", "slope"}
 MAX_POSITION_ERROR_M = 100
 CELL_HALF_SIZE_M = 500  # boundsM must contain whole 1 km squares, not only their centres
 ISO_HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00Z$")
@@ -217,6 +219,14 @@ def check_sites(data, expect_mock):
 def check_validation(data, expect_mock):
     if not (isinstance(data.get("pgda69"), list) and isinstance(data.get("horizons"), dict) and isinstance(data.get("quickmap"), list)):
         problem("validation.json", "needs pgda69 (list), horizons (object) and quickmap (list)")
+    stats = data.get("pgda69Stats", [])
+    if data.get("pgda69") and not (stats and stats[-1].get("region") == "ALL"):
+        problem("validation.json", "pgda69 rows need pgda69Stats ending with region ALL")
+    for entry in stats:
+        for body in ("sun", "earth"):
+            for key in ("halfDisk", "anyPart", "meanDisk"):
+                if set(entry.get(body, {}).get(key, {})) != {"n", "meanOurs", "meanPgda", "meanDifference", "rmse", "pearsonR"}:
+                    problem("validation.json", f"pgda69Stats {entry.get('region')} {body} {key}: wrong fields")
 
 
 def check_maps(data, maps_folder):
@@ -240,6 +250,80 @@ def check_maps(data, maps_folder):
         if not (isinstance(bounds, list) and len(bounds) == 4 and all(is_number(v) for v in bounds)
                 and bounds[0] < bounds[2] and bounds[1] < bounds[3]):
             problem("maps.json", f"{map_id} {kind}: boundsM must be 4 numbers [xMin, yMin, xMax, yMax] with min < max")
+
+
+def check_terrain(data, terrain_folder, region_bounds):
+    """D10: every region has a .bin of width × height Int16 samples whose bounds contain the region."""
+    for entry in data["regions"]:
+        code, width, height, bounds = entry.get("code"), entry.get("width"), entry.get("height"), entry.get("boundsM")
+        path = terrain_folder / str(entry.get("file")).removeprefix("/terrain/")
+        if not path.is_file():
+            problem("terrain/index.json", f"{code}: {entry.get('file')} missing")
+        elif path.stat().st_size != width * height * 2:
+            problem("terrain/index.json", f"{code}: expected {width * height * 2} bytes, file has {path.stat().st_size}")
+        elif path.stat().st_size > MAX_TERRAIN_BYTES:
+            problem("terrain/index.json", f"{code}: over 300 KB")
+        region = region_bounds.get(code)
+        if region is None or not (bounds[0] <= region[0] and bounds[1] <= region[1] and bounds[2] >= region[2] and bounds[3] >= region[3]):
+            problem("terrain/index.json", f"{code}: bounds do not contain the region")
+    missing = set(region_bounds) - {entry.get("code") for entry in data["regions"]}
+    if missing:
+        problem("terrain/index.json", f"no terrain for {sorted(missing)}")
+
+
+def check_relief(data, relief_folder):
+    """relief/index.json: every listed tile exists and is at most 300 kB; levels double in tile count."""
+    if not (isinstance(data.get("tileSizePx"), int) and isinstance(data.get("elevationLegend"), list) and data["elevationLegend"]):
+        problem("relief/index.json", "needs tileSizePx (int) and elevationLegend (list of {elevationM, color})")
+    for level in data["levels"]:
+        z = level["z"]
+        if not (is_number(level.get("tileSizeM")) and is_number(level.get("metersPerPixel")) and is_number(level.get("contourIntervalM"))):
+            problem("relief/index.json", f"level {z}: needs tileSizeM, metersPerPixel and contourIntervalM")
+        for name in level["tiles"]:
+            path = relief_folder / str(z) / f"{name}.jpg"
+            if not path.is_file():
+                problem("relief/index.json", f"{z}/{name}.jpg: missing")
+            elif path.stat().st_size > MAX_TILE_BYTES:
+                problem("relief/index.json", f"{z}/{name}.jpg: {path.stat().st_size / 1e3:.0f} kB, limit is 300 kB")
+
+
+CAP_ID = re.compile(r"^CAP-r\d{3}c\d{3}$")
+
+
+def check_cap(folder):
+    """Whole-cap 2 km grid (README D9): <folder>/cap/index.json plus its tile files."""
+    cap_folder = Path(folder) / "cap"
+    index = load(cap_folder, "index.json", False)
+    if index is None:
+        return
+    regions = json.loads((Path(folder) / "regions.json").read_text(encoding="utf-8"))["regions"]
+    region_bounds = [region["boundsM"] for region in regions]
+    seen_ids, total, feasible_total = set(), 0, 0
+    for tile in index.get("tiles", []):
+        name = f"cap/{tile['id']}.json"
+        data = load(cap_folder, f"{tile['id']}.json", False)
+        if data is None:
+            continue
+        x_min, y_min, x_max, y_max = tile["boundsM"]
+        cells = data.get("cells", [])
+        feasible_count = sum(cell.get("feasible") is True for cell in cells)
+        if data.get("tileId") != tile["id"]:
+            problem(name, "tileId must equal the tile id in index.json")
+        if (len(cells), feasible_count) != (tile["cellCount"], tile["feasibleCount"]):
+            problem(name, "index cellCount/feasibleCount do not match the tile contents")
+        total, feasible_total = total + len(cells), feasible_total + feasible_count
+        for cell in cells:
+            if check_cell(name, "CAP", cell) is None:
+                continue
+            if not CAP_ID.match(cell["id"]) or cell["id"] in seen_ids:
+                problem(name, f"{cell['id']}: id must match CAP-r###c### and be unique")
+            seen_ids.add(cell["id"])
+            if not (x_min <= cell["xM"] < x_max and y_min <= cell["yM"] < y_max):
+                problem(name, f"{cell['id']}: centre outside its tile bounds")
+            if any(b[0] <= cell["xM"] <= b[2] and b[1] <= cell["yM"] <= b[3] for b in region_bounds):
+                problem(name, f"{cell['id']}: centre inside a region's boundsM")
+    if (total, feasible_total) != (index.get("cellCount"), index.get("feasibleCount")):
+        problem("cap/index.json", f"cellCount/feasibleCount {index.get('cellCount')}/{index.get('feasibleCount')} but tiles hold {total}/{feasible_total}")
 
 
 def run_check(file_name, check, *arguments):
@@ -269,9 +353,18 @@ def main():
         maps = load(folder.parent / "maps", "maps.json", False, required=False)
         if maps is not None:
             run_check("maps.json", check_maps, maps, folder.parent / "maps")
+        terrain = load(folder.parent / "terrain", "index.json", False, required=False)
+        if terrain is not None and regions is not None:
+            run_check("terrain/index.json", check_terrain, terrain, folder.parent / "terrain",
+                      {region["code"]: region["boundsM"] for region in regions["regions"]})
+        relief = load(folder.parent / "maps" / "relief", "index.json", False, required=False)
+        if relief is not None:
+            run_check("relief/index.json", check_relief, relief, folder.parent / "maps" / "relief")
     for path in sorted(folder.glob("*.json")):  # files nothing references still obey size and mock rules
         if path.name not in loaded_files:
             load(folder, path.name, expect_mock)
+    if not expect_mock and (folder / "cap" / "index.json").exists():  # mock data has no cap grid
+        run_check("cap", check_cap, folder)
     print(f"checked {folder}")
     for line in problems:
         print("  problem:", line)

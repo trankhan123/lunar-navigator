@@ -66,6 +66,8 @@ function validateRequest(body) {
       }
     } else if (Object.hasOwn(CHAT_FIELDS, field)) {
       if (value !== null && !Number.isFinite(value)) throw new Error('Invalid numeric field.')
+    } else if (field === 'requireDsn') {
+      if (typeof value !== 'boolean') throw new Error('Invalid scenario field.')
     } else if (typeof value !== 'string' || value.length > 32) throw new Error('Invalid scenario field.')
   }
   return body

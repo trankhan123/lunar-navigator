@@ -1,10 +1,10 @@
 """D7 — Validation against NASA PGDA 69 (and the Horizons vector check from D1).
 
 Contract: README "D7 Validation" and "validation.json". Run: python pipeline/validate.py
-Input:  web/public/data/cells_<CODE>.json, pipeline/raw/AVGVISIB_85S_060M_201608.TIF and ..._EARTH.TIF
+Input:  pipeline/raw/AVGVISIB_85S_060M_201608.TIF and ..._EARTH.TIF
         (pixel value × 4e-05 = fraction of time visible; 18.6-year average, covers 85–90°S only, so CAB, MMP, NR2 have no PGDA value)
-        pipeline/out/our_visibility.json = {"<cellId>": {"sunFraction", "earthFraction"}} from the browser core over the whole
-        ephemeris (D7 writes a small node script that imports web/src/core/sunlight.js and communication.js)
+        pipeline/out/our_visibility.json, written first by `node pipeline/compute_our_visibility.mjs`
+        (per sampled cell: region, xM, yM, sun/earth {halfDisk, anyPart, meanDisk} over the whole ephemeris)
 Output: web/public/data/validation.json
 """
 from __future__ import annotations
@@ -32,7 +32,6 @@ PGDA_EARTH_TIF = RAW_DIR / "AVGVISIB_85S_060M_201608_EARTH.TIF"
 HORIZONS_CHECK_JSON = FIXTURES_DIR / "horizons_check.json"
 OUR_VISIBILITY_JSON = OUT_DIR / "our_visibility.json"
 VALIDATION_JSON = WEB_DATA_DIR / "validation.json"
-VISIBILITY_STATS_MJS = PIPELINE_DIR / "visibility_stats.mjs"
 
 # PGDA 69 scale: raw integer × PGDA_SCALE = fraction (0–1) of time visible.
 # Stated in distribution.md: pixel × 4e-05 = fraction.
@@ -156,107 +155,102 @@ def read_pgda_fraction(raster_path: Path, lat: float, lon: float) -> Optional[fl
 
 
 # ---------------------------------------------------------------------------
-# B. PGDA 69 comparison — build pgda69 array
+# B. PGDA 69 comparison: mean of the 60 m pixels inside each 1 km cell square vs our model
 # ---------------------------------------------------------------------------
 
-def build_pgda69_comparison(cells_files: list) -> tuple:
-    """Compare our model's sun/earth fractions against PGDA 69 for all cells.
+CELL_HALF_SIDE_M = 500.0   # the LGRS ACC cell is 1 km
+MIN_VALID_PIXEL_SHARE = 0.5  # fewer valid pixels than this in the square: no PGDA value for the cell
+REGION_ORDER = ["MAL", "HAW", "MMO", "NR1", "DGR", "SLP", "NR2", "MMP"]
+# Three readings of "visible" in our model (keys of our_visibility.json): the app's rule, any part of the disk (NASA's Earth definition), mean disk fraction
+OUR_METRICS = [("halfDisk", "HalfDisk"), ("anyPart", "AnyPart"), ("meanDisk", "MeanDisk")]
 
-    Returns (pgda69_rows, blocked_reasons).
-    Never reports success when there are no valid paired PGDA/model results.
+
+def read_pgda_cell_mean(raster_path: Path, x_m: float, y_m: float, half_side_m: float = CELL_HALF_SIDE_M):
+    """(mean, centre) of the PGDA 69 fraction over pixels whose centre lies in the square around (x_m, y_m).
+
+    x_m, y_m are metres in the PGDA polar stereographic grid (cells_*.json xM, yM). centre is the pixel containing (x_m, y_m).
+    Returns (None, None) outside the raster or when under half the pixels are valid.
     """
+    import numpy as np
+    import rasterio
+
+    with rasterio.open(raster_path) as src:
+        pixel_m = src.transform.a
+        left, top = src.transform.c, src.transform.f
+        first_col = math.ceil((x_m - half_side_m - left) / pixel_m - 0.5)
+        last_col = math.ceil((x_m + half_side_m - left) / pixel_m - 0.5) - 1
+        first_row = math.ceil((top - (y_m + half_side_m)) / pixel_m - 0.5)
+        last_row = math.ceil((top - (y_m - half_side_m)) / pixel_m - 0.5) - 1
+        if first_col < 0 or first_row < 0 or last_col >= src.width or last_row >= src.height:
+            return None, None
+        window = rasterio.windows.Window(first_col, first_row, last_col - first_col + 1, last_row - first_row + 1)
+        raw = src.read(1, window=window).astype("float64")
+        valid = raw != src.nodata
+        if valid.mean() < MIN_VALID_PIXEL_SHARE:
+            return None, None
+        scale = src.scales[0] if src.scales and src.scales[0] != 1.0 else PGDA_SCALE
+        centre_raw = src.read(1, window=rasterio.windows.Window(int((x_m - left) // pixel_m), int((top - y_m) // pixel_m), 1, 1))[0, 0]
+        centre = None if centre_raw == src.nodata else round(float(centre_raw) * scale, 4)
+        return round(float(raw[valid].mean() * scale), 4), centre
+
+
+def compare_stats(ours: list, pgda: list) -> dict:
+    """n, mean ours, mean PGDA, mean difference (ours minus PGDA), RMSE, Pearson r (None if a series is constant)."""
+    n = len(ours)
+    if n == 0:
+        return {"n": 0, "meanOurs": None, "meanPgda": None, "meanDifference": None, "rmse": None, "pearsonR": None}
+    a, b = [float(v) for v in ours], [float(v) for v in pgda]
+    diff = [x - y for x, y in zip(a, b)]
+    mean_a, mean_b = sum(a) / n, sum(b) / n
+    spread_a, spread_b = math.sqrt(sum((x - mean_a) ** 2 for x in a)), math.sqrt(sum((y - mean_b) ** 2 for y in b))
+    r = None if spread_a == 0 or spread_b == 0 else sum((x - mean_a) * (y - mean_b) for x, y in zip(a, b)) / (spread_a * spread_b)
+    return {
+        "n": n,
+        "meanOurs": round(mean_a, 4),
+        "meanPgda": round(mean_b, 4),
+        "meanDifference": round(sum(diff) / n, 4),
+        "rmse": round(math.sqrt(sum(d * d for d in diff) / n), 4),
+        "pearsonR": None if r is None else round(r, 3),
+    }
+
+
+def build_pgda69_comparison() -> tuple:
+    """(rows, stats, blocked): one row per sampled cell with a PGDA value, and per-region + overall statistics."""
     blocked = []
-    rasters_available = PGDA_SUN_TIF.exists() and PGDA_EARTH_TIF.exists()
-    if not rasters_available:
-        blocked.append(
-            f"PGDA 69 TIF files not downloaded to {RAW_DIR}. "
-            "Run: python pipeline/download_data.py"
-        )
-
-    our_vis = {}
+    if not (PGDA_SUN_TIF.exists() and PGDA_EARTH_TIF.exists()):
+        blocked.append(f"PGDA 69 TIF files not downloaded to {RAW_DIR}. Run: python pipeline/download_data.py")
     if not OUR_VISIBILITY_JSON.exists():
-        blocked.append(
-            f"{_rel_path(OUR_VISIBILITY_JSON)} not found. "
-            "Run: node pipeline/visibility_stats.mjs (requires C1+C2+D5)."
-        )
-    else:
-        try:
-            our_vis = json.loads(OUR_VISIBILITY_JSON.read_text(encoding="utf-8"))
-            if not our_vis:
-                blocked.append(
-                    f"{_rel_path(OUR_VISIBILITY_JSON)} is empty. "
-                    "Run: node pipeline/visibility_stats.mjs (requires C1+C2+D5)."
-                )
-        except Exception as e:
-            blocked.append(f"Failed to read {_rel_path(OUR_VISIBILITY_JSON)}: {e}")
-
-    if not cells_files:
-        blocked.append("No real cells_*.json files found in web/public/data/ (requires D5).")
-        return [], blocked
+        blocked.append(f"{_rel_path(OUR_VISIBILITY_JSON)} not found. Run: node pipeline/compute_our_visibility.mjs")
+    if blocked:
+        return [], [], blocked
+    our_visibility = json.loads(OUR_VISIBILITY_JSON.read_text(encoding="utf-8"))
 
     rows = []
-    paired_valid_count = 0
-
-    for cells_file in cells_files:
-        cells_file = Path(cells_file)
-        if not cells_file.exists():
+    for cell_id, ours in our_visibility.items():
+        sun_mean, sun_centre = read_pgda_cell_mean(PGDA_SUN_TIF, ours["xM"], ours["yM"])
+        earth_mean, earth_centre = read_pgda_cell_mean(PGDA_EARTH_TIF, ours["xM"], ours["yM"])
+        if sun_mean is None or earth_mean is None:
             continue
-        try:
-            cells_data = json.loads(cells_file.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        cells = cells_data.get("cells", [])
+        row = {"cellId": cell_id, "region": ours["region"], "pgdaSunFraction": sun_mean, "pgdaEarthFraction": earth_mean,
+               "pgdaSunCentreFraction": sun_centre, "pgdaEarthCentreFraction": earth_centre}
+        for key, suffix in OUR_METRICS:
+            row[f"ourSun{suffix}Fraction"] = ours["sun"][key]
+            row[f"ourEarth{suffix}Fraction"] = ours["earth"][key]
+        rows.append(row)
+    if not rows:
+        return [], [], ["No valid paired PGDA/model results (all sampled cells lack PGDA 69 pixels)."]
 
-        for cell in cells:
-            cell_id = cell.get("id")
-            lat = cell.get("lat")
-            lon = cell.get("lon")
-            if not cell_id or lat is None or lon is None:
-                continue
-
-            # Only compare cells within 85–90°S PGDA coverage
-            if lat > PGDA_COVERAGE_LAT_LIMIT:
-                continue
-
-            pgda_sun = read_pgda_fraction(PGDA_SUN_TIF, lat, lon) if rasters_available else None
-            pgda_earth = read_pgda_fraction(PGDA_EARTH_TIF, lat, lon) if rasters_available else None
-
-            our_sun = None
-            our_earth = None
-            if cell_id in our_vis:
-                v = our_vis[cell_id]
-                if isinstance(v, dict):
-                    our_sun = v.get("sunFraction")
-                    our_earth = v.get("earthFraction")
-
-            def _r(val):
-                return round(float(val), 4) if val is not None and math.isfinite(val) else None
-
-            r_pgda_sun = _r(pgda_sun)
-            r_pgda_earth = _r(pgda_earth)
-            r_our_sun = _r(our_sun)
-            r_our_earth = _r(our_earth)
-
-            # Check for a valid paired comparison
-            if r_pgda_sun is not None and r_our_sun is not None:
-                paired_valid_count += 1
-
-            rows.append({
-                "cellId": cell_id,
-                "pgdaSunFraction": r_pgda_sun,
-                "pgdaEarthFraction": r_pgda_earth,
-                "ourSunFraction": r_our_sun,
-                "ourEarthFraction": r_our_earth,
-            })
-
-    # If there are no valid paired comparisons at all, the comparison is BLOCKED!
-    if paired_valid_count == 0:
-        blocked.append(
-            "No valid paired PGDA/model results (missing rasters, missing model outputs, or all-null comparisons)."
-        )
-        return [], blocked
-
-    return rows, blocked
+    stats = []
+    for region in REGION_ORDER + ["ALL"]:
+        chosen = [r for r in rows if region == "ALL" or r["region"] == region]
+        entry = {"region": region}
+        for body in ("Sun", "Earth"):
+            entry[body.lower()] = {
+                key: compare_stats([r[f"our{body}{suffix}Fraction"] for r in chosen], [r[f"pgda{body}Fraction"] for r in chosen])
+                for key, suffix in OUR_METRICS
+            }
+        stats.append(entry)
+    return rows, stats, []
 
 
 # ---------------------------------------------------------------------------
@@ -421,46 +415,32 @@ console.log(JSON.stringify(results));
 
 
 # ---------------------------------------------------------------------------
-# D. Maintained helper check
-# ---------------------------------------------------------------------------
-
-def check_visibility_stats_script() -> bool:
-    """Verify that pipeline/visibility_stats.mjs exists as a maintained source file."""
-    if not VISIBILITY_STATS_MJS.exists():
-        print(f"  WARNING: {_rel_path(VISIBILITY_STATS_MJS)} not found.")
-        return False
-    return True
-
-
-# ---------------------------------------------------------------------------
 # E. Main
 # ---------------------------------------------------------------------------
 
+def print_stats(stats):
+    print("  region  body   metric      n  ours  NASA   diff   rmse      r")
+    for entry in stats:
+        for body in ("sun", "earth"):
+            for key, _ in OUR_METRICS:
+                v = entry[body][key]
+                print(f"  {entry['region']:<6}  {body:<5}  {key:<9} {v['n']:>3}  {v['meanOurs']}  {v['meanPgda']}  {v['meanDifference']}  {v['rmse']}  {v['pearsonR']}")
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Check that visibility_stats.mjs is present as the maintained source file
-    check_visibility_stats_script()
-
-    # Collect real cells files (not in mock subdirectory)
-    cells_files = sorted(WEB_DATA_DIR.glob("cells_*.json"))
-    cells_files = [f for f in cells_files if "mock" not in str(f)]
 
     print("\n=== D7 Validation ===")
 
     # --- PGDA 69 comparison ---
     print("\n[A] PGDA 69 comparison")
-    if not cells_files:
-        print("  BLOCKED: No real cells_*.json in web/public/data/ — run D5 first.")
-        pgda69_rows = []
-        pgda69_blocked = ["D5 (cells data) not available - run pipeline/build_site_data.py first"]
+    pgda69_rows, pgda69_stats, pgda69_blocked = build_pgda69_comparison()
+    if pgda69_blocked:
+        for b in pgda69_blocked:
+            print(f"  BLOCKED: {b}")
     else:
-        pgda69_rows, pgda69_blocked = build_pgda69_comparison(cells_files)
-        if pgda69_blocked:
-            for b in pgda69_blocked:
-                print(f"  BLOCKED: {b}")
-        else:
-            print(f"  PASSED: {len(pgda69_rows)} valid paired cells compared")
+        print(f"  PASSED: {len(pgda69_rows)} valid paired cells compared")
+        print_stats(pgda69_stats)
 
     # --- Horizons check ---
     print("\n[C] Horizons geometry check (C0 / geometry.js vs JPL fixture)")
@@ -489,6 +469,7 @@ def main():
     # Preserve the exact README schema: pgda69, horizons, quickmap
     out = {
         "pgda69": pgda69_rows,
+        "pgda69Stats": pgda69_stats,
         "horizons": {
             "pointCount": horizons["pointCount"],
             "maxAzimuthErrorDeg": horizons["maxAzimuthErrorDeg"],
@@ -529,8 +510,8 @@ def main():
 
     print()
     print("To reproduce:")
+    print("  node pipeline/compute_our_visibility.mjs   # first: writes pipeline/out/our_visibility.json")
     print("  python pipeline/validate.py")
-    print("  node pipeline/visibility_stats.mjs   # (after C1+C2+D5 are done)")
 
 
 if __name__ == "__main__":

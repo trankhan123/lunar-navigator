@@ -47,7 +47,7 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
 - **Ý tưởng cuối:** `docs/window-finder.md`. **Hợp đồng chính thức:** `README.md`, gồm bảng module, quy ước, định dạng file và chữ ký hàm.
   - Đổi hợp đồng thì đổi cùng lúc README, `web/src/core/*.test.js` và `pipeline/check_web_data.py`.
 - **Module:**
-  - D1 ephemeris, D2 lưới LGRS, D3 ô khả thi, D4 chân trời, D5 build web data, D6 site nổi tiếng, D7 kiểm chứng, D8 ảnh nền bản đồ;
+  - D1 ephemeris, D2 lưới LGRS, D3 ô khả thi, D4 chân trời, D5 build web data, D6 site nổi tiếng, D7 kiểm chứng, D8 ảnh nền bản đồ, D8b địa hình nhiều mức, D9 lưới 2 km toàn cực, D10 khối địa hình 3D;
   - C0 hình học + chuỗi giờ, C1 nắng, C2 liên lạc, C3 năng lượng cần, C4 sạc pin, C5 tối ưu ("quãng đường tối ưu" = xếp hạng ô/thời điểm và ô đạt gần nhất; tìm đường rover đã bỏ);
   - W1 app shell, W2 bản đồ, W3 form, W4 kết quả, W5 chi tiết, W6 globe, W7 chế độ học, S1 bài nộp.
 - **Đã làm sẵn:** `core/data.js` (loader, `hourIndexOf`, `timeAtHour`), hằng số và `countDays` trong `scenario.js`, Worker (`windowSearchWorker.js`, `startWindowSearch.js`), `pipeline/common.py`, `check_web_data.py`, `make_mock_data.py`, mock trong `web/public/data/mock/` (vùng MAL 7×7, ephemeris giả 2028-01 → 2028-07).
@@ -69,9 +69,9 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - D4 `compute_horizon.py` (Quoc_Bao) đã review: ship được.
   - Luồng web chạy trọn: W4 có thanh trượt, bảng xếp hạng, thẻ điểm hiện tại, dải trạng thái, top cặp; W5 có màn hình chi tiết với `core/detail.js`, `countdownText`, `currentPointSentence`.
   - `DetailView` và globe tải lười.
-  - WF3 (PR #5, #6) đã sửa `rankBestPairs` (quét một lượt giữ top 10: 138 ms ở 225 ô × 728 lần hạ cánh) và chiều câu `explainDifference`.
+  - WF3 (PR #5, #6) đã sửa `rankBestWindows` (quét một lượt giữ top 10: 138 ms ở 225 ô × 728 lần hạ cánh) và chiều câu `explainDifference`.
   - Lỗi trắng trang Apollo (`selectSearchCells` trả `[]` khi không có ô nào trong 1 km) đã được Quoc_Bao sửa trên nhánh `PathAndFuel` (f939da2), merge vào `main` ở 66fdf5d ngày 15/11.
-  - Vercel production deploy lại lúc 04:01 ngày 15/11 từ efc1beb (`main` = `web`, có bản đồ v2), thay cho bản 02:25 từ 66fdf5d. Đã kiểm tra link công khai không đăng nhập: dữ liệu thật, đủ 35 ảnh lớp phủ, lớp "% sunlight" ở MAL tính trong 2 s, giao diện 1280 px và 390 px, console 0 lỗi.
+  - Vercel production: từ 15/11 project đã nối GitHub, **push `main` là tự deploy production** (Root Directory = `web`). Bản 09:40 ngày 15/11 từ f8279b4 (gồm bản đồ v3, lưới CAP, 3D, globe, PR #12, WF2 với DSN tuỳ chọn và chat ẩn) đã kiểm tra trên link công khai: 0 lỗi console. Chạy `vercel deploy` từ `web/` giờ lỗi "Root Directory web does not exist"; không cần chạy tay nữa.
 - **WF5 (14/11 tối, Claude Code làm theo yêu cầu của trankhan123):** dữ liệu thật đã có cho 8 vùng.
   - Chạy lại toàn bộ theo thứ tự: `build_grid.py` → `compute_feasibility.py` (12 s) → `compute_horizon.py --region ALL --sites` (của WF1, ~10 phút) → `build_site_data.py` → `export_map_background.py` → `check_web_data.py`.
   - Shapefile đọc thẳng từ zip trong `pipeline/raw/lgrs/`, không cần giải nén. Nhãn là thuộc tính `LGRS_ACC`, luôn 5 ký tự; khoảng 10 % nhãn có `-` (ví dụ `AYR--`), nên chỉ lấy phần trước dấu `-` đầu tiên làm mã vùng.
@@ -93,8 +93,30 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - App tự dùng dữ liệu thật khi có `web/public/data/regions.json`; thêm `?mock=1` để quay về mock. Bản đồ W2 vẽ `web/public/maps/<CODE>.png` theo `maps.json`.
 - **Quy trình nhánh:** thành viên hay push thẳng vào `main` hoặc vào nhánh riêng, đôi khi rebase nên trùng nội dung khác SHA. Trước khi làm, luôn `git fetch`, merge `origin/main` và các nhánh mới vào `web`, chạy `npm test`. README/AI_USAGE/distribution hay conflict: giữ tên người thật và gộp cả hai dòng AI_USAGE.
 - **Vite dev trong VM:** lần đầu import động `echarts-for-react`, Vite tối ưu lại dependency rồi tải gói ~75 s. Màn hình đứng ở "Loading…" là bình thường, bản build không bị.
-- **Còn là khung:** mọi hàm khác `throw notImplemented(...)` hoặc `raise NotImplementedError`. Dòng `eslint-disable no-unused-vars` ở đầu file khung phải xoá khi implement.
+- **Không còn hàm khung:** `web/src/core/notImplemented.js` đã xoá ngày 15/11, mọi hàm core đã có code thật. Không còn `throw notImplemented(...)` hay `raise NotImplementedError` trong `web/src` và `pipeline`.
 - **Bản nháp cũ:** `App.jsx` đọc `/data/mock/legacy/`. W1 thay nó bằng luồng Window Finder rồi xoá `legacy/`.
+
+### Trạng thái 15/11 sáng (sau merge `e3d0acd`, nhánh `web`)
+
+- **i18n 7 ngôn ngữ:** `web/src/i18n/` (`useI18n()`, `t()`). Khoá thiếu thì rơi về tiếng Anh. Khoá mới thêm vào khối `en` và `vi` trong `translations.js`. Nhánh Translation đã merge.
+- **Sửa audit:**
+  - C5 `optimizer.js` không còn bản sao toán C1/C2/C4;
+  - `rankBestPairs` đổi thành `rankBestWindows` (một dòng mỗi ô: thời điểm hạ cánh tốt nhất và số giờ "có thể trượt"); component `BestWindowsTable.jsx` (trước là `BestPairsTable.jsx`);
+  - gợi ý phạm vi tìm hiện số giờ chờ;
+  - `explainDifference` so chân trời tại góc phương vị Mặt Trời, trong các giờ chỉ một ô được chiếu sáng;
+  - thẻ "1 km" trong Learn nêu cả hai ô, ưu tiên ô lân cận cải thiện tối dài ít nhất 12 giờ, và ghi "Elsewhere in this region" khi cặp không chứa điểm hiện tại;
+  - Results ẩn bản đồ cực với điểm nằm ngoài bản đồ, hiện tên site, và có dòng "Smooth-sphere horizon: terrain not included";
+  - thêm meta và Open Graph; xoá `notImplemented.js`.
+- **D7 xong với PGDA 69:** 240 ô, 8 vùng. Mặt Trời r 0,983, Trái Đất r 0,986, lệch trung bình −0,1 và −2,1 điểm %. Kết quả trong `validation.json` và trang About. QuickMap chưa làm.
+- **D9 lưới 2 km toàn chỏm cực:** `pipeline/build_cap_grid.py`, `web/public/data/cap/` (60 tile, 17.336 ô, 14.996 khả thi, 23 MB, 4,1 MB gzip). Nối vào bản đồ (lớp raster ở mức tổng quan), điểm hiện tại và tìm kiếm ("Within a radius" trên toàn chỏm; "Same region" với điểm ngoài 9 vùng = ô CAP trong 15 km).
+- **D8b relief tiles:** `pipeline/export_relief_tiles.py`, `web/public/maps/relief/` (152 JPEG, khoảng 7,5 MB, 5 mức, mức mịn nhất 74 m/px), tô màu cividis trung tính kèm đường đồng mức. Lớp phủ toàn cực: % nắng, % Trái Đất, PSR và loại `slope` mới. `maps.json` có 39 mục.
+- **D10 địa hình 3D:** `pipeline/export_terrain_mesh.py`, `web/public/terrain/*.bin` (9 vùng, mỗi file ≤ 205 kB), `TerrainView3D.jsx`. Chiếu sáng bằng Mặt Trời thật theo giờ của bản đồ. Dùng `three` 0.187.0 ghim chính xác (đã có sẵn qua globe.gl).
+- **W6 quả cầu:** ánh sáng thật từ điểm dưới Mặt Trời; tia Mặt Trời và Trái Đất từ site đã chọn; pin có nhãn, chú giải, vòng vùng, nút camera; bấm vùng thì mở bản đồ 2D. Texture SVS 4720: `lroc_color_4k.jpg`, `ldem_bump_1440.png`, ghi credit "NASA's Scientific Visualization Studio".
+- **Sự cố và bài học:** một agent commit symlink `pipeline/raw`, vì quy tắc ignore `pipeline/raw/` chỉ khớp thư mục. Khi merge commit đó, git xoá thư mục dữ liệu thô đã bị ignore. Đã sửa: quy tắc ignore là `pipeline/raw`, dữ liệu tải lại bằng `pipeline/download_data.py`.
+  - Không bao giờ symlink `pipeline/raw`; đọc file thô bằng đường dẫn tuyệt đối;
+  - trước khi merge, chạy `git ls-tree -r <branch> --name-only | grep pipeline/raw`;
+  - worktree của agent bắt đầu từ `main`, không phải nhánh hiện tại, nên merge nhánh hiện tại trước.
+- **Chưa làm:** preset lander VIPER, Nova-C, Blue Ghost, Vikram. Repo chưa có số liệu có nguồn nên không bịa.
 
 ### Lệnh hay dùng
 
@@ -106,7 +128,7 @@ python pipeline/make_mock_data.py
 cd web && npm run dev          # dev server
 cd web && npm run lint && npm run build
 source ~/python/math_env/bin/activate && python pipeline/<script>.py
-cd web && vercel deploy --prod # deploy (Root Directory = web)
+git push origin web:main      # deploy: Vercel builds production from main itself (Root Directory = web); do not run vercel deploy from web/
 ```
 
 ### Bài học đã rút ra
@@ -140,9 +162,9 @@ cd web && vercel deploy --prod # deploy (Root Directory = web)
   - bộ toàn cầu trên Astropedia nặng 12,5 GB, không dùng;
   - phương án dự phòng là package Python `lgrs` (SETI/USGS, Apache-2.0); đây là thư viện mới nên phải hỏi nhóm.
 - **Vùng lớn:** Mons Mouton Plateau rộng khoảng ±58 km, có thể ra hơn 2.000 ô. Nếu file cells vượt 2 MB, báo nhóm trước khi đổi định dạng.
-- **Lint file khung:** oxlint báo `no-unused-vars` cho tham số của hàm khung, nên mỗi file khung có dòng `eslint-disable` ở đầu.
+- **Lint:** không còn file khung nào có dòng `eslint-disable no-unused-vars`. Nếu cần bỏ qua một cảnh báo, đặt tại đúng dòng và ghi lý do.
 - **Vite dev:** file JSON không tồn tại vẫn trả `index.html` với mã 200, nên phát hiện thiếu `regions.json` bằng cách bắt lỗi parse JSON (`loadRegions(false).catch(...)`), không dựa vào `response.ok`. Vercel thì trả 404.
-- **Hàm khung trong UI:** component gọi hàm của workflow khác (C1, C2, C5, `validateScenario`) qua `try/catch` có comment `shortcut:`. Khi workflow đó xong, xoá `try`.
+- **Try/catch dự phòng:** đã xoá hết (audit 15/11). Không còn comment `shortcut:` trong `web/src` và `pipeline`; C5 gọi C1, C2, C4 thật.
 - **Playwright MCP:** ảnh chụp chỉ lưu được trong thư mục dự án (`.playwright-mcp/`, đã gitignore), không lưu vào scratchpad.
 - **Review bằng 4 subagent ECC (14/11)** (react-patterns, accessibility, tdd-workflow, python-patterns) đã sửa:
   - `nextCrossing` trả `Infinity` khi giá trị nằm đúng ngưỡng (hỏng đồng hồ đếm ngược);
@@ -200,7 +222,8 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 | Tính toán trong trình duyệt | JS thuần trong `web/src/core/`, chạy tìm kiếm trong **Web Worker** |
 | Test | `node --test` có sẵn trong Node (không thêm thư viện test) và `pipeline/check_web_data.py` |
 | Bản đồ 2D cực Nam | SVG + d3-zoom 3.0.0 (kéo/phóng; cả chuỗi d3 ghim bằng overrides trong web/package.json), ảnh nền hillshade PNG |
-| Quả cầu 3D | `globe.gl` (không dùng three.js thuần) |
+| Quả cầu 3D | `globe.gl` (quả cầu W6 dùng globe.gl) |
+| Địa hình 3D | `three` 0.187.0, ghim chính xác, tải lười (globe.gl dùng cùng bản) |
 | Biểu đồ | ECharts (`echarts` + `echarts-for-react`) |
 | CSS | Tailwind |
 | Deploy | Vercel, web tĩnh, không backend |
@@ -211,6 +234,10 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 
 ## 3. Kiến trúc: tính trước, phục vụ tĩnh
 
+Ngoại lệ được yêu cầu cho chat UX: `web/api/mission-chat.js` là Node Vercel Function
+gọi Gemini để chuẩn bị form, có Redis hạn mức; mọi tính toán khoa học vẫn ở browser.
+Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay training.
+
 ```
 [Python, chạy trên máy, một lần]
   JPL Horizons ── D1 ─> ephemeris.json (điểm dưới Mặt Trời / Trái Đất theo giờ, 2027-01 → 2029-01)
@@ -218,6 +245,8 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
   PGDA 90 slope, PSR ─ D3 ─> feasibility_<CODE>.json ────┼─ D5 ─> cells_<CODE>.json, regions.json, sites.json
   PGDA 90 DEM ─── D4 ─> horizon_<CODE>.json ─────────────┘
   PGDA 69 ─────── D7 ─> validation.json        hillshade ─ D8 ─> maps/*.png
+  PGDA 90 DEM ─── D8b ─> maps/relief/*.jpg     PGDA 90 DEM ─ D10 ─> terrain/*.bin
+  D2–D4 + PGDA 90 ─ D9 ─> data/cap/*.json (lưới 2 km ngoài 9 vùng)
 [Trình duyệt, Vercel]
   core/ C0 hình học · C1 nắng · C2 liên lạc · C3 năng lượng cần · C4 sạc pin · C5 tối ưu (Worker)
   UI W1–W7: bản đồ, form, kết quả, chi tiết, globe, chế độ học
@@ -226,10 +255,10 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 - **Vị trí Mặt Trời/Trái Đất** tại bất kỳ ô hay toạ độ nào đều tính từ điểm dưới thiên thể bằng một công thức vector (README mục C0). Nhờ vậy toạ độ tuỳ ý cũng chạy được, không cần gọi Horizons cho từng ô.
 - **Chân trời địa hình** chỉ có cho ô lưới và cho site có lat ≤ −60°. Điểm khác dùng chân trời mặt cầu (0°), và giao diện ghi "terrain not included".
 - **Thư mục:**
-  - `pipeline/`: D1–D8, `common.py`, `check_web_data.py`, `make_mock_data.py`, `out/` (file trung gian, có commit), `raw/` (gitignore);
+  - `pipeline/`: D1–D10 (kể cả D8b), `common.py`, `check_web_data.py`, `make_mock_data.py`, `out/` (file trung gian, có commit), `raw/` (gitignore);
   - `web/src/core/`: module JS thuần kèm `*.test.js`;
   - `web/src/components/`: mỗi component một file;
-  - `web/public/data/` (`mock/` là dữ liệu giả).
+  - `web/public/data/` (`mock/` là dữ liệu giả, `cap/` là lưới 2 km toàn cực), `web/public/terrain/` (khối địa hình 3D), `web/public/maps/relief/` (ảnh địa hình nhiều mức).
 
 ## 4. Data contract và hợp đồng module
 
@@ -298,7 +327,7 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 
 ## 8. Giao diện (chi tiết: `docs/window-finder.md` §3)
 
-Tất cả chữ trên giao diện bằng **tiếng Anh**. Chạy tốt trên laptop, dùng được trên điện thoại.
+Chữ trên giao diện mặc định bằng **tiếng Anh**; có bộ chọn 7 ngôn ngữ (i18n, chữ mới dùng `t()`, xem §9). Chạy tốt trên laptop, dùng được trên điện thoại.
 
 1. **Bản đồ 2D cực Nam** (W2): tô ô khả thi, ô không khả thi để xám. Bấm ô sẽ mở popup có ID, độ dốc, Mặt Trời/Trái Đất và nút "Use as current point".
 2. **Form kịch bản** (W3): có chế độ Simple và Expert.
@@ -329,6 +358,7 @@ Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi 
 - Mỗi khi thêm thư viện, nguồn dữ liệu, ảnh: thêm một dòng vào `REFERENCES.md` và `DATA_SOURCES.md`.
 - Ghi vào `AI_USAGE.md` một dòng cho mỗi phần việc lớn do Claude Code làm (luật cuộc thi yêu cầu khai báo AI).
 - Nhận module: ghi tên vào bảng module trong README. Chỉ sửa file của module mình.
+- Chữ mới trên giao diện dùng khoá `t()` và có cả khối `en` lẫn `vi` trong `web/src/i18n/translations.js`. Khoá thiếu thì rơi về tiếng Anh.
 
 ## 10. Deploy Vercel
 
