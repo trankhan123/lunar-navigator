@@ -71,6 +71,7 @@ export default function App() {
   const [screen, setScreen] = useState(SCREENS.some(([id]) => id === initialState.screen) ? initialState.screen : 'map')
   const [mode, setMode] = useState(initialState.mode)
   const [scenario, setScenario] = useState(initialState.scenario)
+  const [chatEnteredFields, setChatEnteredFields] = useState({})
   const [selectedCellId, setSelectedCellId] = useState(initialState.selectedCellId)
   const [landingTime, setLandingTime] = useState(initialState.landingTime)
   const [mapHour, setMapHour] = useState(null) // the Map screen's own hour (time bar); null = follow the landing time
@@ -371,6 +372,10 @@ export default function App() {
             <p className="text-xs text-slate-400">{t('header.subtitle')}</p>
           </div>
           {data?.useMock && <span className="rounded bg-amber-500 px-2 py-0.5 text-xs font-bold text-slate-950">{t('header.mockBadge')}</span>}
+          {import.meta.env.VITE_CHAT_UI === 'true' && data && !data.useMock && screen === 'map' && <button type="button" className="rounded-lg border border-sky-400 bg-sky-900 px-3 py-2 text-sm font-semibold text-sky-100 hover:bg-sky-800" onClick={() => {
+            document.getElementById('mission-assistant')?.scrollIntoView({ block: 'start' })
+            document.getElementById('mission-message')?.focus({ preventScroll: true })
+          }}>{t('chat.plan')}</button>}
           <div className="flex flex-wrap items-center gap-2">
             <LanguageSwitcher />
             <div className="flex rounded-md border border-slate-500 p-0.5 text-sm" role="group" aria-label={t('header.detailLevel')}>
@@ -453,7 +458,8 @@ export default function App() {
                   ephemeris={data.ephemeris}
                   busy={search.status === 'running'}
                   useMock={data.useMock}
-                  onApply={(next) => { setScenario(next); setMode('expert') }}
+                  enteredFields={chatEnteredFields}
+                  onApply={(next, enteredFields) => { setScenario(next); setMode('expert'); setChatEnteredFields(enteredFields) }}
                 />}
                 <ScenarioForm
                   mode={mode}

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/core/ src/i18n/ server/",
+    "test": "node --test src/core/*.test.js src/i18n/*.test.js server/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
