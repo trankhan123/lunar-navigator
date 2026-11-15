@@ -71,6 +71,7 @@ export default function App() {
   const [screen, setScreen] = useState(SCREENS.some(([id]) => id === initialState.screen) ? initialState.screen : 'map')
   const [mode, setMode] = useState(initialState.mode)
   const [scenario, setScenario] = useState(initialState.scenario)
+  const [chatOpen, setChatOpen] = useState(false)
   const [chatEnteredFields, setChatEnteredFields] = useState({})
   const [selectedCellId, setSelectedCellId] = useState(initialState.selectedCellId)
   const [landingTime, setLandingTime] = useState(initialState.landingTime)
@@ -373,8 +374,12 @@ export default function App() {
           </div>
           {data?.useMock && <span className="rounded bg-amber-500 px-2 py-0.5 text-xs font-bold text-slate-950">{t('header.mockBadge')}</span>}
           {import.meta.env.VITE_CHAT_UI === 'true' && data && !data.useMock && screen === 'map' && <button type="button" className="rounded-lg border border-sky-400 bg-sky-900 px-3 py-2 text-sm font-semibold text-sky-100 hover:bg-sky-800" onClick={() => {
-            document.getElementById('mission-assistant')?.scrollIntoView({ block: 'start' })
-            document.getElementById('mission-message')?.focus({ preventScroll: true })
+            setChatOpen(true)
+            // The section is rendered by the time the timeout fires.
+            setTimeout(() => {
+              document.getElementById('mission-assistant')?.scrollIntoView({ block: 'start' })
+              document.getElementById('mission-message')?.focus({ preventScroll: true })
+            }, 0)
           }}>{t('chat.plan')}</button>}
           <div className="flex flex-wrap items-center gap-2">
             <LanguageSwitcher />
@@ -419,9 +424,8 @@ export default function App() {
           {data && screen === 'map' && (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
               <section aria-labelledby="map-title">
-                <div className="mb-2 flex flex-wrap items-center gap-3">
-                  <h2 id="map-title" className="font-medium">South pole landing cells</h2>
-                  {regionPicker}
+                <h2 id="map-title" className="sr-only">South pole landing cells</h2>
+                <SouthPoleMap {...mapProps} hour={shownMapHour} hourRange={mapRange} stayDays={scenario.stayDays} defaultLayerId="sunNow" timeBar={mapTimeBar} toolbarSlot={<>{regionPicker}
                   {activeRegion && (
                     <label className="text-sm text-slate-300">
                       {t('picker.cell')}{' '}
@@ -436,10 +440,9 @@ export default function App() {
                       </select>
                     </label>
                   )}
-                </div>
-                <SouthPoleMap {...mapProps} hour={shownMapHour} hourRange={mapRange} stayDays={scenario.stayDays} defaultLayerId="sunNow" timeBar={mapTimeBar} />
+</>} />
               </section>
-              <aside className="space-y-4">
+              <aside className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto">
                 {selectedCell && (
                   <CellPopup
                     key={selectedCell.id}
@@ -452,15 +455,6 @@ export default function App() {
                     onClose={() => setSelectedCellId(null)}
                   />
                 )}
-                {import.meta.env.VITE_CHAT_UI === 'true' && <MissionChat
-                  value={scenario}
-                  sites={data.sites}
-                  ephemeris={data.ephemeris}
-                  busy={search.status === 'running'}
-                  useMock={data.useMock}
-                  enteredFields={chatEnteredFields}
-                  onApply={(next, enteredFields) => { setScenario(next); setMode('expert'); setChatEnteredFields(enteredFields) }}
-                />}
                 <ScenarioForm
                   mode={mode}
                   value={scenario}
@@ -470,6 +464,20 @@ export default function App() {
                   onChange={setScenario}
                   onSubmit={runSearch}
                 />
+                {import.meta.env.VITE_CHAT_UI === 'true' && (
+                  <details open={chatOpen} onToggle={(event) => setChatOpen(event.currentTarget.open)} className="rounded-xl border border-sky-500 bg-sky-950">
+                    <summary className="cursor-pointer px-4 py-3 font-semibold text-sky-100">{t('chat.sectionTitle')}</summary>
+                    <MissionChat
+                  value={scenario}
+                  sites={data.sites}
+                  ephemeris={data.ephemeris}
+                  busy={search.status === 'running'}
+                  useMock={data.useMock}
+                  enteredFields={chatEnteredFields}
+                  onApply={(next, enteredFields) => { setScenario(next); setMode('expert'); setChatEnteredFields(enteredFields) }}
+                />
+                  </details>
+                )}
               </aside>
             </div>
           )}

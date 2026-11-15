@@ -57,7 +57,7 @@ function MapImage({ entry, opacity = 1 }) {
  */
 function SouthPoleMap({
   regions, activeRegion, maps, cells, sites, ephemeris, hour, hourRange = null, stayDays = null, defaultLayerId, timeBar = null, statusByCellId, currentCellId,
-  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells, capIndex = null, capCells = [], onNeedCapTiles,
+  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells, capIndex = null, capCells = [], onNeedCapTiles, toolbarSlot = null,
 }) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
@@ -267,6 +267,7 @@ function SouthPoleMap({
             </>
           )}
         </nav>
+        {toolbarSlot}
         <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} capCells={capIndex ? capCells : null} onNeedRegionCells={onNeedRegionCells} onNeedCapPoint={(point) => onNeedCapTiles(capTileIdsInCircle(capIndex, point.xM, point.yM, 0))} onPick={pickSearchMatch} />
         <span className="ml-auto text-xs text-slate-400">{show3d ? 'Drag to rotate, scroll or pinch to zoom' : 'Click the map, then scroll to zoom'}</span>
         {activeRegion && (
@@ -280,7 +281,7 @@ function SouthPoleMap({
       <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]">
       <div>
       {show3d && (
-        <div className="mx-auto w-full max-w-[75vh]">
+        <div className="mx-auto w-full max-w-[max(20rem,calc(100vh-17rem))]">
           <Suspense fallback={<p className="p-4 text-sm text-slate-400">Loading 3D view…</p>}>
             <TerrainView3D
               regionCode={regionCode} cells={cells} colors={colors} maps={maps} ephemeris={ephemeris} hour={hour}
@@ -289,7 +290,7 @@ function SouthPoleMap({
           </Suspense>
         </div>
       )}
-      <div className={`relative mx-auto w-full max-w-[75vh] ${show3d ? 'hidden' : ''}`}>
+      <div className={`relative mx-auto w-full max-w-[max(20rem,calc(100vh-17rem))] ${show3d ? 'hidden' : ''}`}>
       <svg
         ref={svgRef}
         viewBox={VIEW_BOX}
@@ -385,6 +386,7 @@ function SouthPoleMap({
       </p>
       {coverageNote && <p className="text-xs text-amber-200">{coverageNote}</p>}
       </div>
+      <div className="@2xl:max-h-[calc(100vh-17rem)] @2xl:overflow-y-auto">
       <MapLayersPanel
         layerId={chosenLayerId}
         onLayerChange={setChosenLayerId}
@@ -393,6 +395,7 @@ function SouthPoleMap({
         overlayKinds={overlayKinds}
         onOverlayChange={changeOverlay}
       />
+      </div>
       </div>
       {timeBar}
       {activeRegion ? (

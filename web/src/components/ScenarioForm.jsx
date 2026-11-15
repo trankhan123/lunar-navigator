@@ -236,7 +236,7 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
       <button
         type="submit"
         disabled={!canSubmit}
-        className="w-full rounded bg-amber-400 px-3 py-2.5 font-semibold text-slate-950 transition hover:bg-amber-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full rounded bg-amber-400 px-3 py-2.5 lg:sticky lg:bottom-0 lg:z-10 lg:shadow-[0_0_0_8px_#0f172a] font-semibold text-slate-950 transition hover:bg-amber-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
       >
         {busy ? t('scenario.searching') : t('scenario.findWindows')}
       </button>
