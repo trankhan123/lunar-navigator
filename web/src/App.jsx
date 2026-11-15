@@ -5,9 +5,9 @@ import CellPopup from './components/CellPopup.jsx'
 import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
 import LandingTimeSlider from './components/LandingTimeSlider.jsx'
-import MissionChat from './components/MissionChat.jsx'
-import MapTimeBar from './components/MapTimeBar.jsx'
 import LanguageSwitcher from './components/LanguageSwitcher.jsx'
+import MapTimeBar from './components/MapTimeBar.jsx'
+import MissionChat from './components/MissionChat.jsx'
 import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
@@ -335,7 +335,7 @@ export default function App() {
     <label className="text-sm text-slate-300">
       {t('picker.region')}{' '}
       <select value={activeRegion?.code ?? ''} onChange={(event) => openRegion(event.target.value || null)} className={selectClass}>
-        <option value="">South pole (all regions)</option>
+        <option value="">{t('picker.allRegions')}</option>
         {data.regions.map((region) => (
           <option key={region.code} value={region.code}>{region.name}</option>
         ))}
