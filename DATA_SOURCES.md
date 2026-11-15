@@ -88,3 +88,14 @@ Các file dưới đây được sinh từ dữ liệu ở mục 1 hoặc từ �
 | `lroc_color_4k.jpg`, `ldem_bump_1440.png` | NASA SVS 4720 (`lroc_color_16bit_srgb_4k.tif`, `ldem_4_uint.tif`). Trang: https://svs.gsfc.nasa.gov/4720. Credit: NASA's Scientific Visualization Studio | web/public/textures | Texture và bump cho quả cầu W6 (4K màu, 1440 px độ cao) |
 
 - NASA/JPL DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and Geometry", Rev. K (2016): DSN station positions (Table 5) and the 10° elevation limit (sec. 2.2.1, 2.2.4), used by the optional DSN check. https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf
+
+## 6. Thông số tàu cho mẫu có sẵn (E4, `LANDER_PRESETS` trong `web/src/core/scenario.js`)
+
+Chỉ để so sánh kịch bản, không phải thông số chính thức. Số nào không có trong nguồn thì ghi `estimate` trong `basis`.
+
+| Mẫu | Nguồn | Số công bố | Số ước tính |
+|---|---|---|---|
+| VIPER | https://ntrs.nasa.gov/api/citations/20240013903/downloads/LSIC_2024-Tech%20Infusion_Panel-VIPER_Mob-HW.pdf | 450 W (tấm góc), 5.420 Wh, sống 50 h ở chế độ tiết kiệm | Tải 110 W = 5.420 Wh ÷ 50 h |
+| Nova-C (IM-1) | https://en.wikipedia.org/wiki/Intuitive_Machines_Nova-C | 200 W, pin 25 Ah trên bus 28 V, thiết kế 14 ngày | Pin 700 Wh = 25 Ah × 28 V; tải 50 W |
+| Blue Ghost 1 | https://fireflyspace.com/missions/blue-ghost-mission-1/ | 400 W, hơn 14 ngày trên bề mặt | Pin 1.400 Wh, tải 100 W |
+| Vikram (Chandrayaan-3) | https://www.eoportal.org/satellite-missions/chandrayaan-3 (link brochure ISRO trong kế hoạch trả 404) | 738 W, sống 1 ngày Mặt Trăng | Pin 2.600 Wh, tải 185 W |

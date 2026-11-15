@@ -21,6 +21,13 @@
 - NASA NSSDCA — Table of Anthropogenic Impacts and Spacecraft on the Moon (landed spacecraft coordinates). https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html
 - NASA Science Activation — NASA Sees Interns Tackle Real-World Challenges in Lunar Exploration (IM-3 planned mission reference). https://science.nasa.gov/learning-resources/science-activation/nasa-sees-interns-tackle-real-world-challenges-in-lunar-exploration/
 
+### Lander presets (E4; approximate, for comparing scenarios)
+
+- NASA NTRS 20240013903 — VIPER Rover Overview, LSIC 2024 (solar arrays 320 W per panel, 450 W on corner; battery 5,420 Wh; 50 h survival in low-power mode). https://ntrs.nasa.gov/api/citations/20240013903/downloads/LSIC_2024-Tech%20Infusion_Panel-VIPER_Mob-HW.pdf
+- Wikipedia — Intuitive Machines Nova-C (200 W maximum on the surface; 25 Ah battery on a 28 V bus; 14-day design life). https://en.wikipedia.org/wiki/Intuitive_Machines_Nova-C
+- Firefly Aerospace — Blue Ghost Mission 1 (up to 400 W; more than 14 days of surface operations). https://fireflyspace.com/missions/blue-ghost-mission-1/
+- eoPortal — Chandrayaan-3 (Vikram lander power 738 W; design life one lunar day). https://www.eoportal.org/satellite-missions/chandrayaan-3
+
 ## Libraries
 
 - Optional mission chat: Google Gemini structured output — https://aistudio.google.com/docs/structured-output ; Upstash Redis REST/EVAL usage counters — https://upstash.com/docs/redis/features/restapi . Neither is a scientific data source.
