@@ -118,6 +118,18 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
   - worktree của agent bắt đầu từ `main`, không phải nhánh hiện tại, nên merge nhánh hiện tại trước.
 - **Chưa làm:** preset lander VIPER, Nova-C, Blue Ghost, Vikram. Repo chưa có số liệu có nguồn nên không bịa.
 
+### Module thêm E1–E10 (15/11 tối, `docs/extra-prospect.md`)
+
+- Opus điều phối, Sonnet/Haiku làm: mỗi module một agent trong worktree riêng (tạo từ `main` local, nên phải `git fetch origin main:main` trước), một nhánh `extra/E<n>`. Brief chung nằm trong scratchpad của phiên; luật chính chép lại ở đây.
+- Agent **không** sửa `AI_USAGE.md`, `REFERENCES.md`, `DATA_SOURCES.md`, `CLAUDE.md`, skill: các file này chỉ sửa trên nhánh `extra/docs` để các PR không conflict.
+- Chống conflict `translations.js`: mỗi module chèn khoá ngay sau một khoá mốc riêng ở cả khối `en` và `vi` (E1 `results.summary`, E2 `about.pgdaUnavailable`, E3 `results.noSlack`, E4 `scenario.exampleNote`, E5 `currentPoint.searchedOnly`, E6 `learn.moonTitle`, E7 `columns.status`). `App.jsx` chỉ sửa đúng một chỗ đã giao.
+- `docs/window-finder.md` không có số liệu tàu (bản kế hoạch ghi nhầm "§11"): số liệu E4 phải mở nguồn để đối chiếu.
+- Dữ liệu thô: 8 file PGDA đủ; `pipeline/raw/lgrs/` (zip LGRS tải tay) và cache Horizons đã mất. E9 (doi:10.5066/P13FD9ZD) và E10 (doi:10.5066/P13YPWQD) cần người tải bằng trình duyệt; E6–E8 tự lo được.
+- scipy có trong venv nhưng không có trong `requirements.txt`: không dùng (E7 dùng rasterio + shapely).
+- **Máy là VM 2 CPU, 5,3 GB RAM, 4 GB swap.** Tối 15/11 chạy 8 agent song song (npm ci, vite build, raster lớn, build_cap_grid nhiều tiến trình) làm máy treo 3 lần, phải tắt cứng, git có 5 object rỗng (đã sửa, bản sao ở `~/git-empty-objects-backup-20261115`). Quy tắc từ nay: mỗi lúc một agent; job nặng chạy qua `.claude/worktrees/guarded.sh <log> <lệnh>` (giới hạn 1,7 GB RAM, 1,5 CPU, tự dừng khi RAM cả máy > 80 %, theo yêu cầu người dùng); không chạy Playwright song song job nặng. `/tmp` bị xoá khi khởi động lại: ghi chú để trong `.claude/worktrees/` (gitignore).
+- `compute_feasibility.read_region` đọc cả vùng bao của mọi ô: với lưới tới 80°S nó đọc trọn raster PSR 3,7 GB. Phải đọc theo từng lô.
+- Nếu Claude plan (5 giờ) vượt 80 % thì cũng dừng agent và báo người dùng.
+
 ### Lệnh hay dùng
 
 ```bash
@@ -376,6 +388,7 @@ Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi 
 | Ngày 2 sáng | W5 chi tiết, D6 site nổi tiếng, W6 globe, W7 chế độ học, D7 kiểm chứng PGDA 69 + QuickMap |
 | Ngày 2 trưa | Đóng băng tính năng, deploy Vercel, quay video demo |
 | Ngày 2 chiều | Sửa lỗi, trang project tiếng Anh, slide, nộp sớm |
+| Ngày 2 tối | Module thêm E1–E8 (`docs/extra-prospect.md`; E9, E10 chờ người tải dữ liệu LGRS), mỗi module một nhánh `extra/<mã>` và một PR; 22:30 dừng merge |
 
 Yêu cầu bài nộp (đối chiếu Submission Guide 2026):
 

@@ -11,6 +11,8 @@
 - NASA NTRS 20250011660 — Artemis III candidate landing regions. https://ntrs.nasa.gov/citations/20250011660
 - NASA news release (2024-10-28) — NASA Provides Update on Artemis III Moon Landing Regions. https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/
 - McClernan, M.T., 2024, Down Selected Artemis III Candidate Landing Site Navigational Grids: U.S. Geological Survey data release. https://doi.org/10.5066/P1MEQ6UK
+- U.S. Geological Survey data release — Artemis III candidate landing site navigational grids for the 13 original 2022 regions and Apollo 11–17 (not used yet; planned module E9). https://doi.org/10.5066/P13FD9ZD
+- U.S. Geological Survey data release — global Lunar Grid Reference System grids, LTM/LPS projections (not used yet; planned module E10). https://doi.org/10.5066/P13YPWQD
 - McClernan, M.T., Dennis, M.L., Theriot, I.H., Hare, T.M., Archinal, B.A., Ostrach, L.R., Hunter, M.A., Miller, M.J., Beyer, R.A., Annex, A.M., and Lawrence, S.J., 2025, Lunar grid systems, coordinate systems, and map projections for the Artemis missions and lunar surface navigation: U.S. Geological Survey Techniques and Methods, book 11, chap. E1, 308 p. https://doi.org/10.3133/tm11E1
 - NASA NTRS 20250009323 — Artemis overview for the 2025 International Space Apps Challenge (HLS slope, lighting and communication needs). https://ntrs.nasa.gov/citations/20250009323
 - NASA Space Apps Challenge 2026 — Lunar Landing Site Navigator challenge. https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/
@@ -18,6 +20,22 @@
 - NASA NSSDCA — Apollo Landing Site Coordinates (Wagner et al. 2017, Icarus 283, 92–103). https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
 - NASA NSSDCA — Table of Anthropogenic Impacts and Spacecraft on the Moon (landed spacecraft coordinates). https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html
 - NASA Science Activation — NASA Sees Interns Tackle Real-World Challenges in Lunar Exploration (IM-3 planned mission reference). https://science.nasa.gov/learning-resources/science-activation/nasa-sees-interns-tackle-real-world-challenges-in-lunar-exploration/
+
+### Lander presets (E4; approximate, for comparing scenarios)
+
+- NASA NTRS 20240013903 — VIPER Rover Overview, LSIC 2024 (solar arrays 320 W per panel, 450 W on corner; battery 5,420 Wh; 50 h survival in low-power mode). https://ntrs.nasa.gov/api/citations/20240013903/downloads/LSIC_2024-Tech%20Infusion_Panel-VIPER_Mob-HW.pdf
+- Wikipedia — Intuitive Machines Nova-C (200 W maximum on the surface; 25 Ah battery on a 28 V bus; 14-day design life). https://en.wikipedia.org/wiki/Intuitive_Machines_Nova-C
+- Firefly Aerospace — Blue Ghost Mission 1 (up to 400 W; more than 14 days of surface operations). https://fireflyspace.com/missions/blue-ghost-mission-1/
+- eoPortal — Chandrayaan-3 (Vikram lander power 738 W; design life one lunar day). https://www.eoportal.org/satellite-missions/chandrayaan-3
+
+### Mission Replay dates (E6)
+
+- NASA CLPS blog, 2024-02-22 — IM-1 touched down at 5:23 p.m. CST. https://www.nasa.gov/blogs/clps/2024/02/22/nasa-science-touches-down-on-moon-with-intuitive-machines-mission/
+- Intuitive Machines news release — IM-1 entered standby mode on 2024-02-29. https://investors.intuitivemachines.com/news-releases/news-release-details/intuitive-machines-historic-im-1-mission-success-american/
+- NASA news release, 2025-03-07 — IM-2 touched down about 11:30 a.m. CST on 2025-03-06; early end of mission at 12:15 a.m. CST on 2025-03-07, lander on its side. https://www.nasa.gov/news-release/nasa-receives-some-data-before-intuitive-machines-ends-lunar-mission/
+- NASA LRO image article — Chandrayaan-3 touched down on 2023-08-23. https://www.nasa.gov/image-article/nasas-lro-observes-chandrayaan-3-landing-site/
+- Press Information Bureau (India), 2023-08-25 — Chandrayaan-3 soft landing on 2023-08-23. https://static.pib.gov.in/WriteReadData/specificdocs/documents/2023/aug/doc2023825244401.pdf
+- ISRO — Chandrayaan-3 mission page and the 2023-09-04 post "Vikram Lander is set into sleep mode around 08:00 Hrs. IST today". https://www.isro.gov.in/Chandrayaan3.html · https://x.com/isro/status/1698618694795219401
 
 ## Libraries
 
