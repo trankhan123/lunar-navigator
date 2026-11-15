@@ -25,7 +25,7 @@ export default function MissionChat({ value, sites, ephemeris, busy, useMock, on
   const snapshot = JSON.stringify(value)
   const stale = proposal && proposal.baseSnapshot !== snapshot
   const draft = proposal?.draft
-  const canApply = draft?.canApply && !stale && !pending && !busy && validateScenario(draft.scenario, ephemeris).length === 0
+  const canApply = draft?.canApply && !proposal.superseded && !stale && !pending && !busy && validateScenario(draft.scenario, ephemeris).length === 0
 
   useEffect(() => () => activeRequest.current?.abort(), [])
   useEffect(() => {
@@ -41,6 +41,8 @@ export default function MissionChat({ value, sites, ephemeris, busy, useMock, on
     const controller = new AbortController()
     activeRequest.current = controller
     const timeout = setTimeout(() => controller.abort(), 22000)
+    // Keep the draft as follow-up context, but only a successful reply may enable Apply again.
+    setProposal((current) => current && { ...current, superseded: true })
     setPending(true)
     setError('')
     setNotice('')
@@ -107,6 +109,8 @@ export default function MissionChat({ value, sites, ephemeris, busy, useMock, on
           <p className="text-xs text-slate-400">Unspecified settings keep your current form values. Example values are illustrative; check every limit. The assistant does not calculate landing results.</p>
           {draft.errors.length > 0 && <ul className="list-inside list-disc text-xs text-amber-300">{draft.errors.map(({ field, message }) => <li key={field}>{message}</li>)}</ul>}
           {draft.questions.length > 0 && <p className="text-xs text-amber-300">Answer the assistant's questions above before applying.</p>}
+          {!pending && proposal.superseded && <p role="status" className="text-sm text-amber-300">This draft predates your latest message. Send again to update it before applying.</p>}
+          {!proposal.superseded && !draft.canApply && draft.errors.length === 0 && draft.questions.length === 0 && <p className="text-xs text-slate-400">No mission parameters were proposed. Describe a mission or a setting to change.</p>}
           {stale && <p role="status" className="text-sm text-amber-300">Your form changed. Send another message to prepare a draft using the latest values.</p>}
           <button type="button" disabled={!canApply} className={`${buttonClass} w-full bg-sky-900`} onClick={() => {
             if (!canApply) return

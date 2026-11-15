@@ -76,3 +76,16 @@ test('nullable extraction fields preserve current values without accepting unkno
   assert.deepEqual(Object.keys(draft.patch).sort(), ['batteryCapacityWh', 'currentPoint'])
   assert.throws(() => normalizeChatPatch({ unknown: null }, catalog))
 })
+
+test('an empty or all-null patch cannot apply even when the current form is valid', () => {
+  const scenario = { ...DEFAULT_SCENARIO, currentPoint: { type: 'site', siteId: 'test-site' } }
+  for (const patch of [{}, Object.fromEntries(Object.keys(DEFAULT_SCENARIO).map((key) => [key, null]))]) {
+    const draft = prepareChatDraft(reply(patch), scenario, catalog)
+    assert.equal(draft.canApply, false)
+    assert.deepEqual(draft.scenario, scenario)
+    assert.deepEqual(draft.errors, [])
+    assert.deepEqual(draft.questions, [])
+  }
+  // An explicit mission value is still reviewable when it matches the current form.
+  assert.equal(prepareChatDraft(reply({ loadW: { value: scenario.loadW, unit: 'W' } }), scenario, catalog).canApply, true)
+})

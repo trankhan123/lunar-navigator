@@ -64,7 +64,7 @@ export function prepareChatDraft(reply, scenario, catalog) {
     if (!errors.some(({ field }) => field === 'currentPoint')) errors.push({ field: 'currentPoint', message: error.message })
   }
   return { message: reply.message, questions: reply.questions, patch, scenario: next, errors,
-    canApply: errors.length === 0 && reply.questions.length === 0 }
+    canApply: Object.keys(patch).length > 0 && errors.length === 0 && reply.questions.length === 0 }
 }
 
 export function describeChatScenario(scenario, sites) {

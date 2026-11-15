@@ -26,7 +26,7 @@ mission scenarios, not specifications of real spacecraft.
 
 ## Local checks and corrections
 
-- All 131 Node tests, lint and production build pass. A clean build with
+- All 132 Node tests, lint and production build pass. A clean build with
   `NODE_ENV=production` and `npm ci --include=dev` also passed.
 - Actual Redis Lua concurrency test: 20 simultaneous reservations at a cap of 3
   accepted exactly 3; replay denial and expiry were checked.
@@ -38,6 +38,22 @@ mission scenarios, not specifications of real spacecraft.
 - Coordinate provenance rejects invented values, sign flips and integer-prefix
   parsing of decimal longitudes. A quantity such as 2000.5 W cannot satisfy a
   request for the landing year.
+
+## Final review fixes (local regression checks)
+
+- A new message supersedes the previous draft immediately. If the request fails,
+  Apply stays disabled; the input and preceding mission context are kept for a
+  successful retry. Chromium checks cover HTTP 429/502, network failure, invalid
+  JSON and an incomplete response; retrying applies the corrected 5 kWh battery
+  instead of the earlier 2.5 kWh value.
+- Empty or all-null extraction patches cannot enable Apply, including when the
+  current form is valid. Explicit mission fields remain reviewable even when
+  their values match the form. Browser checks also verify an outside-scope
+  response leaves the form unchanged and displays no applicable parameters.
+- Reproduce the browser checks against the local Vite server with
+  `PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs CHROMIUM_PATH=/path/to/chromium CHAT_TEST_URL=http://localhost:5173/?screen=map node tests/mission-chat.browser.mjs`
+  from `web`. Playwright is external tooling, not an app dependency. These cases
+  use synthetic API replies and do not spend Gemini quota.
 
 ## Practical limits
 
