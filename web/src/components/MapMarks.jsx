@@ -1,6 +1,8 @@
 import { VIEW_SIZE_M } from '../core/mapView.js'
 
 const LABEL_STYLE = { fill: '#f8fafc', stroke: '#020617', paintOrder: 'stroke', pointerEvents: 'none' }
+// MMO label goes under its frame: the label above it would sit on the NR1 label.
+const LABEL_BELOW_FRAME = new Set(['MMO'])
 
 // Region frames, their labels and site pins, sized by 1 / zoomScale so they keep their screen size at every zoom.
 // centres: [{regionCode, xM, yM, color, title}] — region-centre dots coloured by the Sun/Earth at the map hour.
@@ -32,7 +34,7 @@ export default function MapMarks({ regions, activeRegionCode, pinSites, centres 
             >
               <title>{region.name}</title>
             </rect>
-            <text x={(xMin + xMax) / 2} y={-yMax - labelSize * 0.4} textAnchor="middle" fontSize={labelSize} strokeWidth={labelSize * 0.25} style={LABEL_STYLE}>
+            <text x={(xMin + xMax) / 2} y={LABEL_BELOW_FRAME.has(region.code) ? -yMin + labelSize * 1.1 : -yMax - labelSize * 0.4} textAnchor="middle" fontSize={labelSize} strokeWidth={labelSize * 0.25} style={LABEL_STYLE}>
               {zoomScale < 3 ? region.code : region.name}
             </text>
           </g>
@@ -59,9 +61,11 @@ export default function MapMarks({ regions, activeRegionCode, pinSites, centres 
       {pinSites.map((site) => (
         <g key={site.id} pointerEvents="none">
           <circle cx={site.xM} cy={-site.yM} r={pinRadius} fill="#f8fafc" stroke="#020617" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-          <text x={site.xM + pinRadius * 1.6} y={-site.yM + pinRadius * 0.6} fontSize={labelSize * 0.9} strokeWidth={labelSize * 0.22} style={LABEL_STYLE}>
-            {site.name}
-          </text>
+          {zoomScale >= 3 && (
+            <text x={site.xM + pinRadius * 1.6} y={-site.yM + pinRadius * 0.6} fontSize={labelSize * 0.9} strokeWidth={labelSize * 0.22} style={LABEL_STYLE}>
+              {site.name}
+            </text>
+          )}
         </g>
       ))}
     </g>
