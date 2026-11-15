@@ -1,4 +1,4 @@
-// C5 — Web Worker entry. Protocol: README "C5 Optimizer → Worker protocol".
+// C5 — Web Worker entry. Protocol: docs/technical-reference.md "C5 Optimizer → Worker protocol".
 // in:  {type:'run', requestId, cells, ephemeris, scenario}
 //      {type:'fractions', requestId, cells, ephemeris, firstHour, hourCount}   (W2 map % layers)
 // out: {type:'progress', requestId, doneCells, totalCells} (run only) | {type:'done', requestId, results} | {type:'error', requestId, message}

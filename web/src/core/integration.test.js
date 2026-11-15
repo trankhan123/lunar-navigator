@@ -32,7 +32,7 @@ function runSearch() {
   return search
 }
 
-// README C5 "Default ranking order", written out again so the test does not reuse the optimizer's comparator.
+// docs/technical-reference.md C5 "Default ranking order", written out again so the test does not reuse the optimizer's comparator.
 function compareDefault(a, b) {
   return (
     (a.status === 'fail') - (b.status === 'fail') ||
@@ -88,7 +88,7 @@ test('runWindowSearch on the real ephemeris: landing times and result arrays', (
   assert.deepEqual(progress.at(-1), [cells.length, cells.length])
 })
 
-test('rankCells and rankBestWindows follow the README default order', () => {
+test('rankCells and rankBestWindows follow the docs/technical-reference.md default order', () => {
   const { results } = runSearch()
   for (let k = 0; k < results.landingCount; k++) {
     const rows = rankCells(results, k)
@@ -162,7 +162,7 @@ test('buildDetail agrees with the search results (detail screen vs ranking)', as
       assertNear(battery.minBatteryFraction, expected.minBatteryFraction, 1e-6)
       assert.equal(battery.deadAtHour, expected.deadAtHour)
       assert.equal(battery.rechargeHours, expected.rechargeHours)
-      // The README C5 status rules, applied to the detail, give the status the ranking shows.
+      // The docs/technical-reference.md C5 status rules, applied to the detail, give the status the ranking shows.
       const failReasons = []
       if (sunSummary.longestDarkHours > scenario.maxDarkHours) failReasons.push('dark')
       if (earthSummary.longestCommLossHours > scenario.maxCommLossHours) failReasons.push('commLoss')

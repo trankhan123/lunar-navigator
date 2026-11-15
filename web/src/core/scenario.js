@@ -1,10 +1,10 @@
-// W3 — scenario (form output). Contract: README "Scenario".
+// W3 — scenario (form output). Contract: docs/technical-reference.md "Scenario".
 
 export const PANEL_MODES = ['auto', 'vertical', 'horizontal']
 export const SEARCH_SCOPES = ['region', 'radius', 'all']
 export const MAX_RANGE_DAYS = 183
 export const MAX_STAY_DAYS = 30
-export const MAX_SEARCH_RADIUS_KM = 50 // keeps a radius search on the 17k-cell cap grid small enough for the worker
+export const MAX_SEARCH_RADIUS_KM = 50 // keeps a radius search on the 2 km cap grid small enough for the worker (cap grid: ~71k cells to 80°S)
 
 // Example values only (window-finder.md §3.2), not the specification of any real lander.
 export const DEFAULT_SCENARIO = {
@@ -20,7 +20,7 @@ export const DEFAULT_SCENARIO = {
   panelMode: 'auto',
   searchScope: 'region',
   searchRadiusKm: 10,
-  requireDsn: false, // opt-in: Earth also needs a DSN station that sees the Moon (README C2)
+  requireDsn: false, // opt-in: Earth also needs a DSN station that sees the Moon (docs/technical-reference.md C2)
 }
 
 // Simple mode fills these fields from a preset and asks only point, dates and stay length.
@@ -126,7 +126,7 @@ function parseDay(text) {
 const isNumber = (value) => typeof value === 'number' && Number.isFinite(value)
 
 /**
- * Rules: README "Scenario". Messages are English UI text.
+ * Rules: docs/technical-reference.md "Scenario". Messages are English UI text.
  * @param {typeof DEFAULT_SCENARIO} scenario
  * @param {import('./data.js').Ephemeris} ephemeris
  * @returns {{field:string, message:string}[]} empty when valid

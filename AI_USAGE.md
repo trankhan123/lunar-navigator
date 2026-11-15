@@ -1,8 +1,8 @@
 # AI Usage
 
-- 2026-11-15 — OpenAI Codex implemented the optional mission chat UI and Gemini extraction endpoint, deterministic quantity/location validation, Redis usage reservations, tests and owner deployment instructions on WF2. All 131 tests, lint and production build passed. Live Gemini/Upstash tests exposed omitted dates/limits; complete nullable extraction and year clarification fixed those cases. Chromium verified English/Vietnamese extraction, follow-up clarification, Apply, worker search, mobile layout, duplicate 409 and quota 429. Preview only; PR not merged. See `docs/mission-chat-evaluation.md`.
+The NASA Space Apps rules ask teams to declare AI use. Every substantial piece of work done with an AI tool is listed here. Scientific values come only from the cited datasets; AI tools wrote and checked code and documents under the team's direction.
 
-Tool: Claude Code (Anthropic).
+## Claude Code (Anthropic)
 
 - 2026-11-14 — Set up the dev environment, scaffolded `web/` (Vite + React + Tailwind + globe.gl + ECharts) with a mock-data draft page, generated mock data in `web/public/data/mock/`, and test-deployed a draft to Vercel.
 - 2026-11-14 — Wrote `pipeline/download_data.py` and `DATA_SOURCES.md`, downloaded NASA PGDA 90/69 rasters and the SVS 4720 texture.
@@ -27,13 +27,8 @@ Tool: Claude Code (Anthropic).
 - 2026-11-15 — D8b relief tiles (`pipeline/export_relief_tiles.py`, `web/public/maps/relief/`) and whole-pole overlays (% sunlight, % Earth, PSR, slope) in `maps.json`, with Claude Code (Opus orchestrating, Sonnet agents implementing).
 - 2026-11-15 — D10 terrain meshes (`pipeline/export_terrain_mesh.py`, `web/public/terrain/`) and the 3D terrain view (`TerrainView3D.jsx`, lit by the real Sun), with Claude Code (Opus orchestrating, Sonnet agents implementing).
 - 2026-11-15 — W6 3D globe: real sunlight from the sub-solar point, Sun and Earth rays from the selected site, labelled pins and region rings, with NASA SVS 4720 textures, with Claude Code (Opus orchestrating, Sonnet agents implementing).
-- 2026-11-15 — Codex fixed final mission-chat review findings: prevent applying a superseded draft after a failed correction, and disable Apply for empty/all-null extraction patches; verified with Node tests and Chromium failure/retry regressions using synthetic API replies.
 - 2026-11-15 — Implemented Task 11 (Call Home - DSN Ground Stations): wrote `pipeline/fetch_dsn.py` to retrieve topocentric Moon apparent elevation from JPL Horizons for Goldstone (DSS-14), Madrid (DSS-63), and Canberra (DSS-43); generated 18,288-hour real and mock `dsn.json` in 0.1° integer units; updated `web/src/core/data.js` and `communication.js` with DSN link validation (≥ 10° elevation requirement), and added contract tests.
-
-- 2026-11-15 — Codex implemented guided mission-chat entry after team UX feedback: plain-language hints, explicit units, grey defaults, green entered values, red invalid values, persistent field-source tracking, and a header shortcut. Integrated with current main and its translation/UI flags; verified with 197 Node tests, lint/build and Chromium regressions using synthetic API responses; retained teammates' DSN additions on WF2.
 - 2026-11-15 — Merged WF2 (DSN stations, mission chat) with Claude Code: DSN check made opt-in (`requireDsn`, Expert checkbox), DSN/ephemeris alignment check, mission chat hidden unless `VITE_CHAT_UI=true`, DSN sources checked against handbook 810-005 module 301.
-
-- 2026-11-15 — Codex rearranged Map & scenario to match the team sketch: Layers left, larger map centre, AI chat right, Mission scenario and selected landing-cell details below. Kept header, map controls, existing callbacks and scientific logic; checked desktop/mobile layout and existing interactions in Chromium.
 - 2026-11-15 — Extra modules from `docs/extra-prospect.md`: Claude Code (Opus) split E1–E8 into briefs and reviewed the results; Sonnet and Haiku subagents implemented each module on its own branch `extra/E<n>`. Each branch passed the Node tests, lint and build before review.
 - 2026-11-15 — E1 (Haiku): absolute `og:image` + `og:url`, "1 cell" summary wording, legend note on 2 km cap cells, MMO label moved under its frame and site names hidden at the pole overview (label overlap checked with a box-overlap script).
 - 2026-11-15 — E2 (Sonnet): validation badge on Results and Cell detail (`validationStats.js`, `ValidationBadge.jsx`) and the PGDA 69 vs ours scatter on About (`ValidationScatter.jsx`, lazy ECharts).
@@ -43,3 +38,15 @@ Tool: Claude Code (Anthropic).
 - 2026-11-15 — E7 (Sonnet): distance from each cell to the nearest permanent shadow ≥ 1 km² (`pipeline/compute_science_access.py`, new `psrDistanceKm` field in cells and cap tiles, `build_cap_grid.py --rebuild-tiles`), ranking column (Expert), popup row, map layer and a Learn paragraph. Drift check: only the new field changed in 22,101 cells.
 - 2026-11-15 — E6 (Sonnet): Mission Replay for IM-1, IM-2 and Chandrayaan-3 (`pipeline/fetch_replay.py`, `web/public/data/replay/`, `core/replay.js`, `MissionReplayCard.jsx` in Learn). Mission dates were read from NASA, Intuitive Machines, ISRO and PIB pages; dates without an official time of day are marked "date only".
 - 2026-11-15 — E8 (Sonnet, run alone under a RAM guard after the machine freezes): 2 km cap grid extended from 85°S to 80°S (70,842 cells, 208 tiles, `build_cap_grid.py --south-of`), feasibility read per 40 km tile instead of the whole 3.7 GB PSR raster, map raster sized from `index.json`, desktop preloads only the 85°S tiles, `horizon_CAP.json` no longer kept (horizons read back from the tiles). Checked on the merged branch: a typed IM-1 point now uses the cap-grid terrain horizon.
+- 2026-11-15 — Final pre-publication pass: two read-only audits (web and pipeline/repo hygiene), fixes for the findings (no mock-sky fallback on real data, bounded cap-tile loading, throttled progress, per-visitor chat cap, cache headers, unused dependency removed), 88 more UI strings translated (en + vi), new public README with the old contract moved to `docs/technical-reference.md`, private notes untracked. All tests, lint, build, data checks and a browser check passed.
+
+## OpenAI Codex
+
+- 2026-11-15 — OpenAI Codex implemented the optional mission chat UI and Gemini extraction endpoint, deterministic quantity/location validation, Redis usage reservations, tests and owner deployment instructions on WF2. All 131 tests, lint and production build passed. Live Gemini/Upstash tests exposed omitted dates/limits; complete nullable extraction and year clarification fixed those cases. Chromium verified English/Vietnamese extraction, follow-up clarification, Apply, worker search, mobile layout, duplicate 409 and quota 429. Preview only; PR not merged. See `docs/mission-chat-evaluation.md`.
+- 2026-11-15 — Codex fixed final mission-chat review findings: prevent applying a superseded draft after a failed correction, and disable Apply for empty/all-null extraction patches; verified with Node tests and Chromium failure/retry regressions using synthetic API replies.
+- 2026-11-15 — Codex implemented guided mission-chat entry after team UX feedback: plain-language hints, explicit units, grey defaults, green entered values, red invalid values, persistent field-source tracking, and a header shortcut. Integrated with current main and its translation/UI flags; verified with 197 Node tests, lint/build and Chromium regressions using synthetic API responses; retained teammates' DSN additions on WF2.
+- 2026-11-15 — Codex rearranged Map & scenario to match the team sketch: Layers left, larger map centre, AI chat right, Mission scenario and selected landing-cell details below. Kept header, map controls, existing callbacks and scientific logic; checked desktop/mobile layout and existing interactions in Chromium.
+
+## Google Gemini (runtime, optional)
+
+- The optional AI assistant in the app sends the user's mission description to the Gemini API to prepare a form draft. The draft is validated in code and must be reviewed and applied by the user; it never produces scientific results.

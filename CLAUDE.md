@@ -1,202 +1,202 @@
 # CLAUDE.md — Lunar Landing Site Navigator: Window Finder (NASA Space Apps 2026)
 
-File này là bối cảnh cố định cho Claude Code. Đọc hết trước khi làm bất kỳ việc gì.
-Đọc thêm ba file:
+This file is fixed context for Claude Code. Read all of it before you do anything.
+Also read these files:
 
-- `README.md`: **hợp đồng module**, bản chính thức gồm input/output, đơn vị, định dạng file và bảng chia việc.
-- `docs/window-finder.md`: ý tưởng cuối cùng của nhóm.
-- `distribution.md`: phân công 5 người, gồm 5 workflow (WF1–WF5 gom các module D + C liên quan) và WEB, kèm thứ tự làm và việc giao nhận giữa các workflow.
-- `DATA_SOURCES.md`: mọi file dữ liệu, URL và thư viện.
-- `docs/extra-prospect.md`: các module làm thêm E1–E10 sau bản chính (15/11 tối), luật nhánh `extra/<mã>` và mốc dừng merge 22:30.
+- `README.md`: project introduction for the public (English).
+- `docs/technical-reference.md`: the **module contract**. The official version has inputs/outputs, units, file formats and the work-split table (the README during NASA Space Apps Challenge 2026).
+- `docs/window-finder.md`: the team's final idea.
+- `docs/distribution.md`: assignment of work to 5 people. It has 5 workflows (WF1–WF5, grouping the related D + C modules) and WEB, plus the work order and the handoffs between workflows.
+- `DATA_SOURCES.md`: every data file, URL and library.
+- `docs/extra-prospect.md`: the extra modules built after the main version (evening of 15/11): E1–E8 merged, E9–E10 not built, the `extra/<code>` branch rule and the 22:30 merge cutoff.
 
-## 1. Bối cảnh
+## 1. Background
 
-- **Cuộc thi:** NASA Space Apps Challenge 2026, đề **Lunar Landing Site Navigator**.
-- **Thời gian:** 14–15/11/2026. Hạn nộp **23:59 ngày 15/11 giờ Việt Nam**, mục tiêu nộp sớm vài giờ.
-- **Người dùng mục tiêu của đề:** mission planner, nhà giáo dục, công chúng.
-- **Yêu cầu cốt lõi của đề:**
-  - hiển thị Mặt Trời và Trái Đất so với đường chân trời tại điểm đổ bộ theo thời gian, để đánh giá cửa sổ phát điện và cửa sổ liên lạc direct-to-Earth;
-  - so sánh nhanh site khác hoặc ngày khác khi lịch sứ mệnh bị trượt;
-  - đề nhắc hai lần phải hiển thị **còn bao lâu đến lúc Mặt Trời lặn / Trái Đất lặn**.
-- **Mặt Trăng không có khí quyển** nên không có khúc xạ. Chân trời do địa hình và độ cong mặt cầu quyết định.
-- **Ý tưởng chốt ngày 14/11 là "Window Finder"** (`docs/window-finder.md`):
-  - người dùng chọn điểm hạ cánh dự kiến trên lưới LGRS 1 km của USGS, khoảng ngày và giới hạn sứ mệnh (tối tối đa, mất liên lạc tối đa, tấm pin, pin, mức tiêu thụ);
-  - công cụ tìm ô và thời điểm hạ cánh tốt nhất trong cùng vùng;
-  - kéo thanh thời gian (bước 6 giờ) để xem bảng xếp hạng thay đổi.
+- **Competition:** NASA Space Apps Challenge 2026, challenge **Lunar Landing Site Navigator**.
+- **Time:** 14–15/11/2026. Deadline **23:59 on 15/11, Vietnam time**. The goal is to submit a few hours early.
+- **Target users in the challenge:** mission planners, educators, the public.
+- **Core requirements of the challenge:**
+  - show the Sun and Earth against the horizon at the landing point over time, to judge the power-generation window and the direct-to-Earth communication window;
+  - quickly compare another site or another date when the mission schedule slips;
+  - the challenge text twice asks to show **how long until sunset / Earthset**.
+- **The Moon has no atmosphere**, so there is no refraction. The horizon is set by terrain and the curvature of the sphere.
+- **The idea chosen on 14/11 is "Window Finder"** (`docs/window-finder.md`):
+  - the user picks an intended landing point on the USGS 1 km LGRS grid, a date range and mission limits (maximum darkness, maximum loss of communication, solar panel, battery, power use);
+  - the tool finds the best cells and landing times in the same region;
+  - dragging the time slider (6-hour steps) shows the ranking change.
 
-Câu định vị: *"Tell us your landing spot and your mission's limits. We find the best nearby sites and dates, ranked hour by hour."*
+Tagline: *"Tell us your landing spot and your mission's limits. We find the best nearby sites and dates, ranked hour by hour."*
 
-## 2. Tech stack (đã chốt, không đổi)
+## 2. Tech stack (fixed, do not change)
 
-| Phần | Công nghệ |
+| Part | Technology |
 |---|---|
-| Tiền xử lý dữ liệu | Python 3.11+, `requests`, `numpy`, `rasterio`, `pyproj`, `geopandas` (đọc shapefile LGRS) |
-| Web | Vite + React (**JavaScript, không dùng TypeScript**) |
-| Tính toán trong trình duyệt | JS thuần trong `web/src/core/`, chạy tìm kiếm trong **Web Worker** |
-| Test | `node --test` có sẵn trong Node (không thêm thư viện test) và `pipeline/check_web_data.py` |
-| Bản đồ 2D cực Nam | SVG + d3-zoom 3.0.0 (kéo/phóng; cả chuỗi d3 ghim bằng overrides trong web/package.json), ảnh nền hillshade PNG |
-| Quả cầu 3D | `globe.gl` (quả cầu W6 dùng globe.gl) |
-| Địa hình 3D | `three` 0.187.0, ghim chính xác, tải lười (globe.gl dùng cùng bản) |
-| Biểu đồ | ECharts (`echarts` + `echarts-for-react`) |
+| Data preprocessing | Python 3.11+, `requests`, `numpy`, `rasterio`, `pyproj`, `geopandas` (reads the LGRS shapefile) |
+| Web | Vite + React (**JavaScript, no TypeScript**) |
+| Computation in the browser | Plain JS in `web/src/core/`, search runs in a **Web Worker** |
+| Test | `node --test`, built into Node (no extra test library), and `pipeline/check_web_data.py` |
+| 2D south pole map | SVG + d3-zoom 3.0.0 (drag/zoom; the whole d3 chain is pinned with overrides in web/package.json), hillshade PNG background |
+| 3D globe | `globe.gl` (the W6 globe uses globe.gl) |
+| 3D terrain | `three` 0.187.0, pinned exactly, lazy loaded (globe.gl uses the same version) |
+| Charts | ECharts (`echarts` + `echarts-for-react`) |
 | CSS | Tailwind |
-| Deploy | Vercel, web tĩnh, không backend |
+| Deploy | Vercel, static web, no backend |
 
-- Không thêm thư viện ngoài danh sách nếu chưa hỏi.
-- Không dùng React Router; chuyển màn hình bằng state.
-- `astronomy-engine` đã cài nhưng chỉ còn là module tuỳ chọn X1: dùng cho ngày nằm ngoài ephemeris.
+- Do not add a library outside this list without asking.
+- Do not use React Router. Switch screens with state.
 
-## 3. Kiến trúc: tính trước, phục vụ tĩnh
+## 3. Architecture: precompute, serve static
 
-Ngoại lệ được yêu cầu cho chat UX: `web/api/mission-chat.js` là Node Vercel Function
-gọi Gemini để chuẩn bị form, có Redis hạn mức; mọi tính toán khoa học vẫn ở browser.
-Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay training.
+Exception requested for the chat UX: `web/api/mission-chat.js` is a Node Vercel Function
+that calls Gemini to prepare the form, with a Redis usage limit. All scientific computation still runs in the browser.
+See `docs/mission-chat-setup.md`. No MCP server, local model or training is needed.
 
 ```
-[Python, chạy trên máy, một lần]
-  JPL Horizons ── D1 ─> ephemeris.json (điểm dưới Mặt Trời / Trái Đất theo giờ, 2027-01 → 2029-01)
+[Python, runs on the local machine, once]
+  JPL Horizons ── D1 ─> ephemeris.json (sub-Sun / sub-Earth points by hour, 2027-01 → 2029-01)
   LGRS USGS ───── D2 ─> pipeline/out/grid_<CODE>.json ──┐
   PGDA 90 slope, PSR ─ D3 ─> feasibility_<CODE>.json ────┼─ D5 ─> cells_<CODE>.json, regions.json, sites.json
   PGDA 90 DEM ─── D4 ─> horizon_<CODE>.json ─────────────┘
   PGDA 69 ─────── D7 ─> validation.json        hillshade ─ D8 ─> maps/*.png
   PGDA 90 DEM ─── D8b ─> maps/relief/*.jpg     PGDA 90 DEM ─ D10 ─> terrain/*.bin
-  D2–D4 + PGDA 90 ─ D9 ─> data/cap/*.json (lưới 2 km ngoài 9 vùng)
-[Trình duyệt, Vercel]
-  core/ C0 hình học · C1 nắng · C2 liên lạc · C3 năng lượng cần · C4 sạc pin · C5 tối ưu (Worker)
-  UI W1–W7: bản đồ, form, kết quả, chi tiết, globe, chế độ học
+  D2–D4 + PGDA 90 ─ D9 ─> data/cap/*.json (2 km grid outside the 9 regions)
+[Browser, Vercel]
+  core/ C0 geometry · C1 sunlight · C2 communication · C3 energy needed · C4 battery charging · C5 optimizer (Worker)
+  UI W1–W7: map, form, results, details, globe, learning mode
 ```
 
-- **Vị trí Mặt Trời/Trái Đất** tại bất kỳ ô hay toạ độ nào đều tính từ điểm dưới thiên thể bằng một công thức vector (README mục C0). Nhờ vậy toạ độ tuỳ ý cũng chạy được, không cần gọi Horizons cho từng ô.
-- **Chân trời địa hình** chỉ có cho ô lưới và cho site có lat ≤ −60°. Điểm khác dùng chân trời mặt cầu (0°), và giao diện ghi "terrain not included".
-- **Thư mục:**
-  - `pipeline/`: D1–D10 (kể cả D8b), `common.py`, `check_web_data.py`, `make_mock_data.py`, `out/` (file trung gian, có commit), `raw/` (gitignore);
-  - `web/src/core/`: module JS thuần kèm `*.test.js`;
-  - `web/src/components/`: mỗi component một file;
-  - `web/public/data/` (`mock/` là dữ liệu giả, `cap/` là lưới 2 km toàn cực), `web/public/terrain/` (khối địa hình 3D), `web/public/maps/relief/` (ảnh địa hình nhiều mức).
+- **Sun/Earth position** at any cell or coordinate is computed from the sub-body point with one vector formula (`docs/technical-reference.md`, section C0). So any coordinate works, and there is no need to call Horizons for each cell.
+- **Terrain horizon** exists only for grid cells and for sites with lat ≤ −60°. Other points use the spherical horizon (0°), and the interface says "terrain not included".
+- **Folders:**
+  - `pipeline/`: D1–D10 (including D8b), `common.py`, `check_web_data.py`, `make_mock_data.py`, `validate.py`, `fetch_dsn.py`, `fetch_replay.py` (E6), `compute_science_access.py` (E7), `out/` (intermediate files, committed), `raw/` (gitignored);
+  - `web/src/core/`: plain JS modules with `*.test.js`;
+  - `web/src/components/`: one component per file;
+  - `web/public/data/` (`mock/` is fake data, `cap/` is the 2 km grid of the whole pole), `web/public/terrain/` (3D terrain blocks), `web/public/maps/relief/` (multi-level relief images).
 
-## 4. Data contract và hợp đồng module
+## 4. Data contract and module contract
 
-**Bản chính thức nằm ở `README.md`.** Ở đây chỉ tóm tắt. Muốn đổi hợp đồng thì đổi cùng lúc README, test `web/src/core/*.test.js` và `pipeline/check_web_data.py`, sau đó báo nhóm.
+**The official version is in `docs/technical-reference.md`.** Only a summary is here. To change the contract, change that file, the `web/src/core/*.test.js` tests and `pipeline/check_web_data.py` at the same time, then tell the team.
 
-- **Quy ước:**
-  - độ ở mọi nơi; azimuth tính theo chiều kim đồng hồ từ Bắc (0–360); kinh độ Đông −180…180, hệ ME;
-  - thời gian UTC dạng `YYYY-MM-DDTHH:mmZ`; giờ i của ephemeris = `startTime + i h`;
-  - năng lượng tính bằng W/Wh;
-  - "thấy" = ≥ 50 % đĩa nằm trên chân trời; bán kính đĩa: Mặt Trời 0,27°, Trái Đất 0,95°.
-- **`ephemeris.json`:** dạng cột `sunSubLonDeg, sunSubLatDeg, sunDistanceAu, earthSubLonDeg, earthSubLatDeg, earthDistanceKm`, bước 1 giờ.
+- **Conventions:**
+  - degrees everywhere; azimuth is clockwise from North (0–360); East longitude −180…180, ME frame;
+  - UTC time as `YYYY-MM-DDTHH:mmZ`; ephemeris hour i = `startTime + i h`;
+  - energy is in W/Wh;
+  - "visible" = ≥ 50 % of the disk is above the horizon; disk radius: Sun 0.27°, Earth 0.95°.
+- **`ephemeris.json`:** column format `sunSubLonDeg, sunSubLatDeg, sunDistanceAu, earthSubLonDeg, earthSubLatDeg, earthDistanceKm`, 1-hour step.
 - **`cells_<CODE>.json`:**
-  - mỗi ô gồm `id` (`<CODE>-<nhãn ACC>`), `label, lat, lon, xM, yM, heightM, slopeDeg, psrFraction, feasible, infeasibleReason`;
-  - `horizon` gồm 360 số nguyên, đơn vị 0,1°.
-- **Mã vùng:** CAB HAW MAL MMP MMO NR1 NR2 DGR SLP.
-- **Mỗi file JSON** là một object, nhỏ hơn 2 MB. Dữ liệu giả chỉ nằm trong `web/public/data/mock/`, có `"mock": true`, và giao diện hiện nhãn "MOCK DATA".
+  - each cell has `id` (`<CODE>-<ACC label>`), `label, lat, lon, xM, yM, heightM, slopeDeg, psrFraction, feasible, infeasibleReason`;
+  - `horizon` is 360 integers, in units of 0.1°.
+- **Region codes:** CAB HAW MAL MMP MMO NR1 NR2 DGR SLP.
+- **Each JSON file** is one object, smaller than 2 MB. Fake data lives only in `web/public/data/mock/`, has `"mock": true`, and the interface shows a "MOCK DATA" label.
 
-## 5. Dữ liệu và nguồn
+## 5. Data and sources
 
 - **JPL Horizons:**
-  - ephemeris: `COMMAND=301`, `CENTER=500@399`, `QUANTITIES=14,15,19,20`, bước 1h, chia theo quý, cache ở `pipeline/raw/horizons/`;
-  - kiểm chứng: `COMMAND=10/399`, `CENTER=coord@301`, `SITE_COORD=lon,lat,alt_km`, `QUANTITIES=4`. Bước `1h` đã thử OK (14/11): 1 tháng = 745 dòng.
-- **PGDA 90 (LOLA, cực Nam):**
-  - `LDEM_80S_80MPP_ADJ` (DEM gần), `LDEM_60S_240MPP_ADJ` (DEM xa và site tới 60°S);
-  - `LDSM_80S_80MPP_ADJ` (độ dốc), `LPSR_80S_20MPP_ADJ` (vùng tối vĩnh cửu 20 m), hillshade.
-- **PGDA 69:** `AVGVISIB_85S_060M_201608` (+`_EARTH`), dùng để kiểm chứng; chỉ phủ 85–90°S.
-- **Lưới LGRS:**
-  - shapefile ACC 1 km của 9 vùng: McClernan 2024, doi:10.5066/P1MEQ6UK. Phải tải bằng trình duyệt vì ScienceBase chặn script;
-  - thiết kế lưới: USGS Techniques & Methods 11-E1 (2025), doi:10.3133/tm11E1;
-  - không dùng "Terrestrial Navigational Training Grids".
-- **Ngưỡng độ dốc 20°:** theo tài liệu NASA HLS cho Space Apps 2025 (NTRS 20250009323).
-- **Texture Mặt Trăng:** NASA SVS 4720.
-- **KHÔNG tự bịa toạ độ.** Site chưa có nguồn thì để `lat/lon: null` và `"source": "TODO"`; code bỏ qua và in cảnh báo (`common.load_sites()`). NASA không công bố toạ độ số của 9 vùng: toạ độ tâm vùng lấy từ ô vuông USGS và gắn `verified: false` (xem `DATA_SOURCES.md` mục 3).
+  - ephemeris: `COMMAND=301`, `CENTER=500@399`, `QUANTITIES=14,15,19,20`, 1h step, split by quarter, cached in `pipeline/raw/horizons/`;
+  - validation: `COMMAND=10/399`, `CENTER=coord@301`, `SITE_COORD=lon,lat,alt_km`, `QUANTITIES=4`. The `1h` step was tried and works (14/11): 1 month = 745 rows.
+- **PGDA 90 (LOLA, south pole):**
+  - `LDEM_80S_80MPP_ADJ` (near DEM), `LDEM_60S_240MPP_ADJ` (far DEM and sites down to 60°S);
+  - `LDSM_80S_80MPP_ADJ` (slope), `LPSR_80S_20MPP_ADJ` (permanently shadowed regions, 20 m), hillshade.
+- **PGDA 69:** `AVGVISIB_85S_060M_201608` (+`_EARTH`), used for validation; covers only 85–90°S.
+- **LGRS grid:**
+  - 1 km ACC shapefile of the 9 regions: McClernan 2024, doi:10.5066/P1MEQ6UK. It must be downloaded with a browser because ScienceBase blocks scripts;
+  - grid design: USGS Techniques & Methods 11-E1 (2025), doi:10.3133/tm11E1;
+  - do not use the "Terrestrial Navigational Training Grids".
+- **20° slope limit:** from the NASA HLS document for Space Apps 2025 (NTRS 20250009323).
+- **Moon texture:** NASA SVS 4720.
+- **Do NOT invent coordinates.** A site without a source gets `lat/lon: null` and `"source": "TODO"`; the code skips it and prints a warning (`common.load_sites()`). NASA does not publish numeric coordinates for the 9 regions: region center coordinates come from the USGS square cell and are marked `verified: false` (see `DATA_SOURCES.md` section 3).
 
-## 6. Thuật toán lõi (chi tiết: `docs/window-finder.md` §4–5 và README)
+## 6. Core algorithm (details: `docs/window-finder.md` §4–5 and `docs/technical-reference.md`)
 
-- **Chân trời:**
-  - 360 tia, lấy mẫu từ 100 m tới 150 km;
-  - góc = `atan2(h_mẫu − h_ô − cột − d²/(2R), d)`, cột mặc định 2 m.
-- **Nhìn thấy:**
+- **Horizon:**
+  - 360 rays, sampled from 100 m to 150 km;
+  - angle = `atan2(h_sample − h_cell − mast − d²/(2R), d)`, default mast 2 m.
+- **Visibility:**
   - `frac = clamp((el − H + ρ) / 2ρ, 0, 1)`;
-  - giờ tối khi nắng < 0,5; giờ mất liên lạc khi Trái Đất < 0,5.
-- **Hệ số nắng:**
-  - `(1 AU / D)² × frac × hệ số tấm pin`;
-  - tấm đứng dùng `cos(el)`, tấm nằm ngang dùng `max(sin el, 0)`;
-  - chế độ auto: |lat| ≥ 60° thì dùng tấm đứng.
-- **Pin:**
-  - đầy lúc hạ cánh;
-  - `pin = clamp(pin + Pmax × hệ số nắng − tải, 0, dung lượng)` mỗi giờ;
-  - pin chạm 0 thì ghi là hết pin.
-- **Khung trượt:** với mỗi ô khả thi trong phạm vi tìm và mỗi thời điểm hạ cánh (bước 6 giờ), khung dài `stayDays × 24` giờ.
-- **Kết quả mỗi khung:**
-  - **đạt** khi tối dài nhất ≤ giới hạn, mất liên lạc dài nhất ≤ giới hạn và pin không cạn;
-  - đạt mà pin thấp nhất < 20 % thì là **sát ngưỡng**.
-- **Xếp hạng:** đạt trước, rồi pin thấp nhất cao hơn, rồi % có cả nắng lẫn Trái Đất cao hơn, rồi gần hơn, rồi liên lạc liền mạch hơn (mất liên lạc dài nhất ngắn hơn). Không dùng điểm có trọng số.
-- **Kiểm chứng:**
-  - so vector với Horizons (< 0,1°) qua fixture. **Đã đạt ngày 14/11:** 30 điểm, sai lệch tối đa 0,015° phương vị và 0,010° góc cao;
-  - so % nắng và % thấy Trái Đất với PGDA 69 (chỉ cần cùng xu hướng);
-  - so một ô với QuickMap.
+  - dark hour when sunlight < 0.5; communication loss hour when Earth < 0.5.
+- **Sunlight factor:**
+  - `(1 AU / D)² × frac × panel factor`;
+  - a vertical panel uses `cos(el)`, a horizontal panel uses `max(sin el, 0)`;
+  - auto mode: |lat| ≥ 60° uses the vertical panel.
+- **Battery:**
+  - full at landing;
+  - `battery = clamp(battery + Pmax × sunlight factor − load, 0, capacity)` each hour;
+  - when the battery reaches 0, record it as depleted.
+- **Sliding window:** for each feasible cell in the search range and each landing time (6-hour step), the window is `stayDays × 24` hours long.
+- **Result for each window:**
+  - **pass** when the longest dark period ≤ limit, the longest communication loss ≤ limit and the battery does not run out;
+  - a pass with minimum battery < 20 % is **marginal**.
+- **Ranking:** passes first, then higher minimum battery, then higher % with both Sun and Earth, then nearer, then more continuous communication (shorter longest communication loss). No weighted score.
+- **Validation:**
+  - compare the vector with Horizons (< 0.1°) through a fixture. **Passed on 14/11:** 30 points, maximum error 0.015° in azimuth and 0.010° in elevation;
+  - compare the % of sunlight and % of Earth visibility with PGDA 69 (only the same trend is needed);
+  - compare one cell with QuickMap.
 
-## 7. Năng lượng (module C3, C4)
+## 7. Energy (modules C3, C4)
 
-- Ví dụ trong form (1000 W, 10 kWh, 300 W) chỉ để minh hoạ. Giao diện phải ghi rõ đây không phải thông số tàu thật.
-- C3 "năng lượng cần": tìm các khoảng tối và tính dung lượng pin tối thiểu để sống qua khung, bằng thâm hụt tích luỹ lớn nhất.
-- C4 "sạc": mô phỏng pin theo giờ, số giờ sạc đầy lại, và mức pin tại mỗi lần Mặt Trời lặn.
+- The example in the form (1000 W, 10 kWh, 300 W) is only an illustration. The interface must state clearly that these are not real spacecraft specs.
+- C3 "energy needed": finds the dark periods and computes the minimum battery capacity to survive the window, using the largest cumulative deficit.
+- C4 "charging": simulates the battery hour by hour, the hours to recharge fully, and the battery level at each sunset.
 
-## 8. Giao diện (chi tiết: `docs/window-finder.md` §3)
+## 8. Interface (details: `docs/window-finder.md` §3)
 
-Chữ trên giao diện mặc định bằng **tiếng Anh**; có bộ chọn 7 ngôn ngữ (i18n, chữ mới dùng `t()`, xem §9). Chạy tốt trên laptop, dùng được trên điện thoại.
+The interface text is in **English** by default; there is a selector for 7 languages (i18n, new text uses `t()`, see §9). It must work well on a laptop and be usable on a phone.
 
-1. **Bản đồ 2D cực Nam** (W2): tô ô khả thi, ô không khả thi để xám. Bấm ô sẽ mở popup có ID, độ dốc, Mặt Trời/Trái Đất và nút "Use as current point".
-2. **Form kịch bản** (W3): có chế độ Simple và Expert.
-3. **Kết quả** (W4):
-   - thanh trượt thời điểm hạ cánh kèm Play;
-   - bản đồ đổi màu xanh/vàng/đỏ, bảng top 10 cập nhật ngay;
-   - thẻ "điểm hiện tại", dải trạng thái theo thời gian, top 10 cặp.
-4. **Chi tiết** (W5):
-   - horizon view có đường đi của Mặt Trời **và** Trái Đất;
-   - **đồng hồ đếm ngược sunset/Earthset to, nổi bật**; góc cao Mặt Trời hiển thị to;
-   - biểu đồ pin; so sánh hai chân trời kèm một câu giải thích; xuất CSV.
-5. **Quả cầu 3D** (W6) và **chế độ học** (W7).
-6. **Minh bạch và chia sẻ:**
-   - footer ghi nguồn dữ liệu và độ phân giải; trang About có mục Known limitations (`docs/window-finder.md` §7);
-   - link chia sẻ lưu kịch bản trong query string; thẻ `og:image` tĩnh.
+1. **2D south pole map** (W2): feasible cells are colored, infeasible cells stay gray. Clicking a cell opens a popup with ID, slope, Sun/Earth and a "Use as current point" button.
+2. **Scenario form** (W3): has Simple and Expert modes.
+3. **Results** (W4):
+   - a landing-time slider with Play;
+   - the map changes to green/yellow/red, and the top 10 table updates immediately;
+   - a "current point" card, a status strip over time, the top 10 pairs.
+4. **Details** (W5):
+   - a horizon view with the path of the Sun **and** Earth;
+   - a prominent **sunset/Earthset countdown clock**; the Sun elevation shown large;
+   - a battery chart; a comparison of two horizons with one explanatory sentence; CSV export.
+5. **3D globe** (W6) and **learning mode** (W7).
+6. **Transparency and sharing:**
+   - the footer lists data sources and resolution; the About page has a Known limitations section (`docs/window-finder.md` §7);
+   - a share link stores the scenario in the query string; a static `og:image` tag.
 
-Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi "cả 9 vùng".
+If time runs short, drop in this order: 3D globe, learning mode, the "all 9 regions" scope.
 
-## 9. Quy tắc code
+## 9. Code rules
 
-- Tên biến và hàm **dễ hiểu nhất có thể** (`sunElevation`, `findLongestDarkPeriod`), không viết tắt khó đoán. Tên có đơn vị (`…Deg`, `…Km`, `…Wh`, `…Hours`, `…Fraction`).
-- Code **ngắn nhất có thể**, không tối ưu sớm, không tạo abstraction thừa. Mỗi component một file, ngắn gọn.
-- JavaScript thuần, không TypeScript. Comment ngắn bằng tiếng Anh, chỉ ở chỗ khó hiểu.
-- Module trong `web/src/core/` là hàm thuần: không dùng React, không đụng DOM, không fetch (trừ `data.js`).
-- Mỗi bước phải để lại một bản **chạy được** (`npm run dev` không lỗi, `npm run lint && npm run build` qua). Gợi ý commit sau mỗi bước.
-- Trước khi sửa nhiều file, nói ngắn gọn sẽ làm gì. Sau khi xong, nói cách chạy thử.
-- Không bịa dữ liệu khoa học. Giá trị trong test là dữ liệu tổng hợp và phải ghi rõ như vậy.
-- Mỗi khi thêm thư viện, nguồn dữ liệu, ảnh: thêm một dòng vào `REFERENCES.md` và `DATA_SOURCES.md`.
-- Ghi vào `AI_USAGE.md` một dòng cho mỗi phần việc lớn do Claude Code làm (luật cuộc thi yêu cầu khai báo AI).
-- Nhận module: ghi tên vào bảng module trong README. Chỉ sửa file của module mình.
-- Chữ mới trên giao diện dùng khoá `t()` và có cả khối `en` lẫn `vi` trong `web/src/i18n/translations.js`. Khoá thiếu thì rơi về tiếng Anh.
+- Variable and function names **as clear as possible** (`sunElevation`, `findLongestDarkPeriod`), no hard-to-guess abbreviations. Names carry the unit (`…Deg`, `…Km`, `…Wh`, `…Hours`, `…Fraction`).
+- Code **as short as possible**, no early optimization, no extra abstraction. One component per file, short.
+- Plain JavaScript, no TypeScript. Short comments in English, only where the code is hard to understand.
+- Modules in `web/src/core/` are pure functions: no React, no DOM, no fetch (except `data.js`).
+- Every step must leave a **working** version (`npm run dev` without errors, `npm run lint && npm run build` pass). Suggest a commit after each step.
+- Before editing many files, say briefly what you will do. When done, say how to try it.
+- Do not invent scientific data. Values in tests are synthetic data and must be labeled as such.
+- Whenever you add a library, data source or image: add a line to `REFERENCES.md` and `DATA_SOURCES.md`.
+- Add one line to `AI_USAGE.md` for each major piece of work done by Claude Code (the competition rules require AI disclosure).
+- Claiming a module: write your name in the module table in `docs/technical-reference.md`. Edit only your own module's files.
+- New interface text uses a `t()` key and has both an `en` block and a `vi` block in `web/src/i18n/translations.js`. A missing key falls back to English.
 
-## 10. Deploy Vercel
+## 10. Deploy to Vercel
 
-- Root Directory trên Vercel = `web`. Framework preset Vite: build `npm run build`, output `dist`.
-- `.gitignore`: `node_modules/`, `dist/`, `.venv/`, `pipeline/raw/`, `*.tif`, `.env*`, `.vercel/`. GitHub chặn file > 100 MB.
-- JSON trong `web/public/data/` phải nhỏ hơn 2 MB mỗi file.
-- Đường dẫn fetch tuyệt đối, đi qua `web/src/core/data.js`.
-- Link cuối phải công khai, mở được bằng tab ẩn danh, không cần đăng nhập.
+- Root Directory on Vercel = `web`. Framework preset Vite: build `npm run build`, output `dist`.
+- `.gitignore`: `node_modules/`, `dist/`, `.venv/`, `pipeline/raw/`, `*.tif`, `.env*`, `.vercel/`. GitHub blocks files > 100 MB.
+- Each JSON file in `web/public/data/` must be smaller than 2 MB.
+- Fetch paths are absolute and go through `web/src/core/data.js`.
+- The final link must be public, open in an incognito tab, and need no login.
 
-## 11. Kế hoạch (chi tiết: `docs/window-finder.md` §8, bảng module trong README)
+## 11. Plan (details: `docs/window-finder.md` §8, the module table in `docs/technical-reference.md`)
 
-| Thời gian | Việc |
+| Time | Work |
 |---|---|
-| Ngày 1 (14/11) | D1 ephemeris + kiểm chứng vector; D2–D5 cho vùng Malapert (MAL) rồi đủ 9 vùng; C0–C5; W1–W4 trên mock. Mục tiêu: chạy trọn luồng cho một vùng |
-| Ngày 2 sáng | W5 chi tiết, D6 site nổi tiếng, W6 globe, W7 chế độ học, D7 kiểm chứng PGDA 69 + QuickMap |
-| Ngày 2 trưa | Đóng băng tính năng, deploy Vercel, quay video demo |
-| Ngày 2 chiều | Sửa lỗi, trang project tiếng Anh, slide, nộp sớm |
-| Ngày 2 tối | Module thêm E1–E8 (`docs/extra-prospect.md`; E9, E10 chờ người tải dữ liệu LGRS), mỗi module một nhánh `extra/<mã>` và một PR; 22:30 dừng merge |
+| Day 1 (14/11) | D1 ephemeris + vector validation; D2–D5 for the Malapert (MAL) region, then all 9 regions; C0–C5; W1–W4 on mock data. Goal: run the whole flow for one region |
+| Day 2 morning | W5 details, D6 famous sites, W6 globe, W7 learning mode, D7 PGDA 69 + QuickMap validation |
+| Day 2 noon | Feature freeze, deploy to Vercel, record the demo video |
+| Day 2 afternoon | Fix bugs, English project page, slides, submit early |
+| Day 2 evening | Extra modules E1–E8 (`docs/extra-prospect.md`; E9, E10 wait for someone to download the LGRS data), one `extra/<code>` branch and one PR per module; merging stops at 22:30 |
 
-Yêu cầu bài nộp (đối chiếu Submission Guide 2026):
+Submission requirements (checked against the Submission Guide 2026):
 
-- viết bằng tiếng Anh;
+- written in English;
 - High-Level Summary;
-- link project công khai;
-- demo tối đa 7 slide hoặc video 30 giây;
-- mô tả chi tiết;
-- dữ liệu cơ quan vũ trụ đã dùng;
+- public project link;
+- demo of at most 7 slides or a 30-second video;
+- detailed description;
+- space agency data used;
 - References.

@@ -1,6 +1,7 @@
 {
   "name": "web",
   "private": true,
+  "license": "MIT",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -12,7 +13,6 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",
-    "astronomy-engine": "^2.1.19",
     "d3-selection": "3.0.0",
     "d3-zoom": "3.0.0",
     "echarts": "^6.1.0",

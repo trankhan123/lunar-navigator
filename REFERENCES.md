@@ -48,7 +48,6 @@
 - d3-zoom, d3-selection — pan and zoom for the SVG south-pole map (3.0.0, versions pinned). https://d3js.org/d3-zoom
 - Apache ECharts — charts. https://echarts.apache.org
 - echarts-for-react — React wrapper for ECharts. https://github.com/hustcc/echarts-for-react
-- Astronomy Engine — Sun/Earth positions in the browser. https://github.com/cosinekitty/astronomy
 - requests — HTTP client for the data pipeline. https://requests.readthedocs.io
 - NumPy — numeric arrays. https://numpy.org
 - rasterio — read DEM GeoTIFFs. https://rasterio.readthedocs.io
@@ -58,3 +57,10 @@
 - three.js 0.187.0 (MIT) — 3D terrain view (`TerrainView3D.jsx`), pinned exactly; globe.gl uses the same copy. https://threejs.org
 
 - NASA/JPL, DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and Geometry", Rev. K, 2016. https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf
+
+## Development tools
+
+- oxlint — JavaScript linter. https://oxc.rs
+- pytest — Python tests for the pipeline. https://pytest.org
+- Playwright — browser checks during development (MCP server and `web/tests/mission-chat.browser.mjs`). https://playwright.dev
+- Claude Code and OpenAI Codex — AI coding assistants, see [AI_USAGE.md](AI_USAGE.md).

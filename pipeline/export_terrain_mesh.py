@@ -1,6 +1,6 @@
 """D10 — Terrain height maps for the web 3D view: one Int16 .bin per region.
 
-Contract: README "D10 Terrain meshes". Run: python pipeline/export_terrain_mesh.py [path/to/LDEM_80S_80MPP_ADJ.TIF]
+Contract: docs/technical-reference.md "D10 Terrain meshes". Run: python pipeline/export_terrain_mesh.py [path/to/LDEM_80S_80MPP_ADJ.TIF]
 Input:  pipeline/raw/LDEM_80S_80MPP_ADJ.TIF (PGDA 90 DEM, 80 m), web/public/data/regions.json
 Output: web/public/terrain/<CODE>.bin (little-endian Int16 metres, row-major, row 0 = north edge, column 0 = west edge,
         height = DEM − d²/(2R) with d the distance from the window centre) and web/public/terrain/index.json.

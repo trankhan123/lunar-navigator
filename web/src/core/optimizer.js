@@ -10,6 +10,7 @@ import { simulateBattery } from './charging.js'
 export const LANDING_STEP_HOURS = 6
 
 // "Same region" for a point outside the 9 regions: the 2 km CAP cells within this distance.
+const PROGRESS_STEP_CELLS = 25 // one progress message per 25 cells keeps the UI responsive on big searches
 export const CAP_REGION_SEARCH_KM = 15
 
 // Minimum battery state-of-charge below which a window is flagged marginal.
@@ -182,7 +183,7 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion, capCells
     const distanceTo = (cell) => (cell.lat == null || cell.lon == null ? Infinity : distanceKm(currentCell, cell))
     const code = regionCode ?? (allCells.length > 0 ? regionOf(allCells.reduce((best, cell) => (distanceTo(cell) < distanceTo(best) ? cell : best))) : null)
     const regionCells = allCells.filter((cell) => regionOf(cell) === code)
-    // Not on an LGRS cell (none within 1 km): search the 2 km CAP cells around the point (README D9); none loaded = nothing to search.
+    // Not on an LGRS cell (none within 1 km): search the 2 km CAP cells around the point (docs/technical-reference.md D9); none loaded = nothing to search.
     candidates = regionCells.some((cell) => distanceTo(cell) <= 1) ? regionCells : withinKm(capCells, CAP_REGION_SEARCH_KM)
   } else if (scope === 'radius') {
     const radius = scenario?.searchRadiusKm ?? 10
@@ -310,7 +311,7 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
       }
     }
 
-    if (onProgress && c + 1 >= reportedDone) {
+    if (onProgress && (c + 1 === cellCount || c + 1 - reportedDone >= PROGRESS_STEP_CELLS)) {
       reportedDone = c + 1
       onProgress(reportedDone, cellCount)
     }

@@ -4,3 +4,5 @@ rasterio==1.5.2
 pyproj==3.8.0
 geopandas==1.2.0
 Pillow==12.3.0
+pytest==9.2.0
+# optional: matplotlib, only for `compute_horizon.py --plot`

@@ -14,10 +14,9 @@ import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import ValidationBadge from './components/ValidationBadge.jsx'
-import { capTileIdsInBounds } from './core/capGrid.js'
+import { capTileIdsInBounds, capTileIdsInCircle } from './core/capGrid.js'
 import { capTileIdsForSearch, pointRegionCode, regionCodesForSearch, searchAnchor } from './core/capSearch.js'
 import { detailCellFor, hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
-import { capTileIdsInCircle } from './core/capGrid.js'
 import { cellDisplayName } from './core/format.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
@@ -45,7 +44,7 @@ const forceMock = new URLSearchParams(window.location.search).get('mock') === '1
 const initialState = decodeShareQuery(window.location.search.slice(1))
 const initialCellId = initialState.selectedCellId ?? initialState.scenario.currentPoint?.cellId ?? null
 const selectClass = 'rounded border border-slate-500 bg-slate-950 px-2 py-1'
-const SMALLER_IS_BETTER = new Set(['distanceKm', 'psrDistanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours']) // README C5 rule
+const SMALLER_IS_BETTER = new Set(['distanceKm', 'psrDistanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours']) // docs/technical-reference.md C5 rule
 
 async function loadAllData() {
   // Real data is used once module D5 publishes regions.json; until then cells and sites come from the mock folder.
@@ -54,10 +53,10 @@ async function loadAllData() {
   if (useMock) regionsFile = await loadRegions(true)
   // The real ephemeris (D1) exists already, so even mock cells get real Sun and Earth positions.
   const [ephemeris, sitesFile, maps, capIndex] = await Promise.all([
-    loadEphemeris(false).catch(() => loadEphemeris(true)),
+    useMock ? loadEphemeris(false).catch(() => loadEphemeris(true)) : loadEphemeris(false), // real cells never get mock skies
     loadSites(useMock),
     useMock ? [] : loadMaps(),
-    useMock ? null : loadCapIndex(), // README D9; null = no cap grid, everything works as before
+    useMock ? null : loadCapIndex(), // docs/technical-reference.md D9; null = no cap grid, everything works as before
   ])
   return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites, maps, capIndex }
 }
@@ -69,7 +68,7 @@ export default function App() {
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [cellsByRegion, setCellsByRegion] = useState({})
-  const [capTiles, setCapTiles] = useState({}) // README D9: tile id → cells, filled as tiles load
+  const [capTiles, setCapTiles] = useState({}) // docs/technical-reference.md D9: tile id → cells, filled as tiles load
   const [regionCode, setRegionCode] = useState(initialCellId?.split('-')[0] ?? null)
   const [screen, setScreen] = useState(SCREENS.some(([id]) => id === initialState.screen) ? initialState.screen : 'map')
   const [mode, setMode] = useState(initialState.mode)
@@ -152,7 +151,7 @@ export default function App() {
     if (anchor) needCapTiles(capTileIdsInBounds(data.capIndex, [anchor.xM, anchor.yM, anchor.xM, anchor.yM]))
   }, [data, scenario.currentPoint, needCapTiles])
 
-  // null = the south-pole overview (README W2); a link with a cell opens that cell's region.
+  // null = the south-pole overview (docs/technical-reference.md W2); a link with a cell opens that cell's region.
   const activeRegion = data?.regions.find((region) => region.code === regionCode) ?? null
   useEffect(() => {
     if (activeRegion) loadRegionCells(activeRegion).catch((error) => setLoadError(error.message))
@@ -235,7 +234,7 @@ export default function App() {
     }
   }
 
-  // README W1: a link opened on the Results screen with a valid scenario runs its search once the data is in.
+  // docs/technical-reference.md W1: a link opened on the Results screen with a valid scenario runs its search once the data is in.
   useEffect(() => {
     if (!data || !autoRunPending.current) return
     autoRunPending.current = false
@@ -288,9 +287,9 @@ export default function App() {
       mapRange ? (
         <MapTimeBar ephemeris={data.ephemeris} range={mapRange} hour={shownMapHour} onChange={setMapHour} />
       ) : (
-        <p className="mt-2 text-sm text-slate-400">Pick valid dates in the form to move the map through time.</p>
+        <p className="mt-2 text-sm text-slate-400">{t('app.pickDatesHint')}</p>
       ),
-    [data, mapRange, shownMapHour],
+    [data, mapRange, shownMapHour, t],
   )
   // The Results map's hour is the landing time its ✓ ! ✕ colours describe; an off-grid time set in Detail makes landingIndex fall back to 0.
   const resultsHour = useMemo(() => (results ? hourIndexOf(data.ephemeris, results.landingTimes[landingIndex]) : null), [data, results, landingIndex])
@@ -316,7 +315,7 @@ export default function App() {
     }
   }, [data, scenario.currentPoint, cellsByRegion, capCells])
 
-  // First click sorts a column better-first (README C5 "Sorting by column"), the next click reverses it.
+  // First click sorts a column better-first (docs/technical-reference.md C5 "Sorting by column"), the next click reverses it.
   function sortRanking(key) {
     const betterFirst = SMALLER_IS_BETTER.has(key) ? 'asc' : 'desc'
     const reversed = betterFirst === 'asc' ? 'desc' : 'asc'
@@ -404,7 +403,7 @@ export default function App() {
             </div>
           </div>
         </div>
-        <nav className="mx-auto mt-2 flex max-w-7xl gap-1 overflow-x-auto" aria-label="Screens">
+        <nav className="mx-auto mt-2 flex max-w-7xl gap-1 overflow-x-auto" aria-label={t('app.screensNav')}>
           {SCREENS.map(([id, labelKey, defaultLabel]) => (
             <button
               key={id}
@@ -420,14 +419,14 @@ export default function App() {
       </header>
 
       <main className={`mx-auto w-full flex-1 p-4 ${screen === 'map' ? 'max-w-[1920px]' : 'max-w-7xl'}`}>
-        {loadError && <p role="alert" className="mb-4 text-red-400">Could not load data: {loadError}</p>}
+        {loadError && <p role="alert" className="mb-4 text-red-400">{t('app.loadError', { error: loadError })}</p>}
         {!data && !loadError && <p className="text-slate-400">{t('picker.loadingData')}</p>}
 
         <ScreenErrorBoundary key={screen}>
           {data && screen === 'map' && (
             <div className="space-y-5">
               <section aria-labelledby="map-title" className="min-w-0">
-                <h2 id="map-title" className="sr-only">South pole landing cells</h2>
+                <h2 id="map-title" className="sr-only">{t('app.mapTitle')}</h2>
                 <SouthPoleMap workspaceLayout rightPanel={import.meta.env.VITE_CHAT_UI === 'true' ? (
                   <details open={chatOpen} onToggle={(event) => setChatOpen(event.currentTarget.open)} className="rounded-xl border border-sky-500 bg-sky-950">
                     <summary className="cursor-pointer px-4 py-3 font-semibold text-sky-100">{t('chat.assistant')}</summary>
@@ -560,7 +559,7 @@ export default function App() {
 
           {data && screen === 'detail' &&
             (detailCell ? (
-              <Suspense fallback={<p className="text-slate-400">Loading cell detail…</p>}>
+              <Suspense fallback={<p className="text-slate-400">{t('app.loadingDetail')}</p>}>
               <DetailView
                 key={`${detailCell.id}|${detailLandingTime}`}
                 cell={detailCell}
@@ -575,7 +574,7 @@ export default function App() {
               />
               </Suspense>
             ) : (
-              <p className="text-slate-400">Select a cell on the Map screen, or a row in the Results, to see its details.</p>
+              <p className="text-slate-400">{t('app.selectCellHint')}</p>
             ))}
 
           {data && screen === 'globe' && (
@@ -598,7 +597,7 @@ export default function App() {
           )}
 
           {data && screen === 'learn' && (
-            <Suspense fallback={<p className="text-slate-400">Loading learn mode…</p>}>
+            <Suspense fallback={<p className="text-slate-400">{t('app.loadingLearn')}</p>}>
               <LearnView results={results} cellsById={searchedPoint ? new Map(cellsById).set(searchedPoint.id, searchedPoint) : cellsById} ephemeris={data.ephemeris} scenario={search.scenario} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
             </Suspense>
           )}

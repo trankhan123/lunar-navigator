@@ -1,6 +1,6 @@
 """D9 — Whole-cap 2 km grid (CAP): every 2 km cell south of 85°S that the 9 LGRS regions do not already cover.
 
-Contract: README "D9". Run: python pipeline/build_cap_grid.py [--limit N] [--jobs N]
+Contract: docs/technical-reference.md "D9". Run: python pipeline/build_cap_grid.py [--limit N] [--jobs N]
 Input:  pipeline/raw DEMs, slope and PSR rasters (same as D3/D4), web/public/data/regions.json (boundsM to exclude)
         --rebuild-tiles skips all computing and rewrites the tiles from the committed pipeline/out/*_CAP.json (use after E7).
 Output: pipeline/out/grid_CAP.json, feasibility_CAP.json (same shapes as the region files; horizons are not kept, they live in the web tiles),
@@ -92,6 +92,8 @@ def horizon_of_cell(cell):
 
 
 def compute_horizons(cells, jobs):
+    if jobs == 1:  # no pool: also works on Windows, where "fork" does not exist
+        return [horizon_of_cell(cell) for cell in cells]
     horizons = []
     with get_context("fork").Pool(jobs) as pool:  # fork (not the 3.14 default) so workers inherit the loaded DEMs
         for count, horizon in enumerate(pool.imap(horizon_of_cell, cells, chunksize=10), start=1):

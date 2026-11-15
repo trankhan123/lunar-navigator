@@ -52,7 +52,7 @@ class TestLunarCoordinateTransformation(unittest.TestCase):
         self.assertAlmostEqual(y, 0.0, places=3)
 
     def test_prime_meridian_orientation(self):
-        """+y points to the 0° meridian as specified in README conventions."""
+        """+y points to the 0° meridian as specified in docs/technical-reference.md conventions."""
         x, y = self.transformer.transform(0.0, -85.0)
         self.assertAlmostEqual(x, 0.0, places=1)
         self.assertGreater(y, 0.0, "+y must point to 0° meridian")
@@ -60,7 +60,7 @@ class TestLunarCoordinateTransformation(unittest.TestCase):
         self.assertAlmostEqual(y, 151713.0, delta=100.0)
 
     def test_90_east_orientation(self):
-        """+x points to lon 90°E as specified in README conventions."""
+        """+x points to lon 90°E as specified in docs/technical-reference.md conventions."""
         x, y = self.transformer.transform(90.0, -85.0)
         self.assertGreater(x, 0.0, "+x must point to 90°E")
         self.assertAlmostEqual(y, 0.0, places=1)
@@ -329,7 +329,7 @@ class TestScaleOffsetTreatment(unittest.TestCase):
             self.assertAlmostEqual(result, 0.6, places=5)
 
     def test_pgda_scale_constant_value(self):
-        """PGDA_SCALE must be exactly 4e-05 as stated in the README."""
+        """PGDA_SCALE must be exactly 4e-05 as stated in the docs/technical-reference.md."""
         self.assertAlmostEqual(V.PGDA_SCALE, 4e-05, places=12)
 
 
@@ -409,7 +409,7 @@ class TestHorizonsCheckWithFixture(unittest.TestCase):
 # ===========================================================================
 
 class TestOutputJsonSchema(unittest.TestCase):
-    """Test that the validation.json output adheres strictly to the README contract."""
+    """Test that the validation.json output adheres strictly to the docs/technical-reference.md contract."""
 
     def test_schema_keys(self):
         """Top-level keys must be exactly pgda69, horizons, quickmap."""

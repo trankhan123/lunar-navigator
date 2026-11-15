@@ -5,7 +5,7 @@ import { distanceKm } from './geometry.js'
 import { isOnPolarMap } from './mapView.js'
 
 const MAX_MATCHES = 8
-const CAP_TILE_SIZE_M = 40000 // README D9
+const CAP_TILE_SIZE_M = 40000 // docs/technical-reference.md D9
 const CELL_ID_START = /^[a-z0-9]{3}-/i
 
 const insideBounds = ({ xM, yM }, [xMin, yMin, xMax, yMax]) => xM >= xMin && xM <= xMax && yM >= yMin && yM <= yMax

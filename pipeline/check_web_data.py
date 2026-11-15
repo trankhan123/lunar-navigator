@@ -1,4 +1,4 @@
-"""Check that a data folder follows the README data contract. Real and mock data must both pass.
+"""Check that a data folder follows the docs/technical-reference.md data contract. Real and mock data must both pass.
 
 Run: python pipeline/check_web_data.py                       (web/public/data, plus web/public/maps/maps.json)
      python pipeline/check_web_data.py web/public/data/mock  (mock data: every file must say "mock": true; no maps)
@@ -136,7 +136,7 @@ def check_cell(file_name, code, cell):
         return None
     if cell["psrDistanceKm"] is not None and not in_range(cell["psrDistanceKm"], 0, 1e4):
         problem(file_name, f"{cell_id}: psrDistanceKm must be null or a number >= 0")
-    # Rule applied to the rounded values written in the file (README "cells_<CODE>.json").
+    # Rule applied to the rounded values written in the file (docs/technical-reference.md "cells_<CODE>.json").
     expected = cell["slopeDeg"] <= SLOPE_LIMIT_DEG and cell["psrFraction"] <= PSR_LIMIT_FRACTION
     reason = None if expected else ("slope" if cell["slopeDeg"] > SLOPE_LIMIT_DEG else "psr")
     if cell["feasible"] is not expected or cell["infeasibleReason"] != reason:
@@ -313,7 +313,7 @@ CAP_ID = re.compile(r"^CAP-r\d{3}c\d{3}$")
 
 
 def check_cap(folder):
-    """Whole-cap 2 km grid (README D9): <folder>/cap/index.json plus its tile files."""
+    """Whole-cap 2 km grid (docs/technical-reference.md D9): <folder>/cap/index.json plus its tile files."""
     cap_folder = Path(folder) / "cap"
     index = load(cap_folder, "index.json", False)
     if index is None:
@@ -396,7 +396,7 @@ def main():
         print("  problem:", line)
     if problems:
         raise SystemExit(f"{len(problems)} problem(s)")
-    print("  OK, follows the README data contract")
+    print("  OK, follows the docs/technical-reference.md data contract")
 
 
 if __name__ == "__main__":

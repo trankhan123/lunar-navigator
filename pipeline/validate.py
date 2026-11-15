@@ -1,6 +1,6 @@
 """D7 — Validation against NASA PGDA 69 (and the Horizons vector check from D1).
 
-Contract: README "D7 Validation" and "validation.json". Run: python pipeline/validate.py
+Contract: docs/technical-reference.md "D7 Validation" and "validation.json". Run: python pipeline/validate.py
 Input:  pipeline/raw/AVGVISIB_85S_060M_201608.TIF and ..._EARTH.TIF
         (pixel value × 4e-05 = fraction of time visible; 18.6-year average, covers 85–90°S only, so CAB, MMP, NR2 have no PGDA value)
         pipeline/out/our_visibility.json, written first by `node pipeline/compute_our_visibility.mjs`
@@ -466,7 +466,7 @@ def main():
             pass
 
     # --- Write validation.json ---
-    # Preserve the exact README schema: pgda69, horizons, quickmap
+    # Preserve the exact docs/technical-reference.md schema: pgda69, horizons, quickmap
     out = {
         "pgda69": pgda69_rows,
         "pgda69Stats": pgda69_stats,

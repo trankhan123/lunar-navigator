@@ -11,7 +11,7 @@ const LIMITATIONS = [
   'The terrain horizon is computed at the centre of each 1 km cell from 80 m LOLA terrain, so boulders and small ridges are not seen.',
   'Sites outside the terrain model use a smooth-sphere horizon ("terrain not included").',
   'The battery model is simple: constant load, no temperature effects, no panel or battery ageing.',
-  'This is a hackathon project, not an official NASA tool.',
+  'This is a NASA Space Apps Challenge 2026 project, not an official NASA tool.',
 ]
 
 const SOURCES = [

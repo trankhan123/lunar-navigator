@@ -21,7 +21,7 @@ test('computeEarthTrack with DSN: only when requireDsn is true, a hidden-station
     canberra: [-100, -100, -50, -300],
   }
 
-  // Default is the README rule: line of sight only, DSN data is ignored.
+  // Default is the docs/technical-reference.md rule: line of sight only, DSN data is ignored.
   const lineOfSight = computeEarthTrack(equatorCell, ephemeris, 0, 4)
   assert.deepEqual([...lineOfSight.diskFraction], [1, 1, 1, 1])
   assert.deepEqual([...computeEarthTrack(equatorCell, ephemeris, 0, 4, false).diskFraction], [1, 1, 1, 1])

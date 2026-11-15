@@ -49,7 +49,7 @@ export async function reserveChatQuota({ req, sessionId, requestId, env, fetchIm
     `${prefix}:request:${sessionId}:${requestId}`, `${prefix}:day:${day}`, `${prefix}:minute:${minute}`,
     `${prefix}:ip:${ipHash}:minute:${minute}`, `${prefix}:ip:${ipHash}:day:${day}`, `${prefix}:session:${sessionId}:${day}`,
   ]
-  const args = [limit(env.CHAT_GLOBAL_DAILY_LIMIT, 50), 172800, limit(env.CHAT_GLOBAL_MINUTE_LIMIT, 3), 120, 4, 120, 20, 172800, 20, 172800]
+  const args = [limit(env.CHAT_GLOBAL_DAILY_LIMIT, 50), 172800, limit(env.CHAT_GLOBAL_MINUTE_LIMIT, 3), 120, 4, 120, 10, 172800, 10, 172800] // per-IP and per-session daily caps of 10 keep the shared 50/day for many visitors
   const response = await fetchImpl(env.UPSTASH_REDIS_REST_URL, {
     method: 'POST', headers: { Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`, 'content-type': 'application/json' },
     body: JSON.stringify(['EVAL', QUOTA_SCRIPT, keys.length, ...keys, ...args]), signal: AbortSignal.timeout(3000),

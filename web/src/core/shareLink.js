@@ -1,4 +1,4 @@
-// W1 — shareable link. Contract: README "W1 → Share link".
+// W1 — shareable link. Contract: docs/technical-reference.md "W1 → Share link".
 import { DEFAULT_SCENARIO, PANEL_MODES, SEARCH_SCOPES } from './scenario.js'
 
 const TEXT_KEYS = { start: 'startDate', end: 'endDate', panelMode: 'panelMode', scope: 'searchScope' }

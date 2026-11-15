@@ -31,26 +31,11 @@ required. No new npm dependency was added.
    production-only dependencies. For `vite: command not found`, first confirm
    Root Directory is `web`; root-level builds cannot see this configuration.
 
-## Two Hobby accounts, one public repository
+## Deployment access
 
-The repository `trankhan123/lunar-navigator` is public, confirmed through the
-GitHub API. Public repository collaboration is free on Vercel. A contributor
-with GitHub write access can push feature branches for automatic previews and
-merge through the repository's normal rules for a production deployment, when
-the Vercel Git integration is configured accordingly. No owner-authored release
-commit or Pro upgrade is required for this public-repository workflow.
-
-The private-repository Hobby commit-author restriction does not apply to this
-public repository. GitHub write access does not grant Vercel dashboard access:
-the project owner still configures secrets, domains and project settings.
-Check the actual Production Branch in Project Settings; do not change it to WF2
-without coordinating with the team. Keep changes attributed to their real author.
-
-The owner enters environment variables. Contributors can then trigger Git-based
-deployments without sharing the owner's Vercel password.
-If the user wants independent deployment instead, create a separate project
-from code they are authorized to copy into a personal repository, and configure
-its own secrets. That gets a separate URL and does not control the existing site.
+The repository is public and deployed by the Vercel Git integration (Root Directory `web`).
+Only the Vercel project owner sets environment variables, secrets and domains; contributors
+deploy by pushing to the repository. Changes stay attributed to their real author.
 
 ## Environment variables
 
@@ -86,8 +71,8 @@ deployment checks. Without credentials the form works and chat fails closed.
 
 - Every accepted request atomically reserves global, IP and signed-session
   allowances **before** calling Gemini. There are no automatic provider retries.
-- Defaults: global 50/day and 3/minute, IP 4/minute and 20/day, signed session
-  20/day. Minute/day buckets use UTC. Counters and request IDs expire in Redis.
+- Defaults: global 50/day and 3/minute, IP 4/minute and 10/day, signed session
+  10/day. Minute/day buckets use UTC. Counters and request IDs expire in Redis.
 - All deployments using this Redis database share the global quota. Requests
   that fail at the provider still consume their reservation. Do not delete
   counters to bypass the budget.

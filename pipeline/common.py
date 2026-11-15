@@ -1,4 +1,4 @@
-"""Shared paths, constants and helpers for every pipeline module (contract: README "Data files")."""
+"""Shared paths, constants and helpers for every pipeline module (contract: docs/technical-reference.md "Data files")."""
 import json
 from pathlib import Path
 

@@ -1,4 +1,5 @@
 import { Suspense, lazy, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity } from 'd3-zoom'
 import { capTileIdsInCircle } from '../core/capGrid.js'
@@ -52,7 +53,7 @@ function MapImage({ entry, opacity = 1 }) {
 }
 
 /**
- * README W2: one SVG of the whole south pole in PGDA metres (SVG y = −yM), panned and zoomed by d3-zoom.
+ * docs/technical-reference.md W2: one SVG of the whole south pole in PGDA metres (SVG y = −yM), panned and zoomed by d3-zoom.
  * activeRegion null = the overview; otherwise that region's cells are drawn.
  */
 function SouthPoleMap({
@@ -60,6 +61,7 @@ function SouthPoleMap({
   selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells, capIndex = null, capCells = [], onNeedCapTiles, toolbarSlot = null, workspaceLayout = false, rightPanel = null,
 }) {
   const svgRef = useRef(null)
+  const { t } = useI18n()
   const behaviorRef = useRef(null)
   const isFirstFit = useRef(true)
   const [transform, setTransform] = useState(zoomIdentity)
@@ -261,14 +263,14 @@ function SouthPoleMap({
   return (
     <figure className="@container">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
-        <nav aria-label="Map level" className="flex items-center gap-1">
+        <nav aria-label={t('map.levelNav')} className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => onOpenRegion(null)}
             aria-current={activeRegion ? undefined : 'page'}
             className="rounded px-2 py-1 text-sky-300 transition-colors hover:bg-slate-800 aria-[current=page]:text-slate-200"
           >
-            South pole
+            {t('map.southPole')}
           </button>
           {activeRegion && (
             <>
@@ -279,20 +281,20 @@ function SouthPoleMap({
         </nav>
         {toolbarSlot}
         <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} capCells={capIndex ? capCells : null} onNeedRegionCells={onNeedRegionCells} onNeedCapPoint={(point) => onNeedCapTiles(capTileIdsInCircle(capIndex, point.xM, point.yM, 0))} onPick={pickSearchMatch} />
-        <span className="ml-auto hidden text-xs text-slate-400 min-[1700px]:inline">{show3d ? 'Drag to rotate, scroll or pinch to zoom' : 'Click the map, then scroll to zoom'}</span>
+        <span className="ml-auto hidden text-xs text-slate-400 min-[1700px]:inline">{show3d ? t('map.hint3d') : t('map.hint2d')}</span>
         {activeRegion && (
           <button type="button" aria-pressed={view3d} onClick={() => setView3d(!view3d)} className="h-9 rounded border border-slate-600 px-3 transition-colors hover:bg-slate-800 aria-pressed:bg-slate-700">
             {view3d ? '2D' : '3D'}
           </button>
         )}
-        <button type="button" aria-label="Zoom in" onClick={() => zoomBy(ZOOM_STEP)} className={toolbarButton}>+</button>
-        <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)} className={toolbarButton}>−</button>
+        <button type="button" aria-label={t('map.zoomIn')} onClick={() => zoomBy(ZOOM_STEP)} className={toolbarButton}>+</button>
+        <button type="button" aria-label={t('map.zoomOut')} onClick={() => zoomBy(1 / ZOOM_STEP)} className={toolbarButton}>−</button>
       </div>
       <div className={workspaceLayout ? `map-workspace-grid ${rightPanel ? 'has-chat' : ''}` : 'grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]'}>
       <div className={workspaceLayout ? 'map-workspace-canvas min-w-0' : undefined}>
       {show3d && (
         <div className={workspaceLayout ? 'mx-auto w-full lg:max-w-[max(20rem,calc(100vh-15rem))]' : 'mx-auto w-full max-w-[max(20rem,calc(100vh-17rem))]'}>
-          <Suspense fallback={<p className="p-4 text-sm text-slate-400">Loading 3D view…</p>}>
+          <Suspense fallback={<p className="p-4 text-sm text-slate-400">{t('map.loading3d')}</p>}>
             <TerrainView3D
               regionCode={regionCode} cells={cells} colors={colors} maps={maps} ephemeris={ephemeris} hour={hour}
               directions={directions} lonDeg={measuredCell?.lon} focusCell={measuredCell}

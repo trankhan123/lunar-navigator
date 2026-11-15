@@ -1,4 +1,4 @@
-// Which files a search needs: LGRS regions and CAP tiles (README C5 "Search scope", D9).
+// Which files a search needs: LGRS regions and CAP tiles (docs/technical-reference.md C5 "Search scope", D9).
 import { CAP_ID_PATTERN, capCellCenterFromId, capTileIdsInCircle } from './capGrid.js'
 import { toPolarXY } from './data.js'
 import { CAP_REGION_SEARCH_KM } from './optimizer.js'

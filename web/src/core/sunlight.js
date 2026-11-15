@@ -1,4 +1,4 @@
-// C1 — Sunlight. Contract: README "C1 Sunlight".
+// C1 — Sunlight. Contract: docs/technical-reference.md "C1 Sunlight".
 import {
   bodyAzimuthElevation,
   horizonElevationAt,

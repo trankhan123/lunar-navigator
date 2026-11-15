@@ -10,7 +10,7 @@ mission scenarios, not specifications of real spacecraft.
 | Case | Expected and observed behavior |
 |---|---|
 | English date range | “At Malapert Massif, January 1–7, 2028, stay 6 days. Battery 10 kWh, panel 1 kW, load 300 W.” → start `2028-01-01`, end `2028-01-07`, 6 days, 10000 Wh, 1000 W, 300 W; Apply updates the form. |
-| Vietnamese limits | “Ở Malapert Massif, hạ cánh từ 2028-02-01 đến 2028-02-07, ở lại 3 ngày. Pin 2.5 kWh, tấm pin 1.2 kW, tải 150 W. Tối đa 8 giờ tối và 4 giờ mất liên lạc. Tìm trong bán kính 5 km.” → all ten expected date/quantity/scope fields matched. |
+| Vietnamese limits | “Ở Malapert Massif, hạ cánh từ 2028-02-01 đến 2028-02-07, ở lại 3 ngày. Pin 2.5 kWh, tấm pin 1.2 kW, tải 150 W. Tối đa 8 giờ tối và 4 giờ mất liên lạc. Tìm trong bán kính 5 km.” (Vietnamese example input; in English: landing at Malapert Massif 2028-02-01 to 2028-02-07, 3-day stay, 2.5 kWh battery, 1.2 kW panel, 150 W load, max 8 h dark, 4 h no contact, 5 km radius) → all ten expected date/quantity/scope fields matched. |
 | Month without year | “At Malapert Massif in January, staying 6 days.” → asks for year; Apply disabled. |
 | Partial update | Change only battery to 2.5 kWh in a custom Haworth scenario → 2500 Wh; point, dates, 875 W panel, 225 W load, 9 h darkness, 7 h comm loss, horizontal panel and 12.5 km radius preserved. |
 | Missing landing point | January 1–7, 2028, 3-day stay, 2 kWh battery, 150 W load → asks for landing site and disables Apply. |

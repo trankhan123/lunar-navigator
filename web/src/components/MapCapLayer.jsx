@@ -17,8 +17,11 @@ function rasterUrl(capCells, colors, gridSize) {
   return canvas.toDataURL()
 }
 
+// shortcut: past this many loaded cap cells, panning loads no more tiles (phone memory); evicting old tiles would be the real fix.
+const MAX_CAP_CELLS_ON_MAP = 30000
+
 /**
- * README W2: the whole-cap 2 km grid as ONE raster (a pixel per cell, same colours as the region cells on the active layer).
+ * docs/technical-reference.md W2: the whole-cap 2 km grid as ONE raster (a pixel per cell, same colours as the region cells on the active layer).
  * Sky and search colours are computed here from the loaded CAP cells; layerId is the layer SouthPoleMap actually draws.
  */
 function MapCapLayer({ capCells, capIndex, layerId, ephemeris, hour, hourRange, statusByCellId, transform, onSelectCell, onHoverCell, onNeedCapTiles, onStatusChange }) {
@@ -76,10 +79,10 @@ function MapCapLayer({ capCells, capIndex, layerId, ephemeris, hour, hourRange, 
 
   // Tiles in view load once zoomed in; wide screens already preloaded the 85°S circle (App).
   useEffect(() => {
-    if (!capIndex || transform.k < PHONE_MIN_ZOOM_SCALE) return
+    if (!capIndex || transform.k < PHONE_MIN_ZOOM_SCALE || capCells.length >= MAX_CAP_CELLS_ON_MAP) return
     const timer = setTimeout(() => onNeedCapTiles(capTileIdsInBounds(capIndex, viewBoundsM(transform))), TILE_WAIT_MS)
     return () => clearTimeout(timer)
-  }, [capIndex, transform, onNeedCapTiles])
+  }, [capIndex, transform, onNeedCapTiles, capCells.length])
 
   function cellFromEvent(event) {
     const box = event.currentTarget.getBoundingClientRect()
