@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
 import { searchMap } from '../core/mapSearch.js'
 
 // Enter picks the first match, Escape clears. A typed cell ID asks App to load its region's file (onNeedRegionCells).
 export default function MapSearch({ regions, sites, cellsByRegion, capCells = null, onNeedRegionCells, onNeedCapPoint, onPick }) {
+  const { t } = useI18n()
   const [text, setText] = useState('')
   const { matches, regionCodeToLoad, capPointToLoad } = useMemo(() => searchMap(text, regions, sites, cellsByRegion, capCells), [text, regions, sites, cellsByRegion, capCells])
   useEffect(() => {
@@ -34,8 +36,8 @@ export default function MapSearch({ regions, sites, cellsByRegion, capCells = nu
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => event.key === 'Escape' && setText('')}
-        aria-label="Find a region, site or cell ID"
-        placeholder="Find…"
+        aria-label={t('map.findLabel')}
+        placeholder={t('map.findPlaceholder')}
         className="w-40 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-sm"
       />
       {typed && (matches.length > 0 || status) && (

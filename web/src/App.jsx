@@ -288,9 +288,9 @@ export default function App() {
       mapRange ? (
         <MapTimeBar ephemeris={data.ephemeris} range={mapRange} hour={shownMapHour} onChange={setMapHour} />
       ) : (
-        <p className="mt-2 text-sm text-slate-400">Pick valid dates in the form to move the map through time.</p>
+        <p className="mt-2 text-sm text-slate-400">{t('app.pickDatesHint')}</p>
       ),
-    [data, mapRange, shownMapHour],
+    [data, mapRange, shownMapHour, t],
   )
   // The Results map's hour is the landing time its ✓ ! ✕ colours describe; an off-grid time set in Detail makes landingIndex fall back to 0.
   const resultsHour = useMemo(() => (results ? hourIndexOf(data.ephemeris, results.landingTimes[landingIndex]) : null), [data, results, landingIndex])
@@ -404,7 +404,7 @@ export default function App() {
             </div>
           </div>
         </div>
-        <nav className="mx-auto mt-2 flex max-w-7xl gap-1 overflow-x-auto" aria-label="Screens">
+        <nav className="mx-auto mt-2 flex max-w-7xl gap-1 overflow-x-auto" aria-label={t('app.screensNav')}>
           {SCREENS.map(([id, labelKey, defaultLabel]) => (
             <button
               key={id}
@@ -420,14 +420,14 @@ export default function App() {
       </header>
 
       <main className={`mx-auto w-full flex-1 p-4 ${screen === 'map' ? 'max-w-[1920px]' : 'max-w-7xl'}`}>
-        {loadError && <p role="alert" className="mb-4 text-red-400">Could not load data: {loadError}</p>}
+        {loadError && <p role="alert" className="mb-4 text-red-400">{t('app.loadError', { error: loadError })}</p>}
         {!data && !loadError && <p className="text-slate-400">{t('picker.loadingData')}</p>}
 
         <ScreenErrorBoundary key={screen}>
           {data && screen === 'map' && (
             <div className="space-y-5">
               <section aria-labelledby="map-title" className="min-w-0">
-                <h2 id="map-title" className="sr-only">South pole landing cells</h2>
+                <h2 id="map-title" className="sr-only">{t('app.mapTitle')}</h2>
                 <SouthPoleMap workspaceLayout rightPanel={import.meta.env.VITE_CHAT_UI === 'true' ? (
                   <details open={chatOpen} onToggle={(event) => setChatOpen(event.currentTarget.open)} className="rounded-xl border border-sky-500 bg-sky-950">
                     <summary className="cursor-pointer px-4 py-3 font-semibold text-sky-100">{t('chat.assistant')}</summary>
@@ -560,7 +560,7 @@ export default function App() {
 
           {data && screen === 'detail' &&
             (detailCell ? (
-              <Suspense fallback={<p className="text-slate-400">Loading cell detail…</p>}>
+              <Suspense fallback={<p className="text-slate-400">{t('app.loadingDetail')}</p>}>
               <DetailView
                 key={`${detailCell.id}|${detailLandingTime}`}
                 cell={detailCell}
@@ -575,7 +575,7 @@ export default function App() {
               />
               </Suspense>
             ) : (
-              <p className="text-slate-400">Select a cell on the Map screen, or a row in the Results, to see its details.</p>
+              <p className="text-slate-400">{t('app.selectCellHint')}</p>
             ))}
 
           {data && screen === 'globe' && (
@@ -598,7 +598,7 @@ export default function App() {
           )}
 
           {data && screen === 'learn' && (
-            <Suspense fallback={<p className="text-slate-400">Loading learn mode…</p>}>
+            <Suspense fallback={<p className="text-slate-400">{t('app.loadingLearn')}</p>}>
               <LearnView results={results} cellsById={searchedPoint ? new Map(cellsById).set(searchedPoint.id, searchedPoint) : cellsById} ephemeris={data.ephemeris} scenario={search.scenario} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
             </Suspense>
           )}

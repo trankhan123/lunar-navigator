@@ -60,7 +60,7 @@ export default function RankingTable({ rows, sortBy, direction, onSort, onSelect
                 <button type="button" onClick={() => onSelectRow(row)} className="font-mono text-sky-300 underline-offset-2 hover:underline">
                   {row.cellId === currentCellId && currentPointName ? currentPointName : row.cellId}
                 </button>
-                {row.cellId === currentCellId && <span className="ml-1 text-xs text-amber-300">(you)</span>}
+                {row.cellId === currentCellId && <span className="ml-1 text-xs text-amber-300">{t('results.you')}</span>}
               </td>
               {columns.map((column) => (
                 <td key={column.key} className="py-1.5 pr-2">{column.show(row)}</td>

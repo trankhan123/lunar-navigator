@@ -111,7 +111,7 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
 
       <fieldset className="space-y-2">
         <legend className="mb-1 text-sm text-slate-300">{t('scenario.currentPoint')}</legend>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="How to give the point">
+        <div className="flex flex-wrap gap-1" role="group" aria-label={t('scenario.pointTypeGroup')}>
           {pointTypes.map(([type, label]) => (
             <button
               key={type}

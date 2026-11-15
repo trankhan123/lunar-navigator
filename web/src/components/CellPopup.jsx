@@ -41,14 +41,14 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
 
   function copyId() {
     const copying = navigator.clipboard?.writeText(cell.id) ?? Promise.reject(new Error('no clipboard'))
-    copying.then(() => setCopyMessage('Copied')).catch(() => setCopyMessage('Copy failed: select the ID above'))
+    copying.then(() => setCopyMessage(t('popup.copied'))).catch(() => setCopyMessage(t('popup.copyFailed')))
   }
 
   const rows = [
-    ['Latitude, longitude', `${cell.lat.toFixed(4)}°, ${cell.lon.toFixed(4)}°`],
-    ['Height', `${Math.round(cell.heightM)} m`],
-    ['Slope', `${cell.slopeDeg.toFixed(1)}°`],
-    ['Permanent shadow', `${Math.round(cell.psrFraction * 100)} % of the cell`],
+    [t('popup.latLon'), `${cell.lat.toFixed(4)}°, ${cell.lon.toFixed(4)}°`],
+    [t('popup.height'), `${Math.round(cell.heightM)} m`],
+    [t('popup.slope'), `${cell.slopeDeg.toFixed(1)}°`],
+    [t('popup.psr'), t('popup.psrShare', { percent: Math.round(cell.psrFraction * 100) })],
     ...(cell.psrDistanceKm == null ? [] : [[t('popup.psrDistance'), `${cell.psrDistanceKm.toFixed(1)} km`]]),
   ]
   return (
@@ -57,10 +57,10 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
         <div>
           <h2 id="cell-title" className="font-mono text-base font-semibold">{cell.id}</h2>
           <p className={cell.feasible ? 'text-sky-300' : 'text-slate-300'}>
-            {cell.feasible ? 'Feasible landing cell' : `Not feasible: ${INFEASIBLE_REASON_TEXT[cell.infeasibleReason]}`}
+            {cell.feasible ? t('popup.feasible') : t('popup.notFeasible', { reason: INFEASIBLE_REASON_TEXT[cell.infeasibleReason] })}
           </p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close cell details" className="-mr-2 -mt-2 grid size-10 place-items-center rounded text-xl text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100">
+        <button type="button" onClick={onClose} aria-label={t('popup.close')} className="-mr-2 -mt-2 grid size-10 place-items-center rounded text-xl text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100">
           ×
         </button>
       </div>
@@ -75,20 +75,19 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
       <div className="mt-3 border-t border-slate-800 pt-3">
         {sky ? (
           <>
-            <p className="text-xs text-slate-400">At {formatUtc(timeAtHour(ephemeris, hour))}</p>
+            <p className="text-xs text-slate-400">{t('popup.at', { time: formatUtc(timeAtHour(ephemeris, hour)) })}</p>
             <p className="text-amber-300">{skyLine('Sun', sky.sun, sky.lookAheadHours)}</p>
             <p className="text-sky-300">{skyLine('Earth', sky.earth, sky.lookAheadHours)}</p>
           </>
         ) : (
           <p className="text-xs text-slate-400">
-            Pick a landing date between {formatUtc(timeAtHour(ephemeris, 0)).slice(0, 10)} and {formatUtc(timeAtHour(ephemeris, ephemeris.hours - 1)).slice(0, 10)} to
-            see the Sun and Earth from this cell.
+            {t('popup.pickDate', { first: formatUtc(timeAtHour(ephemeris, 0)).slice(0, 10), last: formatUtc(timeAtHour(ephemeris, ephemeris.hours - 1)).slice(0, 10) })}
           </p>
         )}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2" aria-live="polite">
         <button type="button" onClick={copyId} className="rounded border border-slate-500 px-3 py-2 transition-colors hover:bg-slate-800">
-          Copy ID
+          {t('popup.copyId')}
         </button>
         <button
           type="button"
@@ -96,10 +95,10 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
           disabled={isCurrent}
           className="rounded bg-sky-700 px-3 py-2 font-medium text-white transition-colors hover:bg-sky-800 disabled:cursor-default disabled:opacity-60"
         >
-          {isCurrent ? 'This is your current point' : 'Use as current point'}
+          {isCurrent ? t('popup.isCurrent') : t('popup.useAsCurrent')}
         </button>
         <button type="button" onClick={onOpenDetail} className="rounded border border-slate-500 px-3 py-2 transition-colors hover:bg-slate-800">
-          Open details
+          {t('popup.openDetails')}
         </button>
         {copyMessage && <span className="text-xs text-slate-300">{copyMessage}</span>}
       </div>
@@ -108,7 +107,7 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
           <SeasonalCalendar cell={cell} ephemeris={ephemeris} />
         </Suspense>
       </div>
-      {!cell.feasible && <p className="mt-2 text-xs text-slate-400">You can still use it as your current point to find the nearest good cells.</p>}
+      {!cell.feasible && <p className="mt-2 text-xs text-slate-400">{t('popup.stillUsable')}</p>}
     </section>
   )
 }
