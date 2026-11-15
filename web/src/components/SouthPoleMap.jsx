@@ -57,7 +57,7 @@ function MapImage({ entry, opacity = 1 }) {
  */
 function SouthPoleMap({
   regions, activeRegion, maps, cells, sites, ephemeris, hour, hourRange = null, stayDays = null, defaultLayerId, timeBar = null, statusByCellId, currentCellId,
-  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells, capIndex = null, capCells = [], onNeedCapTiles, toolbarSlot = null,
+  selectedCellId, onSelectCell, onOpenRegion, focus = null, cellsByRegion = {}, onNeedRegionCells, capIndex = null, capCells = [], onNeedCapTiles, toolbarSlot = null, workspaceLayout = false, rightPanel = null,
 }) {
   const svgRef = useRef(null)
   const behaviorRef = useRef(null)
@@ -248,6 +248,15 @@ function SouthPoleMap({
     ? `Map of ${activeRegion.name}: ${cells?.length ?? 0} cells of 1 km, ${cells?.filter((cell) => cell.feasible).length ?? 0} feasible. Use the Cell list above the map to select a cell with the keyboard.`
     : 'Map of the lunar south pole with the Artemis III regions. Use the Region list to open one.'
 
+  const mapFooter = <>
+      {timeBar}
+      {activeRegion ? (
+        <MapLegend layerId={layerId} dateRangeText={dateRangeText} enabledOverlayKinds={enabledNasaKinds} reliefIndex={overlays.relief.enabled ? reliefIndex : null} />
+      ) : (
+        <MapLegend layerId={dotLayerId} showsCentreDots enabledOverlayKinds={enabledNasaKinds} reliefIndex={overlays.relief.enabled ? reliefIndex : null} />
+      )}
+  </>
+
   return (
     <figure className="@container">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
@@ -278,10 +287,10 @@ function SouthPoleMap({
         <button type="button" aria-label="Zoom in" onClick={() => zoomBy(ZOOM_STEP)} className={toolbarButton}>+</button>
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)} className={toolbarButton}>−</button>
       </div>
-      <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]">
-      <div>
+      <div className={workspaceLayout ? `map-workspace-grid ${rightPanel ? 'has-chat' : ''}` : 'grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]'}>
+      <div className={workspaceLayout ? 'map-workspace-canvas min-w-0' : undefined}>
       {show3d && (
-        <div className="mx-auto w-full max-w-[max(20rem,calc(100vh-17rem))]">
+        <div className={workspaceLayout ? 'w-full' : 'mx-auto w-full max-w-[max(20rem,calc(100vh-17rem))]'}>
           <Suspense fallback={<p className="p-4 text-sm text-slate-400">Loading 3D view…</p>}>
             <TerrainView3D
               regionCode={regionCode} cells={cells} colors={colors} maps={maps} ephemeris={ephemeris} hour={hour}
@@ -290,7 +299,7 @@ function SouthPoleMap({
           </Suspense>
         </div>
       )}
-      <div className={`relative mx-auto w-full max-w-[max(20rem,calc(100vh-17rem))] ${show3d ? 'hidden' : ''}`}>
+      <div className={`relative mx-auto w-full ${workspaceLayout ? '' : 'max-w-[max(20rem,calc(100vh-17rem))]'} ${show3d ? 'hidden' : ''}`}>
       <svg
         ref={svgRef}
         viewBox={VIEW_BOX}
@@ -385,8 +394,9 @@ function SouthPoleMap({
         {statusText}
       </p>
       {coverageNote && <p className="text-xs text-amber-200">{coverageNote}</p>}
+      {workspaceLayout && mapFooter}
       </div>
-      <div className="@2xl:max-h-[calc(100vh-17rem)] @2xl:overflow-y-auto">
+      <div className={workspaceLayout ? 'map-workspace-layers min-w-0' : '@2xl:max-h-[calc(100vh-17rem)] @2xl:overflow-y-auto'}>
       <MapLayersPanel
         layerId={chosenLayerId}
         onLayerChange={setChosenLayerId}
@@ -396,13 +406,9 @@ function SouthPoleMap({
         onOverlayChange={changeOverlay}
       />
       </div>
+      {workspaceLayout && rightPanel && <aside className="map-workspace-chat min-w-0">{rightPanel}</aside>}
       </div>
-      {timeBar}
-      {activeRegion ? (
-        <MapLegend layerId={layerId} dateRangeText={dateRangeText} enabledOverlayKinds={enabledNasaKinds} reliefIndex={overlays.relief.enabled ? reliefIndex : null} />
-      ) : (
-        <MapLegend layerId={dotLayerId} showsCentreDots enabledOverlayKinds={enabledNasaKinds} reliefIndex={overlays.relief.enabled ? reliefIndex : null} />
-      )}
+      {!workspaceLayout && mapFooter}
     </figure>
   )
 }

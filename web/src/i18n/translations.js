@@ -14,6 +14,8 @@ export const LANGUAGES = {
 
 export const TRANSLATIONS = {
   en: {
+    'layout.landingCell': 'Landing cell details',
+    'layout.selectCell': 'Select a cell on the map to see its feasibility, terrain and visibility. You can then use it as your current point.',
     "chat.plan": "Plan with AI",
     "chat.sectionTitle": "Describe your mission (AI assist)",
     "chat.intro": "Start with what you know. Use the guided template or chat in English or Vietnamese — we’ll help with the details.",
@@ -275,6 +277,8 @@ export const TRANSLATIONS = {
   },
 
   vi: {
+    'layout.landingCell': 'Chi tiết ô hạ cánh',
+    'layout.selectCell': 'Chọn một ô trên bản đồ để xem khả năng hạ cánh, địa hình và tầm nhìn. Sau đó bạn có thể dùng ô đó làm điểm hiện tại.',
     "chat.plan": "Lập kế hoạch với AI",
     "chat.sectionTitle": "Mô tả sứ mệnh (trợ lý AI)",
     "chat.intro": "Bắt đầu từ những gì bạn biết. Điền mẫu hướng dẫn hoặc trò chuyện bằng tiếng Việt hay tiếng Anh — chúng tôi sẽ hỏi thêm khi cần.",
