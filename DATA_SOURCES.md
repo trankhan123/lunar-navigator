@@ -99,3 +99,14 @@ Chỉ để so sánh kịch bản, không phải thông số chính thức. Số
 | Nova-C (IM-1) | https://en.wikipedia.org/wiki/Intuitive_Machines_Nova-C | 200 W, pin 25 Ah trên bus 28 V, thiết kế 14 ngày | Pin 700 Wh = 25 Ah × 28 V; tải 50 W |
 | Blue Ghost 1 | https://fireflyspace.com/missions/blue-ghost-mission-1/ | 400 W, hơn 14 ngày trên bề mặt | Pin 1.400 Wh, tải 100 W |
 | Vikram (Chandrayaan-3) | https://www.eoportal.org/satellite-missions/chandrayaan-3 (link brochure ISRO trong kế hoạch trả 404) | 738 W, sống 1 ngày Mặt Trăng | Pin 2.600 Wh, tải 185 W |
+
+## 7. Ngày giờ sứ mệnh cho Mission Replay (E6, `web/public/data/replay/index.json`)
+
+| Sứ mệnh | Hạ cánh (UTC) | Kết thúc (UTC) | Nguồn |
+|---|---|---|---|
+| IM-1 Odysseus | 2024-02-22 23:23 | 2024-02-29, chỉ có ngày (vào chế độ chờ) | NASA CLPS blog 2024-02-22; Intuitive Machines news release |
+| IM-2 Athena | 2025-03-06 khoảng 17:30 | 2025-03-07 06:15 (tàu nằm nghiêng, hết pin) | NASA news release 2025-03-07 |
+| Chandrayaan-3 (Vikram) | 2023-08-23, chỉ có ngày (giờ 12:33 UTC chỉ thấy trên nguồn không chính thức) | 2023-09-04 02:30 (vào chế độ ngủ) | NASA LRO, PIB, ISRO (trang và bài đăng X, chỉ đọc được đoạn trích) |
+
+Lịch thiên văn ngắn cho từng sứ mệnh: JPL Horizons, cùng truy vấn với D1, xem mục 2.
+

@@ -28,6 +28,15 @@
 - Firefly Aerospace — Blue Ghost Mission 1 (up to 400 W; more than 14 days of surface operations). https://fireflyspace.com/missions/blue-ghost-mission-1/
 - eoPortal — Chandrayaan-3 (Vikram lander power 738 W; design life one lunar day). https://www.eoportal.org/satellite-missions/chandrayaan-3
 
+### Mission Replay dates (E6)
+
+- NASA CLPS blog, 2024-02-22 — IM-1 touched down at 5:23 p.m. CST. https://www.nasa.gov/blogs/clps/2024/02/22/nasa-science-touches-down-on-moon-with-intuitive-machines-mission/
+- Intuitive Machines news release — IM-1 entered standby mode on 2024-02-29. https://investors.intuitivemachines.com/news-releases/news-release-details/intuitive-machines-historic-im-1-mission-success-american/
+- NASA news release, 2025-03-07 — IM-2 touched down about 11:30 a.m. CST on 2025-03-06; early end of mission at 12:15 a.m. CST on 2025-03-07, lander on its side. https://www.nasa.gov/news-release/nasa-receives-some-data-before-intuitive-machines-ends-lunar-mission/
+- NASA LRO image article — Chandrayaan-3 touched down on 2023-08-23. https://www.nasa.gov/image-article/nasas-lro-observes-chandrayaan-3-landing-site/
+- Press Information Bureau (India), 2023-08-25 — Chandrayaan-3 soft landing on 2023-08-23. https://static.pib.gov.in/WriteReadData/specificdocs/documents/2023/aug/doc2023825244401.pdf
+- ISRO — Chandrayaan-3 mission page and the 2023-09-04 post "Vikram Lander is set into sleep mode around 08:00 Hrs. IST today". https://www.isro.gov.in/Chandrayaan3.html · https://x.com/isro/status/1698618694795219401
+
 ## Libraries
 
 - Optional mission chat: Google Gemini structured output — https://aistudio.google.com/docs/structured-output ; Upstash Redis REST/EVAL usage counters — https://upstash.com/docs/redis/features/restapi . Neither is a scientific data source.
