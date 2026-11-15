@@ -257,7 +257,6 @@ def main():
                                        ("validation.json", check_validation, expect_mock)]:
         data = load(folder, file_name, expect_mock, required)
         if data is not None:
-        if data is not None:
             run_check(file_name, check, data, expect_mock)
     if (folder / "dsn.json").exists():
         dsn_data = load(folder, "dsn.json", expect_mock)

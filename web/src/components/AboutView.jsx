@@ -4,12 +4,14 @@ const LIMITATIONS = [
   'The terrain horizon is computed at the centre of each 1 km cell from 80 m LOLA terrain, so boulders and small ridges are not seen.',
   'Sites outside the terrain model use a smooth-sphere horizon ("terrain not included").',
   'The battery model is simple: constant load, no temperature effects, no panel or battery ageing.',
-  '"Earth visible" does not check whether a ground station on Earth can see the Moon at that time.',
   'This is a hackathon project, not an official NASA tool.',
 ]
 
 const SOURCES = [
-  ['JPL Horizons API', 'Sub-solar and sub-Earth points on the Moon, every hour 2027–2029 (DE441).'],
+  [
+    'JPL Horizons API',
+    'Sub-solar and sub-Earth points on the Moon, and topocentric Moon elevation at 3 NASA DSN ground stations (Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43; requiring elevation ≥ 10° for communication), every hour 2027–2029 (DE441).',
+  ],
   ['NASA GSFC PGDA 90 (LOLA)', 'South-pole terrain, slope, permanent shadow and hillshade.'],
   ['NASA GSFC PGDA 69', 'Average Sun and Earth visibility, used to validate our results.'],
   ['USGS LGRS grid', '1 km Artemis III region grids (McClernan 2024) following USGS Techniques and Methods 11-E1.'],
