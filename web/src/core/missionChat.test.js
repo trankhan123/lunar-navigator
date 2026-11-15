@@ -63,3 +63,16 @@ test('validates preserved IDs and rejects malformed provider replies', () => {
     assert.throws(() => prepareChatDraft(output, DEFAULT_SCENARIO, catalog))
   }
 })
+
+test('nullable extraction fields preserve current values without accepting unknown fields', () => {
+  const patch = Object.fromEntries(Object.keys(DEFAULT_SCENARIO).map((key) => [key, null]))
+  patch.currentPoint = { type: 'site', siteId: 'test-site' }
+  patch.batteryCapacityWh = { value: 2.5, unit: 'kWh' }
+  const draft = prepareChatDraft(reply(patch), DEFAULT_SCENARIO, catalog)
+  assert.equal(draft.canApply, true)
+  assert.equal(draft.scenario.batteryCapacityWh, 2500)
+  assert.equal(draft.scenario.loadW, DEFAULT_SCENARIO.loadW)
+  assert.equal(draft.scenario.endDate, DEFAULT_SCENARIO.endDate)
+  assert.deepEqual(Object.keys(draft.patch).sort(), ['batteryCapacityWh', 'currentPoint'])
+  assert.throws(() => normalizeChatPatch({ unknown: null }, catalog))
+})

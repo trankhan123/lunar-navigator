@@ -134,3 +134,21 @@ test('mission quantities cannot become coordinates and latitude signs cannot fli
     }
   }
 })
+
+test('a month without an explicit year asks for clarification even if the model guesses', async (t) => {
+  for (const message of ['At Test site in January, staying 6 days.', 'Ở Test site vào tháng 1, ở lại 6 ngày.']) {
+    let calls = 0
+    const call = await fixture(t, async () => ++calls === 1 ? json({ result: 1 }) : json({ candidates: [{
+      finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ ...goodReply, patch: {
+        ...goodReply.patch, startDate: '2028-01-01', endDate: '2028-01-31',
+      } }) }] },
+    }] }))
+    const response = await call({ ...payload(), message })
+    assert.equal(response.status, 200)
+    const draft = await response.json()
+    assert.equal(draft.canApply, false)
+    assert.ok(draft.questions.some((question) => /year/i.test(question)))
+    assert.equal(draft.patch.startDate, undefined)
+    assert.equal(draft.patch.endDate, undefined)
+  }
+})

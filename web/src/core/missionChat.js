@@ -30,6 +30,7 @@ export function normalizeChatPatch(patch, catalog) {
   assertObject(patch, Object.keys(DEFAULT_SCENARIO))
   const result = {}
   for (const [field, value] of Object.entries(patch)) {
+    if (value === null) continue // Nullable extraction means the user did not specify this field.
     if (Object.hasOwn(CHAT_FIELDS, field)) {
       assertObject(value, ['value', 'unit'])
       const units = CHAT_FIELDS[field].units
