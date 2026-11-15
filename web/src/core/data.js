@@ -39,7 +39,16 @@ async function loadJson(path) {
   return response.json()
 }
 
-export const loadEphemeris = (useMock) => loadJson(`${dataFolder(useMock)}/ephemeris.json`)
+export async function loadEphemeris(useMock) {
+  const ephemeris = await loadJson(`${dataFolder(useMock)}/ephemeris.json`)
+  try {
+    ephemeris.dsn = await loadJson(`${dataFolder(useMock)}/dsn.json`)
+  } catch {
+    ephemeris.dsn = null
+  }
+  return ephemeris
+}
+export const loadDsn = (useMock) => loadJson(`${dataFolder(useMock)}/dsn.json`)
 export const loadRegions = (useMock) => loadJson(`${dataFolder(useMock)}/regions.json`)
 export const loadCells = (useMock, cellsFile) => loadJson(`${dataFolder(useMock)}/${cellsFile}`)
 export const loadSites = (useMock) => loadJson(`${dataFolder(useMock)}/sites.json`)

@@ -22,6 +22,9 @@ export function computeEarthTrack(cell, ephemeris, firstHour, hourCount) {
   const elevationDeg = new Float32Array(hourCount)
   const diskFraction = new Float32Array(hourCount)
 
+  const dsn = ephemeris?.dsn
+  const minDsnElev = dsn ? (dsn.elevationUnitDeg != null ? 10 / dsn.elevationUnitDeg : 100) : 0
+
   for (let i = 0; i < hourCount; i++) {
     const ephHour = firstHour + i
     const subLon = ephemeris.earthSubLonDeg[ephHour]
@@ -33,7 +36,19 @@ export function computeEarthTrack(cell, ephemeris, firstHour, hourCount) {
     elevationDeg[i] = el
 
     const horizonDeg = horizonElevationAt(cell.horizon, az)
-    diskFraction[i] = visibleDiskFraction(el, horizonDeg, EARTH_DISK_RADIUS_DEG)
+    let fraction = visibleDiskFraction(el, horizonDeg, EARTH_DISK_RADIUS_DEG)
+
+    if (dsn) {
+      const g = dsn.goldstone?.[ephHour] ?? dsn.stations?.goldstone?.elevation?.[ephHour] ?? -Infinity
+      const m = dsn.madrid?.[ephHour] ?? dsn.stations?.madrid?.elevation?.[ephHour] ?? -Infinity
+      const c = dsn.canberra?.[ephHour] ?? dsn.stations?.canberra?.elevation?.[ephHour] ?? -Infinity
+      const dsnAvailable = g >= minDsnElev || m >= minDsnElev || c >= minDsnElev
+      if (!dsnAvailable) {
+        fraction = 0
+      }
+    }
+
+    diskFraction[i] = fraction
   }
 
   return {

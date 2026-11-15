@@ -31,6 +31,7 @@ stores usage counters. Neither supplies scientific results or new lunar data.
 |---|---|---|
 | JPL Horizons API (ephemeris) | https://ssd.jpl.nasa.gov/api/horizons.api | Module D1: `COMMAND=301`, `CENTER=500@399`, `QUANTITIES=14,15,19,20`, bước 1h, 2027-01-01 → 2029-01-31, chia theo quý → `web/public/data/ephemeris.json`. Cache vào `pipeline/raw/horizons/` |
 | JPL Horizons API (kiểm chứng) | https://ssd.jpl.nasa.gov/api/horizons.api | Azimuth/elevation Mặt Trời (`COMMAND=10`) và Trái Đất (`COMMAND=399`) tại điểm (`CENTER=coord@301`, `QUANTITIES=4`) → fixture `web/src/core/fixtures/horizons_check.json`. Bước 1h OK, 1 tháng = 745 dòng |
+| JPL Horizons API (trạm DSN - Task 11) | https://ssd.jpl.nasa.gov/api/horizons.api | Góc cao biểu kiến của Mặt Trăng (`COMMAND=301`) nhìn từ 3 trạm DSN trên Trái Đất (`CENTER=coord@399`, `QUANTITIES=4`: Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43), bước 1h, 2027-01-01 → 2029-01-31 (18.288h) → `web/public/data/dsn.json` (đơn vị 0.1°). Cache vào `pipeline/raw/horizons_dsn/` |
 
 ## 3. Toạ độ site (`pipeline/sites.json`, không bịa)
 

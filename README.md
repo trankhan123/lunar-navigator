@@ -171,6 +171,31 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 - `earth*` are the sub-Earth point (libration is included) and the Moon-centre → Earth-centre distance.
 - The file covers 2027-01-01T00:00Z … 2029-01-31T23:00Z (18,288 h), so any 6-month range in 2027–2028 plus a 30-day stay fits.
 
+### `dsn.json` (Task 11)
+
+```json
+{
+  "source": "JPL Horizons API (DE441): COMMAND=301 CENTER=coord@399 QUANTITIES=4, retrieved 2026-11-15",
+  "startTime": "2027-01-01T00:00Z",
+  "stepHours": 1,
+  "hours": 18288,
+  "elevationUnitDeg": 0.1,
+  "stations": {
+    "goldstone": { "name": "Goldstone (DSS-14)", "code": "DSS-14", "lat": 35.4259, "lon": -116.8895, "heightKm": 1.001 },
+    "madrid": { "name": "Madrid (DSS-63)", "code": "DSS-63", "lat": 40.4314, "lon": -4.248, "heightKm": 0.834 },
+    "canberra": { "name": "Canberra (DSS-43)", "code": "DSS-43", "lat": -35.4014, "lon": 148.9813, "heightKm": 0.689 }
+  },
+  "goldstone": [],
+  "madrid": [],
+  "canberra": []
+}
+```
+
+- Apparent elevation of the Moon from the 3 Deep Space Network (DSN) complexes.
+- Station arrays have length `hours` (18,288 h for real, 5,112 h for mock).
+- Values are integer in units of 0.1° (multiplied by 10 then rounded).
+- Communication is available when Moon elevation $\ge 10^\circ$ at any station.
+
 ### `regions.json` (D5)
 
 ```json
@@ -377,7 +402,7 @@ Rules:
 
 - Use `EARTH_DISK_RADIUS_DEG`.
 - Always use the cell position, never the Moon centre. Earth is close enough that parallax shifts it by up to 0.26°.
-- **Known limitation:** the model does not check whether a ground station on Earth can see the Moon.
+- **DSN ground stations (Task 11):** Checks realistic direct-to-Earth communication via NASA's Deep Space Network (Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43). Communication is possible when Earth is above the local terrain horizon (`diskFraction ≥ 0.5`) AND the Moon is at elevation ≥ 10° at least one DSN station (from `ephemeris.dsn` / `dsn.json`). If `ephemeris.dsn` is omitted, falls back to direct line-of-sight.
 
 ### C3 Energy need
 
