@@ -3,6 +3,7 @@ import { computeEarthTrack, nextEarthEvent } from '../core/communication.js'
 import { timeAtHour } from '../core/data.js'
 import { INFEASIBLE_REASON_TEXT, formatDuration, formatUtc } from '../core/format.js'
 import { computeSunTrack, nextSunEvent } from '../core/sunlight.js'
+import SeasonalCalendar from './SeasonalCalendar.jsx'
 
 const LOOK_AHEAD_HOURS = 30 * 24
 const EVENT_WORDS = { sunset: 'sets', sunrise: 'rises', earthset: 'sets', earthrise: 'rises' }
@@ -80,6 +81,9 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
             see the Sun and Earth from this cell.
           </p>
         )}
+      </div>
+      <div className="mt-3 border-t border-slate-800 pt-3">
+        <SeasonalCalendar cell={cell} ephemeris={ephemeris} />
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2" aria-live="polite">
         <button type="button" onClick={copyId} className="rounded border border-slate-500 px-3 py-2 transition-colors hover:bg-slate-800">
