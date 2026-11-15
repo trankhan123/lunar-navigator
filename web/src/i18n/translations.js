@@ -15,6 +15,7 @@ export const LANGUAGES = {
 export const TRANSLATIONS = {
   en: {
     "chat.plan": "Plan with AI",
+    "chat.sectionTitle": "Describe your mission (AI assist)",
     "chat.intro": "Start with what you know. Use the guided template or chat in English or Vietnamese — we’ll help with the details.",
     "chat.describe": "1 · Describe",
     "chat.review": "2 · Review",
@@ -275,6 +276,7 @@ export const TRANSLATIONS = {
 
   vi: {
     "chat.plan": "Lập kế hoạch với AI",
+    "chat.sectionTitle": "Mô tả sứ mệnh (trợ lý AI)",
     "chat.intro": "Bắt đầu từ những gì bạn biết. Điền mẫu hướng dẫn hoặc trò chuyện bằng tiếng Việt hay tiếng Anh — chúng tôi sẽ hỏi thêm khi cần.",
     "chat.describe": "1 · Mô tả",
     "chat.review": "2 · Kiểm tra",
