@@ -174,6 +174,10 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 - `earth*` are the sub-Earth point (libration is included) and the Moon-centre → Earth-centre distance.
 - The file covers 2027-01-01T00:00Z … 2029-01-31T23:00Z (18,288 h), so any 6-month range in 2027–2028 plus a 30-day stay fits.
 
+### `replay/` (E6 Mission Replay)
+
+`replay/index.json` is `{ "missions": [ { siteId, name, landedUtc, endedUtc, endedReason, sourceUrls, landedPrecision?, endedPrecision? } ] }`. `siteId` is an entry of `sites.json`; times are `YYYY-MM-DDTHH:mmZ`; `endedUtc` may be `null` (shown as "not confirmed"); `"…Precision": "day"` means the source gave only a date (stored as 00:00Z); `sourceUrls` are the pages the dates were read from. `replay/<siteId>.json` has exactly the `ephemeris.json` format, hourly from landing − 2 days to landing + 19 days (`pipeline/fetch_replay.py`, reusing D1). `core/replay.js` `replaySummary` compares the geometric sunset with `endedUtc`; `check_web_data.py` checks both file kinds (`check_replay`).
+
 ### `dsn.json` (Task 11)
 
 ```json

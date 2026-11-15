@@ -1,0 +1,39 @@
+{
+  "missions": [
+    {
+      "siteId": "im-1",
+      "name": "IM-1 Odysseus (Intuitive Machines)",
+      "landedUtc": "2024-02-22T23:23Z",
+      "endedUtc": "2024-02-29T00:00Z",
+      "endedPrecision": "day",
+      "endedReason": "Entered standby mode on 29 February 2024, awaiting the next lunar day; the sources used report no revival.",
+      "sourceUrls": [
+        "https://www.nasa.gov/blogs/clps/2024/02/22/nasa-science-touches-down-on-moon-with-intuitive-machines-mission/",
+        "https://investors.intuitivemachines.com/news-releases/news-release-details/intuitive-machines-historic-im-1-mission-success-american/"
+      ]
+    },
+    {
+      "siteId": "im-2",
+      "name": "IM-2 Athena (Intuitive Machines)",
+      "landedUtc": "2025-03-06T17:30Z",
+      "endedUtc": "2025-03-07T06:15Z",
+      "endedReason": "Early end of mission after landing on its side in a crater; batteries were depleted.",
+      "sourceUrls": [
+        "https://www.nasa.gov/news-release/nasa-receives-some-data-before-intuitive-machines-ends-lunar-mission/"
+      ]
+    },
+    {
+      "siteId": "chandrayaan-3",
+      "name": "Chandrayaan-3 Vikram (ISRO)",
+      "landedUtc": "2023-08-23T00:00Z",
+      "landedPrecision": "day",
+      "endedUtc": "2023-09-04T02:30Z",
+      "endedReason": "Lander set into sleep mode before the lunar night; ISRO awaited a wake-up around 22 September 2023.",
+      "sourceUrls": [
+        "https://www.isro.gov.in/Chandrayaan3.html",
+        "https://x.com/isro/status/1698618694795219401",
+        "https://www.nasa.gov/image-article/nasas-lro-observes-chandrayaan-3-landing-site/"
+      ]
+    }
+  ]
+}

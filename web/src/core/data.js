@@ -57,6 +57,9 @@ export const loadRegions = (useMock) => loadJson(`${dataFolder(useMock)}/regions
 export const loadCells = (useMock, cellsFile) => loadJson(`${dataFolder(useMock)}/${cellsFile}`)
 export const loadSites = (useMock) => loadJson(`${dataFolder(useMock)}/sites.json`)
 export const loadValidation = (useMock) => loadJson(`${dataFolder(useMock)}/validation.json`)
+/** README "replay/" files (E6): index of replayed missions, and one short ephemeris per mission. */
+export const loadReplayIndex = () => loadJson('/data/replay/index.json')
+export const loadReplay = (siteId) => loadJson(`/data/replay/${siteId}.json`)
 /** README D9 index of the whole-cap 2 km grid; null when the data set has none (mock data, older deploys). */
 export const loadCapIndex = () => loadJson('/data/cap/index.json').catch(() => null)
 

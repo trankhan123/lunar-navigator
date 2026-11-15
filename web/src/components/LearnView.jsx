@@ -4,6 +4,7 @@ import { metricSentences, moonFacts, neighborLesson } from '../core/learn.js'
 import { metricsAt } from '../core/optimizer.js'
 import { useI18n } from '../i18n/index.jsx'
 import HorizonChart from './HorizonChart.jsx'
+import MissionReplayCard from './MissionReplayCard.jsx'
 
 const cardClass = 'min-w-0 break-words rounded-lg border border-slate-800 bg-slate-900 p-4'
 const toDegrees = (horizon) => horizon?.map((tenths) => tenths / 10) // a point without a horizon draws no line, never throws
@@ -79,6 +80,8 @@ export default function LearnView({ results, cellsById, ephemeris, scenario, lan
           ))}
         </ul>
       </section>
+
+      <MissionReplayCard />
     </div>
   )
 }
