@@ -12,9 +12,9 @@ import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
-import { capTileIdsInBounds } from './core/capGrid.js'
+import { capTileIdsInBounds, capTileIdsInCircle } from './core/capGrid.js'
 import { capTileIdsForSearch, pointRegionCode, regionCodesForSearch, searchAnchor } from './core/capSearch.js'
-import { detailCellFor, hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell } from './core/data.js'
+import { detailCellFor, hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
 import { cellDisplayName } from './core/format.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
@@ -126,10 +126,10 @@ export default function App() {
       return []
     }
   }, [])
-  // Wide screens load the whole cap grid in the background after the first paint; phones load tiles as the map zooms in (MapCapLayer).
+  // Wide screens preload the cap tiles inside the 85°S circle after the first paint; the 80-85°S ring and phones load tiles on demand (MapCapLayer, search, point).
   useEffect(() => {
     if (!data?.capIndex || !window.matchMedia('(min-width: 768px)').matches) return
-    const tileIds = data.capIndex.tiles.map((tile) => tile.id)
+    const tileIds = capTileIdsInCircle(data.capIndex, 0, 0, Math.hypot(...Object.values(toPolarXY(-85, 0))))
     let isStopped = false
     const timer = setTimeout(async () => {
       for (let first = 0; first < tileIds.length && !isStopped; first += CAP_BATCH_SIZE) await needCapTiles(tileIds.slice(first, first + CAP_BATCH_SIZE))

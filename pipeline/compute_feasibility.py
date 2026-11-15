@@ -30,7 +30,8 @@ def read_region(path, cells, margin_m=1000):
     xs = [cell["xM"] for cell in cells]
     ys = [cell["yM"] for cell in cells]
     with rasterio.open(path) as source:
-        window = from_bounds(min(xs) - margin_m, min(ys) - margin_m, max(xs) + margin_m, max(ys) + margin_m, source.transform)
+        left, bottom, right, top = source.bounds  # clamp: the 80°S rasters end at ±304 km, the cap grid reaches that edge
+        window = from_bounds(max(min(xs) - margin_m, left), max(min(ys) - margin_m, bottom), min(max(xs) + margin_m, right), min(max(ys) + margin_m, top), source.transform)
         window = window.round_offsets().round_lengths()
         return source.read(1, window=window), source.window_transform(window)
 
