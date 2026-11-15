@@ -126,6 +126,9 @@ Chạy `python pipeline/download_data.py`. Script đọc bảng ở mục 1 củ
 - `docs/window-finder.md` không có số liệu tàu (bản kế hoạch ghi nhầm "§11"): số liệu E4 phải mở nguồn để đối chiếu.
 - Dữ liệu thô: 8 file PGDA đủ; `pipeline/raw/lgrs/` (zip LGRS tải tay) và cache Horizons đã mất. E9 (doi:10.5066/P13FD9ZD) và E10 (doi:10.5066/P13YPWQD) cần người tải bằng trình duyệt; E6–E8 tự lo được.
 - scipy có trong venv nhưng không có trong `requirements.txt`: không dùng (E7 dùng rasterio + shapely).
+- **Máy là VM 2 CPU, 5,3 GB RAM, 4 GB swap.** Tối 15/11 chạy 8 agent song song (npm ci, vite build, raster lớn, build_cap_grid nhiều tiến trình) làm máy treo 3 lần, phải tắt cứng, git có 5 object rỗng (đã sửa, bản sao ở `~/git-empty-objects-backup-20261115`). Quy tắc từ nay: mỗi lúc một agent; job nặng chạy qua `.claude/worktrees/guarded.sh <log> <lệnh>` (giới hạn 1,7 GB RAM, 1,5 CPU, tự dừng khi RAM cả máy > 80 %, theo yêu cầu người dùng); không chạy Playwright song song job nặng. `/tmp` bị xoá khi khởi động lại: ghi chú để trong `.claude/worktrees/` (gitignore).
+- `compute_feasibility.read_region` đọc cả vùng bao của mọi ô: với lưới tới 80°S nó đọc trọn raster PSR 3,7 GB. Phải đọc theo từng lô.
+- Nếu Claude plan (5 giờ) vượt 80 % thì cũng dừng agent và báo người dùng.
 
 ### Lệnh hay dùng
 
