@@ -504,7 +504,7 @@ export default function App() {
               {results && (
                 <>
                   <p className="text-slate-400">
-                    {t('results.summary', { count: results.cellCount, steps: results.landingCount, days: search.scenario.stayDays })}
+                    {t(results.cellCount === 1 ? 'results.summaryOne' : 'results.summary', { count: results.cellCount, steps: results.landingCount, days: search.scenario.stayDays })}
                   </p>
                   <CurrentPointCard
                     summary={currentPointSummary}

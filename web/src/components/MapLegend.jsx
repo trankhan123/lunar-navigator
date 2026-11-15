@@ -79,7 +79,7 @@ export default function MapLegend({ layerId, showsCentreDots = false, dateRangeT
       )}
       {showsCentreDots && <p>Dots: region centres (terrain horizon of the centre point)</p>}
       <p>Amber outline: current point · white: selected</p>
-      <p>1 square = 1 km · up = towards 0° longitude (Earth-facing side)</p>
+      <p>1 square = 1 km in the 9 regions, 2 km on the cap grid outside them · up = towards 0° longitude (Earth-facing side)</p>
       <p>Sources: LOLA LDEM and PGDA 90 (80 m), PGDA 69 (60 m, 85°S+), USGS LGRS, JPL Horizons.</p>
     </div>
   )
