@@ -1,248 +1,248 @@
-# Phân công: 5 workflow + web
+# Work split: 5 workflows + web
 
-Nhóm có 5 người. Một người lo web: tổng hợp mọi phần lên giao diện. Bốn người còn lại chọn workflow:
+The team has 5 people. One person handles the web: putting every part together in the interface. The other four each pick a workflow:
 
-- mỗi workflow gom các module D (pipeline Python) và C (lõi JS trong trình duyệt) liên quan đến nhau, nên một người làm từ dữ liệu tới hàm tính;
-- có **5 workflow cho 4 người**, xem cách chia ở mục [Nếu chỉ có 4 bạn](#nếu-chỉ-có-4-bạn).
+- each workflow groups related D modules (Python pipeline) and C modules (JS core in the browser), so one person works from the data all the way to the computing functions;
+- there are **5 workflows for 4 people**; see how to split them in [If there are only 4 people](#if-there-are-only-4-people).
 
-Hợp đồng chính thức (input/output, đơn vị, định dạng file, chữ ký hàm) vẫn nằm trong [docs/technical-reference.md](technical-reference.md). File này chỉ nói **ai làm gì, theo thứ tự nào, giao gì cho ai**. Mọi mục trong docs/technical-reference.md như "C1 Sunlight" hay "D4 Terrain horizon" là phần phải đọc trước khi code.
+The official contract (input/output, units, file formats, function signatures) still lives in [docs/technical-reference.md](technical-reference.md). This file only says **who does what, in which order, and what to hand to whom**. Every section in docs/technical-reference.md such as "C1 Sunlight" or "D4 Terrain horizon" must be read before coding.
 
-## Bảng chọn
+## Choice table
 
-| Workflow | Chủ đề | Module | Khối lượng | Người nhận |
+| Workflow | Topic | Modules | Workload | Owner |
 |---|---|---|---|---|
-| [WF1](#wf1--sunlight-và-địa-hình) | Sunlight và địa hình | C1 Sunlight, D4 Terrain horizon | nặng (~9 h) | Quoc_Bao |
-| [WF2](#wf2--sóng-liên-lạc-và-kiểm-chứng) | Sóng liên lạc và kiểm chứng | C2 Communication, D6 Famous sites, D7 Validation | vừa (~7 h) | chubin271-blip |
-| [WF3](#wf3--quãng-đường-và-tối-ưu) | Quãng đường và tối ưu | C5 Optimizer, `core/explain.js` | vừa (~7 h) | vominhuy28 |
-| [WF4](#wf4--năng-lượng-cần-và-thời-gian-sạc) | Năng lượng cần và thời gian sạc | C3 Energy need, C4 Charging, `validateScenario` | nhẹ (~5 h) | hoanggbach |
-| [WF5](#wf5--bản-đồ-và-toạ-độ) | Bản đồ và toạ độ | D2 LGRS grid, D3 Feasibility, D5 Build web data, D8 Map background | vừa (~8 h) | trankhan123 (Claude Code) |
-| [WEB](#web--tổng-hợp-giao-diện) | Tổng hợp giao diện | W1–W7, S1 | nặng | trankhan123 |
+| [WF1](#wf1--sunlight-and-terrain) | Sunlight and terrain | C1 Sunlight, D4 Terrain horizon | heavy (~9 h) | Quoc_Bao |
+| [WF2](#wf2--communication-and-validation) | Communication and validation | C2 Communication, D6 Famous sites, D7 Validation | medium (~7 h) | chubin271-blip |
+| [WF3](#wf3--distance-and-optimization) | Distance and optimization | C5 Optimizer, `core/explain.js` | medium (~7 h) | vominhuy28 |
+| [WF4](#wf4--energy-need-and-charging-time) | Energy need and charging time | C3 Energy need, C4 Charging, `validateScenario` | light (~5 h) | hoanggbach |
+| [WF5](#wf5--map-and-coordinates) | Map and coordinates | D2 LGRS grid, D3 Feasibility, D5 Build web data, D8 Map background | medium (~8 h) | trankhan123 (Claude Code) |
+| [WEB](#web--putting-the-interface-together) | Putting the interface together | W1–W7, S1 | heavy | trankhan123 |
 
-**Đã xong:** C0 (hình học, chuỗi giờ) và D1 (ephemeris thật trong `web/public/data/ephemeris.json`, khớp JPL Horizons trong phạm vi 0,015°). Mọi workflow dùng được hai phần này ngay.
+**Already done:** C0 (geometry, hourly series) and D1 (real ephemeris in `web/public/data/ephemeris.json`, matching JPL Horizons within 0.015°). Every workflow can use these two parts right away.
 
-**Cách nhận:**
+**How to take a workflow:**
 
-1. Ghi tên vào cột "Người nhận" ở bảng trên.
-2. Ghi tên vào cột `Owner` trong bảng module của docs/technical-reference.md cho **mọi** module của workflow, và đặt `Status` là `doing`.
-3. Commit và push ngay, để hai người không nhận trùng.
+1. Write your name in the "Owner" column of the table above.
+2. Write your name in the `Owner` column of the module table in docs/technical-reference.md for **every** module of the workflow, and set `Status` to `doing`.
+3. Commit and push at once, so two people do not take the same workflow.
 
-**"Quãng đường" ở WF3** là khoảng cách (km) tới ô đạt gần nhất, cùng với việc xếp hạng ô và thời điểm. Tìm đường đi cho xe tự hành đã bỏ (docs/window-finder.md §3.2).
+**"Distance" in WF3** is the distance (km) to the nearest passing cell, together with the ranking of cells and times. Path finding for the rover has been dropped (docs/window-finder.md §3.2).
 
-## Ai giao gì cho ai
+## Who hands what to whom
 
 ```
-            WF5 grid_MAL.json ──────────────> WF1 (D4 tính chân trời)
-            WF1 horizon_MAL.json ───────────> WF5 (D5 gộp)
-WF1 C1 sunlight.js ──┬──> WF3 (evaluateWindow), WF4 (dùng dạng SunTrack), WF2 (D7), WEB
+            WF5 grid_MAL.json ──────────────> WF1 (D4 computes the horizon)
+            WF1 horizon_MAL.json ───────────> WF5 (D5 merges)
+WF1 C1 sunlight.js ──┬──> WF3 (evaluateWindow), WF4 (uses the SunTrack shape), WF2 (D7), WEB
 WF2 C2 communication.js ─┼──> WF3, WEB
-WF4 C4 charging.js ──────┼──> WF3, WEB (biểu đồ pin)
+WF4 C4 charging.js ──────┼──> WF3, WEB (battery chart)
 WF4 C3 energyNeed.js, validateScenario ──> WEB
 WF5 cells_<CODE>.json, regions.json, sites.json, maps/ ──> WEB, WF3, WF2 (D7)
-WF2 sites.json (toạ độ D6) ──> WF5 (D5 xuất bản), WF1 (chân trời cho site ≤ −60°)
-WF2 validation.json ──> WEB (trang About)
-WF3 optimizer.js, explain.js ──> WEB (kết quả, chi tiết, chế độ học)
+WF2 sites.json (D6 coordinates) ──> WF5 (D5 publishes), WF1 (horizon for sites ≤ −60°)
+WF2 validation.json ──> WEB (About page)
+WF3 optimizer.js, explain.js ──> WEB (results, details, learning mode)
 ```
 
-| Thứ tự | Ai giao | Giao cái gì | Ai cần | Mốc |
+| Order | Who hands over | What | Who needs it | Deadline |
 |---|---|---|---|---|
-| 1 | WF1 | `sunlight.js` qua test | WF3, WF4, WF2, WEB | **sớm nhất có thể** (vài giờ đầu) |
-| 1 | WF2 | `communication.js` qua test | WF3, WEB | vài giờ đầu |
-| 1 | WF4 | `charging.js` qua test | WF3, WEB | vài giờ đầu |
-| 2 | WF5 | `pipeline/out/grid_MAL.json` | WF1 | ngay khi có shapefile LGRS |
-| 3 | WF1 | `pipeline/out/horizon_MAL.json` | WF5 | chiều ngày 1 |
-| 4 | WF5 | `cells_MAL.json`, `regions.json`, `sites.json` | WEB, WF3, WF2 | tối ngày 1 → **mốc M1** |
-| 4 | WF3 | `optimizer.js` qua test, Worker chạy trên mock | WEB | tối ngày 1 |
-| 5 | WF5 + WF1 | đủ 9 vùng | WEB | sáng ngày 2 |
-| 5 | WF2 | `sites.json` đủ toạ độ, `validation.json` | WEB | sáng ngày 2 |
+| 1 | WF1 | `sunlight.js` passing its tests | WF3, WF4, WF2, WEB | **as early as possible** (first few hours) |
+| 1 | WF2 | `communication.js` passing its tests | WF3, WEB | first few hours |
+| 1 | WF4 | `charging.js` passing its tests | WF3, WEB | first few hours |
+| 2 | WF5 | `pipeline/out/grid_MAL.json` | WF1 | as soon as the LGRS shapefile is available |
+| 3 | WF1 | `pipeline/out/horizon_MAL.json` | WF5 | afternoon of day 1 |
+| 4 | WF5 | `cells_MAL.json`, `regions.json`, `sites.json` | WEB, WF3, WF2 | evening of day 1 → **milestone M1** |
+| 4 | WF3 | `optimizer.js` passing its tests, Worker running on mock | WEB | evening of day 1 |
+| 5 | WF5 + WF1 | all 9 regions | WEB | morning of day 2 |
+| 5 | WF2 | `sites.json` with all coordinates, `validation.json` | WEB | morning of day 2 |
 
-**Mốc chung:**
+**Shared milestones:**
 
-- **M1 (cuối ngày 1):** chạy trọn luồng cho vùng Malapert (MAL) bằng dữ liệu thật: bản đồ → form → kết quả → chi tiết.
-- **M2 (sáng ngày 2):** đủ 9 vùng, site nổi tiếng, kiểm chứng PGDA 69.
-- **M3 (trưa ngày 2):** đóng băng tính năng, deploy Vercel, quay video.
+- **M1 (end of day 1):** the full flow runs for the Malapert (MAL) region with real data: map → form → results → details.
+- **M2 (morning of day 2):** all 9 regions, famous sites, PGDA 69 validation.
+- **M3 (noon of day 2):** feature freeze, deploy to Vercel, record the video.
 
-## WF1 — Sunlight và địa hình
+## WF1 — Sunlight and terrain
 
-**Mục tiêu:** biết mỗi ô có nắng lúc nào và tấm pin nhận được bao nhiêu. Để vậy cần hai phần: đường chân trời địa hình 360° (D4) và quỹ đạo Mặt Trời theo giờ (C1).
+**Goal:** know when each cell has sunlight and how much the solar panel receives. This needs two parts: the 360° terrain horizon (D4) and the hourly Sun track (C1).
 
-**File của bạn:** `web/src/core/sunlight.js`, `pipeline/compute_horizon.py`, `pipeline/out/horizon_*.json`.
+**Your files:** `web/src/core/sunlight.js`, `pipeline/compute_horizon.py`, `pipeline/out/horizon_*.json`.
 
-**Các bước:**
+**Steps:**
 
-1. **C1 trước**, vì ba workflow khác chờ nó. Không cần dữ liệu thật: test có sẵn, và có thể chạy thử trên `ephemeris.json` thật cùng `mock/cells_MAL.json`.
+1. **C1 first**, because three other workflows wait for it. It needs no real data: the tests are ready, and you can try it on the real `ephemeris.json` with `mock/cells_MAL.json`.
    - `resolvePanelType`, `panelFactor`;
-   - `computeSunTrack`: mỗi giờ gọi `bodyAzimuthElevation` (C0) với `sunSubLonDeg/sunSubLatDeg/sunDistanceAu × AU_KM`, rồi `horizonElevationAt` và `visibleDiskFraction` với `SUN_DISK_RADIUS_DEG`. `powerFactor = (1/D)² × diskFraction × panelFactor`;
-   - `summarizeSunWindow` và `nextSunEvent`: dùng `longestRunBelow`, `fractionAtLeast`, `meanWhereAtLeast`, `firstIndexBelow`, `nextCrossing` từ `timeSeries.js`;
-   - chạy `cd web && node --test src/core/sunlight.test.js`, rồi push.
-2. **D4 trên các điểm đã có toạ độ**, trước khi có lưới: hàm `compute_horizon(lat, lon, near_dem, far_dem)` chạy với tâm 9 vùng trong `pipeline/sites.json`.
-   - Vẽ thử chân trời tâm Malapert và so bằng mắt với QuickMap hoặc Moon Trek.
-   - Ghi `pipeline/out/horizon_sites.json` cho các site có lat ≤ −60°.
-3. **D4 cho lưới:** khi WF5 push `grid_MAL.json`, chạy `--region MAL` để ghi `horizon_MAL.json`, push, rồi làm đủ 9 vùng.
+   - `computeSunTrack`: each hour call `bodyAzimuthElevation` (C0) with `sunSubLonDeg/sunSubLatDeg/sunDistanceAu × AU_KM`, then `horizonElevationAt` and `visibleDiskFraction` with `SUN_DISK_RADIUS_DEG`. `powerFactor = (1/D)² × diskFraction × panelFactor`;
+   - `summarizeSunWindow` and `nextSunEvent`: use `longestRunBelow`, `fractionAtLeast`, `meanWhereAtLeast`, `firstIndexBelow`, `nextCrossing` from `timeSeries.js`;
+   - run `cd web && node --test src/core/sunlight.test.js`, then push.
+2. **D4 on the points that already have coordinates**, before the grid exists: the function `compute_horizon(lat, lon, near_dem, far_dem)` runs on the 9 region centers in `pipeline/sites.json`.
+   - Plot the horizon at the Malapert center and compare it by eye with QuickMap or Moon Trek.
+   - Write `pipeline/out/horizon_sites.json` for sites with lat ≤ −60°.
+3. **D4 for the grid:** when WF5 pushes `grid_MAL.json`, run `--region MAL` to write `horizon_MAL.json`, push it, then do all 9 regions.
 
-**Lưu ý dữ liệu** (đã kiểm tra 14/11):
+**Data notes** (checked 14/11):
 
-- **CRS chung:** `common.PGDA_CRS`, nodata là `nan`, độ cao tính bằng mét so với mặt cầu 1737,4 km.
-- **`LDEM_80S_80MPP_ADJ.TIF`:** 7600×7600, 80 m/px, phủ ±304 km quanh cực.
-- **`LDEM_60S_240MPP_ADJ.TIF`:** 7760×7760, 240 m/px, phủ ±931 km. Dùng cho phần tia đi ra ngoài ô vuông ±304 km. Peak near Cabeus B cách cực 196 km, nên tia 150 km của nó chắc chắn ra ngoài.
-- **Công thức** (docs/technical-reference.md D4): `angle = atan2(h_mẫu − h_ô − 2 m − d²/(2R), d)`, ghi `round(10 × độ)`.
-- **Tốc độ:** 225 ô × 360 tia × vài trăm mẫu. Vector hoá bằng numpy, nội suy song tuyến tính, không lặp Python từng mẫu.
+- **Shared CRS:** `common.PGDA_CRS`, nodata is `nan`, heights are in meters relative to a sphere of 1737.4 km.
+- **`LDEM_80S_80MPP_ADJ.TIF`:** 7600×7600, 80 m/px, covers ±304 km around the pole.
+- **`LDEM_60S_240MPP_ADJ.TIF`:** 7760×7760, 240 m/px, covers ±931 km. Use it for the part of the rays that goes outside the ±304 km square. Peak near Cabeus B is 196 km from the pole, so its 150 km rays surely go outside.
+- **Formula** (docs/technical-reference.md D4): `angle = atan2(h_sample − h_cell − 2 m − d²/(2R), d)`, write `round(10 × degrees)`.
+- **Speed:** 225 cells × 360 rays × a few hundred samples. Vectorize with numpy, use bilinear interpolation, and do not loop over samples in Python.
 
-**Xong khi:** `sunlight.test.js` qua; có `horizon_<CODE>.json` cho 9 vùng và `horizon_sites.json`; một chân trời đã đối chiếu bằng mắt.
+**Done when:** `sunlight.test.js` passes; `horizon_<CODE>.json` exists for the 9 regions and `horizon_sites.json` exists; one horizon has been checked by eye.
 
-## WF2 — Sóng liên lạc và kiểm chứng
+## WF2 — Communication and validation
 
-**Mục tiêu:**
+**Goal:**
 
-- biết lúc nào thấy Trái Đất để liên lạc direct-to-Earth (C2);
-- điền toạ độ site nổi tiếng (D6);
-- chứng minh kết quả đúng bằng nguồn NASA (D7).
+- know when the Earth is visible for direct-to-Earth communication (C2);
+- fill in the coordinates of the famous sites (D6);
+- prove the results are right using NASA sources (D7).
 
-**File của bạn:** `web/src/core/communication.js`, `pipeline/sites.json` (chỉ các site TODO và mục `sources`), `pipeline/validate.py`, `pipeline/visibility_stats.mjs` (tạo mới), `web/public/data/validation.json`.
+**Your files:** `web/src/core/communication.js`, `pipeline/sites.json` (only the TODO sites and the `sources` entry), `pipeline/validate.py`, `pipeline/visibility_stats.mjs` (new), `web/public/data/validation.json`.
 
-**Các bước:**
+**Steps:**
 
-1. **C2:** làm giống C1 nhưng dùng `earthSubLonDeg/earthSubLatDeg/earthDistanceKm` và `EARTH_DISK_RADIUS_DEG`.
-   - Luôn tính từ vị trí ô, vì thị sai tới 0,26°.
-   - `summarizeEarthWindow` và `nextEarthEvent` (`'earthset'|'earthrise'`).
-   - Chạy `node --test src/core/communication.test.js`, rồi push.
-2. **D6:** điền `lat/lon` cho 13 site `"source": "TODO"` (Apollo 12/14/16, IM-1/2/3, Blue Ghost 1, Chang'e 3–6, Chandrayaan-3, SLIM).
-   - Chỉ lấy từ nguồn chính thức (LROC, NASA, CNSA, ISRO, JAXA).
-   - Mỗi nguồn thêm vào `sources`, `REFERENCES.md` và `DATA_SOURCES.md` §3.
-   - **Không đoán.** Site có lat ≤ −60° (ví dụ Chandrayaan-3) đặt `hasTerrain: true` và báo WF1 tính chân trời.
-3. **D7, khi WF5 có `cells_MAL.json`:**
-   - viết `pipeline/visibility_stats.mjs` (node, import `web/src/core/sunlight.js` và `communication.js`): tính `sunFraction` và `earthFraction` của các ô trên toàn bộ ephemeris, ghi `pipeline/out/our_visibility.json`;
-   - `validate.py`: đọc pixel PGDA 69 tại các ô đó (giá trị × 4e-05 = tỉ lệ thời gian; chỉ phủ 85–90°S, nên CAB, MMP, NR2 không có), rồi ghi `validation.json` theo docs/technical-reference.md;
-   - mục `horizons` lấy từ fixture: 30 điểm, sai lệch 0,015° / 0,010°;
-   - chụp một ảnh QuickMap "Compute Visibility" cho slide.
+1. **C2:** do it like C1 but with `earthSubLonDeg/earthSubLatDeg/earthDistanceKm` and `EARTH_DISK_RADIUS_DEG`.
+   - Always compute from the cell position, because parallax is up to 0.26°.
+   - `summarizeEarthWindow` and `nextEarthEvent` (`'earthset'|'earthrise'`).
+   - Run `node --test src/core/communication.test.js`, then push.
+2. **D6:** fill in `lat/lon` for the 13 sites with `"source": "TODO"` (Apollo 12/14/16, IM-1/2/3, Blue Ghost 1, Chang'e 3–6, Chandrayaan-3, SLIM).
+   - Take values only from official sources (LROC, NASA, CNSA, ISRO, JAXA).
+   - Add each source to `sources`, `REFERENCES.md` and `DATA_SOURCES.md` §3.
+   - **Do not guess.** A site with lat ≤ −60° (for example Chandrayaan-3) gets `hasTerrain: true`, and you tell WF1 to compute its horizon.
+3. **D7, when WF5 has `cells_MAL.json`:**
+   - write `pipeline/visibility_stats.mjs` (node, imports `web/src/core/sunlight.js` and `communication.js`): compute `sunFraction` and `earthFraction` of the cells over the whole ephemeris, and write `pipeline/out/our_visibility.json`;
+   - `validate.py`: read the PGDA 69 pixels at those cells (value × 4e-05 = fraction of time; it only covers 85–90°S, so CAB, MMP, NR2 are missing), then write `validation.json` as defined in docs/technical-reference.md;
+   - the `horizons` entry comes from the fixture: 30 points, differences 0.015° / 0.010°;
+   - take one QuickMap "Compute Visibility" screenshot for the slides.
 
-**Liên quan tiêu chí mới** (docs/window-finder.md, thứ tự xếp thứ 5, "liên lạc liền mạch nhất"): đo bằng `longestCommLossHours` nhỏ hơn. WF3 dùng nó để phân thắng khi mọi tiêu chí trước bằng nhau.
+**Related to the new criterion** (docs/window-finder.md, sort order number 5, "most continuous communication"): measured by a smaller `longestCommLossHours`. WF3 uses it to break ties when all earlier criteria are equal.
 
-**Xong khi:** `communication.test.js` qua; không còn site TODO (hoặc site còn lại có `note` giải thích); có `validation.json`; trang About có số để WEB hiển thị.
+**Done when:** `communication.test.js` passes; no TODO sites remain (or any remaining site has a `note` explaining why); `validation.json` exists; the About page has numbers for WEB to show.
 
-## WF3 — Quãng đường và tối ưu
+## WF3 — Distance and optimization
 
-**Mục tiêu:** đây là lõi "Window Finder".
+**Goal:** this is the "Window Finder" core.
 
-- Trượt khung `stayDays` ngày qua mọi ô khả thi và mọi thời điểm hạ cánh (bước 6 giờ), đánh giá đạt / sát ngưỡng / không đạt.
-- Xếp hạng, và tìm thời điểm đạt gần nhất cùng ô đạt gần nhất (km).
-- Viết câu giải thích vì sao dời vài km lại khác nhau.
+- Slide a `stayDays`-day window over every feasible cell and every landing time (6-hour step), and rate each as pass / close to the limit / fail.
+- Rank, and find the nearest passing time and the nearest passing cell (km).
+- Write the sentence that explains why moving a few km gives different results.
 
-**File của bạn:** `web/src/core/optimizer.js`, `web/src/core/explain.js` (phần logic của W5/W7; WEB chỉ dựng component).
+**Your files:** `web/src/core/optimizer.js`, `web/src/core/explain.js` (the logic part of W5/W7; WEB only builds the components).
 
-**Các bước:**
+**Steps:**
 
-1. **Phần không cần C1/C2/C4:** `metricsAt`, `rankCells`, `rankBestWindows`, `summarizeCurrentPoint`, `selectSearchCells` (dùng `distanceKm` của C0). Test có sẵn trong `optimizer.test.js`.
-   - **Thứ tự mặc định:** đạt hoặc sát ngưỡng trước → `minBatteryFraction` cao hơn → `fractionBoth` cao hơn → `distanceKm` nhỏ hơn → `longestCommLossHours` nhỏ hơn (liên lạc liền mạch nhất).
-   - Không dùng điểm có trọng số.
-2. **`evaluateWindow` và `runWindowSearch`,** khi WF1/WF2/WF4 đã push C1/C2/C4: mỗi ô tính hai track một lần, trượt khung, rồi bỏ track đi.
-   - Chạy thử trong trình duyệt bằng `startWindowSearch` (Worker đã viết sẵn) với `mock/cells_MAL.json`.
-   - Mục tiêu tốc độ: phạm vi `region` dưới 3 giây.
+1. **The part that does not need C1/C2/C4:** `metricsAt`, `rankCells`, `rankBestWindows`, `summarizeCurrentPoint`, `selectSearchCells` (uses `distanceKm` from C0). The tests are ready in `optimizer.test.js`.
+   - **Default order:** passing or close-to-limit first → higher `minBatteryFraction` → higher `fractionBoth` → smaller `distanceKm` → smaller `longestCommLossHours` (most continuous communication).
+   - Do not use a weighted score.
+2. **`evaluateWindow` and `runWindowSearch`,** once WF1/WF2/WF4 have pushed C1/C2/C4: for each cell compute the two tracks once, slide the window, then throw the tracks away.
+   - Try it in the browser with `startWindowSearch` (the Worker is already written) and `mock/cells_MAL.json`.
+   - Speed goal: scope `region` in under 3 seconds.
 3. **`explain.js`:**
    - `compassName`;
-   - `explainDifference`: tìm các giờ ô hiện tại tối mà ô kia có nắng, so chân trời hai ô tại phương vị Mặt Trời lúc đó, rồi viết câu tiếng Anh;
+   - `explainDifference`: find the hours when the current cell is dark but the other cell is sunlit, compare the two cells' horizons at the Sun's azimuth at that time, then write an English sentence;
    - `findMostDifferentNeighbors`;
-   - thêm test cho hai hàm sau vào `explain.test.js`.
+   - add tests for the last two functions to `explain.test.js`.
 
-**Xong khi:** `optimizer.test.js` và `explain.test.js` qua; Worker chạy trên mock MAL dưới 3 giây; giao WEB dữ liệu `WindowResults` thật.
+**Done when:** `optimizer.test.js` and `explain.test.js` pass; the Worker runs on the MAL mock in under 3 seconds; WEB receives real `WindowResults` data.
 
-## WF4 — Năng lượng cần và thời gian sạc
+## WF4 — Energy need and charging time
 
-**Mục tiêu:** quy nắng ra điện.
+**Goal:** turn sunlight into electricity.
 
-- Lander có sống qua khung không, pin thấp nhất bao nhiêu, mất bao lâu sạc đầy lại (C4).
-- Cần pin tối thiểu bao nhiêu để sống qua khung (C3).
-- Kiểm tra form nhập giới hạn sứ mệnh.
+- Does the lander survive the window, how low does the battery get, and how long does it take to recharge fully (C4).
+- How much minimum battery is needed to survive the window (C3).
+- Check the form where the mission limits are entered.
 
-**File của bạn:** `web/src/core/charging.js`, `web/src/core/energyNeed.js`, `validateScenario` và `LANDER_PRESETS` trong `web/src/core/scenario.js`.
+**Your files:** `web/src/core/charging.js`, `web/src/core/energyNeed.js`, `validateScenario` and `LANDER_PRESETS` in `web/src/core/scenario.js`.
 
-**Các bước:**
+**Steps:**
 
-1. **C4 trước**, vì WF3 cần nó:
-   - `simulateBattery`: pin đầy lúc hạ cánh; mỗi giờ `clamp(pin + panelMaxW × powerFactor − loadW, 0, capacity)`; tính `deadAtHour`, `rechargeHours`, `chargingMask`;
-   - `findFullChargeWindows`: mức pin tại mỗi lần Mặt Trời lặn;
-   - chạy `node --test src/core/charging.test.js`, rồi push.
+1. **C4 first**, because WF3 needs it:
+   - `simulateBattery`: battery full at landing; each hour `clamp(battery + panelMaxW × powerFactor − loadW, 0, capacity)`; compute `deadAtHour`, `rechargeHours`, `chargingMask`;
+   - `findFullChargeWindows`: the battery level at each sunset;
+   - run `node --test src/core/charging.test.js`, then push.
 2. **C3:**
    - `findDarkPeriods`;
-   - `summarizeEnergyNeed`: `minimumCapacityWh` là thâm hụt tích luỹ lớn nhất, công thức ở docs/technical-reference.md C3.
-3. **`validateScenario`:** quy tắc ở bảng Scenario trong docs/technical-reference.md; mỗi trường tối đa một lỗi, viết bằng tiếng Anh.
-   - `LANDER_PRESETS` chỉ là ví dụ minh hoạ, không phải thông số tàu thật. Muốn thêm preset thì ghi rõ "illustrative".
-4. **Nếu còn thời gian:** đối chiếu kết quả C3/C4 với công thức tính tay trên 2–3 ô mock, ghi vào docs/technical-reference.md C3.
+   - `summarizeEnergyNeed`: `minimumCapacityWh` is the largest cumulative deficit, formula in docs/technical-reference.md C3.
+3. **`validateScenario`:** the rules are in the Scenario table of docs/technical-reference.md; each field gets at most one error, written in English.
+   - `LANDER_PRESETS` are only illustrative examples, not real lander specifications. To add a preset, mark it clearly as "illustrative".
+4. **If there is time left:** check the C3/C4 results against a hand calculation on 2–3 mock cells, and note it in docs/technical-reference.md C3.
 
-**Không cần chờ ai:** chỉ dùng dạng `SunTrack` (`powerFactor`, `diskFraction`), test có sẵn dữ liệu giả.
+**No need to wait for anyone:** it only uses the `SunTrack` shape (`powerFactor`, `diskFraction`), and the tests come with fake data.
 
-**Xong khi:** `charging.test.js`, `energyNeed.test.js` và `scenario.test.js` qua.
+**Done when:** `charging.test.js`, `energyNeed.test.js` and `scenario.test.js` pass.
 
-## WF5 — Bản đồ và toạ độ
+## WF5 — Map and coordinates
 
-**Mục tiêu:** dựng lưới ô 1 km chuẩn USGS LGRS cho 9 vùng Artemis III, rồi đánh dấu ô khả thi (độ dốc, vùng tối vĩnh cửu). Sau đó gộp mọi thứ thành file web đọc được và làm ảnh nền bản đồ.
+**Goal:** build the 1 km cell grid in the USGS LGRS standard for the 9 Artemis III regions, then mark the feasible cells (slope, permanently shadowed regions). After that, merge everything into files the web can read, and make the map background images.
 
-**File của bạn:** `pipeline/build_grid.py`, `compute_feasibility.py`, `build_site_data.py`, `export_map_background.py`, `pipeline/out/grid_*.json`, `feasibility_*.json`, `web/public/data/regions.json`, `cells_*.json`, `sites.json`, `web/public/maps/`.
+**Your files:** `pipeline/build_grid.py`, `compute_feasibility.py`, `build_site_data.py`, `export_map_background.py`, `pipeline/out/grid_*.json`, `feasibility_*.json`, `web/public/data/regions.json`, `cells_*.json`, `sites.json`, `web/public/maps/`.
 
-**Các bước:**
+**Steps:**
 
-1. **Tải shapefile** bằng **trình duyệt** (script bị chặn 403) tại https://www.sciencebase.gov/catalog/item/671a6fa8d34efed5620f89f8 (McClernan 2024, doi:10.5066/P1MEQ6UK), lưu vào `pipeline/raw/lgrs/`. Thiết kế lưới và nhãn ACC: USGS T&M 11-E1 (doi:10.3133/tm11E1).
-2. **D2 `build_grid.py`** (geopandas đã có trong `requirements.txt`):
-   - lấy tâm từng ô 1 km, đổi sang lat/lon và `xM/yM` theo `PGDA_CRS`;
-   - nhãn lấy theo thuộc tính ACC; ghi tên thuộc tính vào README D2;
-   - **làm `MAL` trước và push `grid_MAL.json` ngay cho WF1**, rồi làm đủ 9 vùng;
-   - ghi số ô mỗi vùng vào bảng vùng trong README.
+1. **Download the shapefile** with a **browser** (scripts get blocked with 403) from https://www.sciencebase.gov/catalog/item/671a6fa8d34efed5620f89f8 (McClernan 2024, doi:10.5066/P1MEQ6UK), and save it in `pipeline/raw/lgrs/`. Grid design and ACC labels: USGS T&M 11-E1 (doi:10.3133/tm11E1).
+2. **D2 `build_grid.py`** (geopandas is already in `requirements.txt`):
+   - take the center of each 1 km cell, convert to lat/lon and to `xM/yM` using `PGDA_CRS`;
+   - take the label from the ACC attribute; write the attribute name in the README D2;
+   - **do `MAL` first and push `grid_MAL.json` for WF1 at once**, then do all 9 regions;
+   - write the cell count of each region in the region table in the README.
 3. **D3 `compute_feasibility.py`:**
-   - `slopeDeg` là trung vị độ dốc trong ô;
-   - `psrFraction` là tỉ lệ pixel vùng tối vĩnh cửu;
-   - `heightM` là độ cao tại tâm.
-4. **D5 `build_site_data.py`:** gộp grid + feasibility + horizon (của WF1) + `pipeline/sites.json`, rồi chạy `python pipeline/check_web_data.py`. Xong `MAL` là đạt **mốc M1**.
-5. **D8 `export_map_background.py`:** hillshade → PNG ≤ 1 MB cho toàn cực và cho từng vùng, kèm `maps.json`; có thêm lớp phủ % nắng PGDA 69 nếu kịp.
+   - `slopeDeg` is the median slope in the cell;
+   - `psrFraction` is the fraction of permanently shadowed pixels;
+   - `heightM` is the height at the center.
+4. **D5 `build_site_data.py`:** merge grid + feasibility + horizon (from WF1) + `pipeline/sites.json`, then run `python pipeline/check_web_data.py`. Finishing `MAL` reaches **milestone M1**.
+5. **D8 `export_map_background.py`:** hillshade → PNG ≤ 1 MB for the whole pole and for each region, with `maps.json`; also add a PGDA 69 sunlight % overlay if there is time.
 
-**Lưu ý dữ liệu** (đã kiểm tra 14/11):
+**Data notes** (checked 14/11):
 
-- **`LDSM_80S_80MPP_ADJ.TIF`:** độ dốc tính bằng độ, float32, 7600×7600, 80 m/px.
-- **`LPSR_80S_20MPP_ADJ.TIF`:** giá trị 0/1, float32, **30400×30400**. Cả file khoảng 3,7 GB trong RAM, nên **đọc theo cửa sổ** (`rasterio.windows`) quanh từng ô, không đọc cả file.
-- **Hướng trục:** trong `PGDA_CRS`, `+x` hướng về kinh độ 90°E, `+y` hướng về kinh tuyến 0°.
-- **Vùng lớn:** Mons Mouton Plateau rộng khoảng ±58 km, có thể ra hơn 2.000 ô. Nếu `cells_MMP.json` vượt 2 MB, báo nhóm trước khi đổi định dạng.
+- **`LDSM_80S_80MPP_ADJ.TIF`:** slope in degrees, float32, 7600×7600, 80 m/px.
+- **`LPSR_80S_20MPP_ADJ.TIF`:** values 0/1, float32, **30400×30400**. The whole file is about 3.7 GB in RAM, so **read it by window** (`rasterio.windows`) around each cell, never the whole file.
+- **Axis direction:** in `PGDA_CRS`, `+x` points toward longitude 90°E and `+y` points toward the 0° meridian.
+- **Large region:** Mons Mouton Plateau is about ±58 km wide and may have more than 2,000 cells. If `cells_MMP.json` goes over 2 MB, tell the team before changing the format.
 
-**Xong khi:** `check_web_data.py` qua trên `web/public/data` cho 9 vùng; có `maps.json`; số ô từng vùng đã ghi trong README.
+**Done when:** `check_web_data.py` passes on `web/public/data` for the 9 regions; `maps.json` exists; the cell count of each region is written in the README.
 
-## WEB — Tổng hợp giao diện
+## WEB — Putting the interface together
 
-**Người làm:** trankhan123. Phần này dựng mọi component và nối các workflow vào giao diện. Phần logic thuần đã chuyển cho workflow khác:
+**Owner:** trankhan123. This part builds every component and connects the workflows to the interface. The pure-logic parts were given to other workflows:
 
-- `explain.js` thuộc WF3;
-- `validateScenario` thuộc WF4.
+- `explain.js` belongs to WF3;
+- `validateScenario` belongs to WF4.
 
-**Module:** W1 khung app + link chia sẻ, W2 bản đồ + popup, W3 form, W4 kết quả, W5 chi tiết, W6 globe, W7 chế độ học, S1 bài nộp. Chi tiết props ở README.
+**Modules:** W1 app skeleton + share link, W2 map + popup, W3 form, W4 results, W5 details, W6 globe, W7 learning mode, S1 submission. Props are detailed in the README.
 
-**Thứ tự gợi ý:**
+**Suggested order:**
 
-1. W1 khung app trên mock: các màn hình, nhãn MOCK DATA, footer nguồn dữ liệu.
+1. W1 app skeleton on mock: the screens, the MOCK DATA label, the data-source footer.
 2. W3 form.
-3. W2 bản đồ, đọc `mock/cells_MAL.json`.
-4. W4 kết quả: nối `startWindowSearch` khi WF3 push.
-5. W5 chi tiết: horizon view, đếm ngược, biểu đồ pin. Cần C1, C2, C4.
-6. W7, rồi W6 (bỏ trước nếu trễ).
-7. Deploy, rồi S1.
+3. W2 map, reading `mock/cells_MAL.json`.
+4. W4 results: connect `startWindowSearch` when WF3 pushes.
+5. W5 details: horizon view, countdown, battery chart. Needs C1, C2, C4.
+6. W7, then W6 (drop it first if we run late).
+7. Deploy, then S1.
 
-**Điểm nối:** mỗi khi một workflow push xong, đổi phần tương ứng từ mock sang thật. Dữ liệu thật tự bật khi có `web/public/data/regions.json` (README W1).
+**Connection points:** each time a workflow finishes a push, switch the matching part from mock to real. Real data turns on by itself when `web/public/data/regions.json` exists (README W1).
 
-## Quy tắc chung cho mọi workflow
+## Rules for every workflow
 
-- **Trước khi code:** đọc mục module của mình trong README. Hàm, trường JSON, đơn vị và tên file đã cố định.
-- **Chỉ sửa file trong mục "File của bạn".** Cần đổi hợp đồng thì hỏi nhóm trước, rồi sửa cùng lúc README, test và `pipeline/check_web_data.py`.
-- **Commit nhỏ, push sớm:** `git pull --rebase` trước khi push. Mỗi commit phải qua `cd web && npm run lint && npm run build`.
-- **Test của mình:**
+- **Before coding:** read your module section in the README. Functions, JSON fields, units and file names are already fixed.
+- **Only edit files in your "Your files" section.** If the contract must change, ask the team first, then change the README, the tests and `pipeline/check_web_data.py` at the same time.
+- **Small commits, push early:** `git pull --rebase` before pushing. Every commit must pass `cd web && npm run lint && npm run build`.
+- **Your own tests:**
   - JS: `cd web && node --test src/core/<file>.test.js`;
-  - dữ liệu: `python pipeline/check_web_data.py`.
-- **Dữ liệu:** không bịa dữ liệu khoa học. Không commit `pipeline/raw/` và `*.tif`. Nguồn mới ghi vào `REFERENCES.md` và `DATA_SOURCES.md`; việc lớn làm bằng AI ghi vào `AI_USAGE.md`.
-- **Dùng Claude Code:**
-  - mở Claude Code trong repo, skill dự án tự nạp;
-  - gõ ví dụ "Implement WF4 theo distribution.md";
-  - Claude sẽ đọc README, CLAUDE.md và làm đúng hợp đồng.
+  - data: `python pipeline/check_web_data.py`.
+- **Data:** do not invent scientific data. Do not commit `pipeline/raw/` and `*.tif`. Write new sources in `REFERENCES.md` and `DATA_SOURCES.md`; write big pieces of work done with AI in `AI_USAGE.md`.
+- **Using Claude Code:**
+  - open Claude Code in the repo, and the project skill loads by itself;
+  - type an example like "Implement WF4 following distribution.md";
+  - Claude will read the README and CLAUDE.md and follow the contract.
 
-## Nếu chỉ có 4 bạn
+## If there are only 4 people
 
-Có 5 workflow mà chỉ 4 người, nên **tách WF2** cho ba người:
+There are 5 workflows but only 4 people, so **split WF2** among three people:
 
-- **C2** cho người làm **WF4**: C2 làm giống C1 và nhẹ; WF4 cộng thêm C2 vẫn khoảng 6–7 h.
-- **D6** cho người làm **WF5**: điền toạ độ site đi cùng phần bản đồ.
-- **D7** cho người xong việc sớm nhất. D7 thuộc mốc M2 (sáng ngày 2), không nằm trên đường găng.
+- **C2** goes to the person doing **WF4**: C2 works like C1 and is light; WF4 plus C2 is still about 6–7 h.
+- **D6** goes to the person doing **WF5**: filling in site coordinates fits with the map work.
+- **D7** goes to whoever finishes earliest. D7 belongs to milestone M2 (morning of day 2), so it is not on the critical path.
 
-Khi tách, ghi lại tên người nhận C2, D6 và D7 ở bảng chọn phía trên.
+After the split, write down who took C2, D6 and D7 in the choice table above.

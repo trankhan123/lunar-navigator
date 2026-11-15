@@ -1,6 +1,6 @@
 # Technical reference — module contracts
 
-This is the team's integration contract for **Lunar Landing Site Navigator** (NASA Space Apps Challenge 2026). It was the repository README during the hackathon; the project overview now lives in the [README](../README.md).
+This is the team's integration contract for **Lunar Landing Site Navigator** (NASA Space Apps Challenge 2026). It was the repository README during the NASA Space Apps Challenge 2026 weekend; the project overview now lives in the [README](../README.md).
 
 Every module below has fixed inputs, outputs, units and file formats. The contract is this file, together with `web/src/core/*.test.js` and `pipeline/check_web_data.py`.
 
@@ -102,10 +102,10 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D10 | WF5 | Terrain meshes for the 3D view | `pipeline/export_terrain_mesh.py`, `web/public/terrain/` | LDEM 80 m (raw), D2 | M | trankhan123 (Claude Code) | done (9 regions, each ≤ 205 kB) |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
 | C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | Quoc_Bao | done |
-| C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | chubin271-blip | done |
-| C3 | WF4 | Energy need (năng lượng cần) | `web/src/core/energyNeed.js` | track shape only | S | hoanggbach | done |
-| C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
-| C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
+| C2 | WF2 | Communication (direct-to-Earth radio link) | `web/src/core/communication.js` | C0 | S | chubin271-blip | done |
+| C3 | WF4 | Energy need | `web/src/core/energyNeed.js` | track shape only | S | hoanggbach | done |
+| C4 | WF4 | Charging (battery charging) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
+| C5 | WF3 | Optimizer: best nearby cell and date | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
 | W2 | WEB | South-pole map (relief tiles, whole-cap raster, 3D view) and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `MapReliefTiles`, `CellHoverCard`, `DirectionCard`, `MapSearch`, `TerrainView3D`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js`, `mapTiles.js`, `capGrid.js`, `capSearch.js` | W1, D8, D8b, D9, D10 | L | trankhan123 | done (map v2 + relief, cap raster, 3D view) |
 | W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
@@ -126,7 +126,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 
 **If late, drop in this order:** W6 globe, W7 learn mode, the `all` search scope.
 
-**"Quãng đường tối ưu" is C5.** It ranks cells and landing times, and reports the nearest passing cell in km. Rover route planning was dropped in window-finder.md §3.2. If the team wants it back, it needs a new module and a slope-limit field.
+**"Optimal route" is C5.** It ranks cells and landing times, and reports the nearest passing cell in km. Rover route planning was dropped in window-finder.md §3.2. If the team wants it back, it needs a new module and a slope-limit field.
 
 ## Global conventions (every module)
 

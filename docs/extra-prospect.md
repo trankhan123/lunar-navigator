@@ -1,252 +1,254 @@
-# Extra prospect: các module làm thêm sau khi nhóm xong bản chính
+# Extra prospect: extra modules to build after the team finished the main version
 
-Cập nhật 15/11/2026 14:45. Viết trên `main` commit `675ff1e`. Mục tiêu: merge được trước **22:30**, vì cổng nộp đóng 23:59 và giám khảo sẽ mở link web.
+Status after the NASA Space Apps Challenge 2026 weekend: E1–E8 were built and merged; E9 and E10 were not done.
 
-## 0. Luật chung cho mọi module
+Updated 15/11/2026 14:45. Written on `main` at commit `675ff1e`. Goal: merge before **22:30**, because the submission portal closes at 23:59 and the judges will open the web link.
 
-- **Nhánh và PR:** mỗi module một nhánh `extra/<mã>` và một PR riêng, để bỏ được module lỗi mà không kéo theo module khác. Làm từ `main` mới nhất.
-- **Trước khi merge,** chạy trong `web/`:
+## 0. General rules for every module
+
+- **Branch and PR:** one branch `extra/<code>` and one separate PR per module, so a broken module can be dropped without dragging others down. Start from the latest `main`.
+- **Before merging,** run in `web/`:
   ```bash
   node --test src/core/*.test.js
   npm run lint
   npm run build
   ```
-  Nếu có đụng dữ liệu thì chạy thêm `python pipeline/check_web_data.py` ở thư mục gốc.
-- **Mở bản preview Vercel của PR** và đi lại hai luồng: (a) Apollo 11; (b) ô `MAL-BASCS`, dates 2028-01-01 → 2028-06-30, stay 6 ngày, bấm Find, mở chi tiết.
-- **Chữ giao diện:** thêm key vào `web/src/i18n/translations.js`. Bắt buộc có `en`; nên có `vi`. Ngôn ngữ thiếu key sẽ tự dùng bản tiếng Anh.
-- **Hợp đồng dữ liệu:** đổi file dữ liệu hay chữ ký hàm thì phải sửa cùng lúc ba chỗ: README, `*.test.js`, `check_web_data.py`.
-- **Ít đụng `App.jsx`:** file này đã conflict nhiều lần.
-- **Sổ sách:** mỗi module thêm một dòng vào `AI_USAGE.md`; dữ liệu hoặc nguồn mới thì ghi vào `REFERENCES.md` và `DATA_SOURCES.md`.
-- **Mốc dừng:** 22:30 không merge thêm gì nữa.
+  If the change touches data, also run `python pipeline/check_web_data.py` from the repo root.
+- **Open the Vercel preview of the PR** and walk through two flows: (a) Apollo 11; (b) cell `MAL-BASCS`, dates 2028-01-01 → 2028-06-30, stay 6 days, click Find, open the detail view.
+- **UI text:** add keys to `web/src/i18n/translations.js`. The `en` block is required; `vi` is recommended. A language missing a key falls back to English.
+- **Data contract:** if you change a data file or a function signature, update three places at once: README, `*.test.js`, `check_web_data.py`.
+- **Touch `App.jsx` as little as possible:** this file has had many conflicts.
+- **Bookkeeping:** each module adds one line to `AI_USAGE.md`; new data or sources go into `REFERENCES.md` and `DATA_SOURCES.md`.
+- **Stop time:** at 22:30 nothing more is merged.
 
-## 1. Thứ tự đề xuất
+## 1. Suggested order
 
-| Thứ tự | Mã | Module | Loại | Ước tính | Rủi ro | Cần dữ liệu mới? |
+| Order | Code | Module | Type | Estimate | Risk | New data needed? |
 |---|---|---|---|---|---|---|
-| 1 | E1 | Gom lỗi nhỏ | Sửa điểm yếu | 30 phút | Rất thấp | Không |
-| 2 | E2 | Đưa kiểm chứng NASA ra mặt tiền | Khai thác điểm mạnh | 1–1,5 h | Thấp | Không (`validation.json`) |
-| 3 | E3 | Nút "tìm cả quanh điểm này" | Sửa điểm yếu | 1–1,5 h | Thấp | Không |
-| 4 | E4 | Mẫu tàu thật | Sửa điểm yếu | 1 h | Thấp | Số liệu công bố |
-| 5 | E5 | Câu tiêu đề "nếu trễ lịch" | Khai thác điểm mạnh | 1 h | Thấp | Không |
-| 6 | E6 | Mission Replay (IM-1, IM-2, Chandrayaan-3) | Galactic Impact, kiểm chứng | 3–4 h | Vừa | Horizons, 3 khung ngắn |
-| 7 | E7 | Khoảng cách tới bẫy lạnh (PSR) | Best Use of Data, khoa học | 3–4 h | Vừa (đổi hợp đồng) | Không (PGDA 90 LPSR) |
-| 8 | E8 | Mở chỏm ô 2 km tới 80°S | Độ phủ | 1 h code + thời gian máy | Vừa | Không (DEM 80 m tới 80°S) |
-| 9 | E9 | Vùng Artemis gốc ở 1 km (Peak near Shackleton…) | Độ phân giải | 2–3 h + thời gian máy | Vừa | Zip LGRS cũ |
-| 10 | E10 | Lớp lưới LGRS chính thức, toạ độ ACC | Độ tin cậy | 2 h | Thấp | Shapefile LGRS toàn cầu |
+| 1 | E1 | Small-bug sweep | Fix a weakness | 30 min | Very low | No |
+| 2 | E2 | Put the NASA validation up front | Use a strength | 1–1.5 h | Low | No (`validation.json`) |
+| 3 | E3 | "Also search around this point" button | Fix a weakness | 1–1.5 h | Low | No |
+| 4 | E4 | Real lander presets | Fix a weakness | 1 h | Low | Published figures |
+| 5 | E5 | "If the launch slips" headline sentence | Use a strength | 1 h | Low | No |
+| 6 | E6 | Mission Replay (IM-1, IM-2, Chandrayaan-3) | Galactic Impact, validation | 3–4 h | Medium | Horizons, 3 short windows |
+| 7 | E7 | Distance to cold trap (PSR) | Best Use of Data, science | 3–4 h | Medium (contract change) | No (PGDA 90 LPSR) |
+| 8 | E8 | Extend the 2 km cap cells to 80°S | Coverage | 1 h code + machine time | Medium | No (80 m DEM down to 80°S) |
+| 9 | E9 | Original Artemis regions at 1 km (Peak near Shackleton…) | Resolution | 2–3 h + machine time | Medium | Older LGRS zip |
+| 10 | E10 | Official LGRS grid layer, ACC coordinates | Credibility | 2 h | Low | Global LGRS shapefile |
 
-**Gợi ý:**
-- Một người làm lần lượt E1 → E5 (khoảng 5 giờ, gần như không rủi ro).
-- Nếu có người thứ hai, làm E6 hoặc E7 song song.
-- E8 và E9 chỉ làm khi máy có sẵn `pipeline/raw/` và lần chạy thử đo thời gian cho thấy tính xong kịp.
-
----
-
-## E1. Gom lỗi nhỏ (30 phút)
-
-**Việc:**
-1. `web/index.html`: đổi `og:image` thành URL đầy đủ `https://lunar-navigator-six.vercel.app/og-image.png`, và thêm `og:url`. Ảnh xem trước khi dán link chỉ hiện với URL đầy đủ.
-2. `results.summary` ("{count} cells × …"): khi `count === 1` thì nói "1 cell". Làm bằng key riêng `results.summaryOne`, hoặc chọn key theo số ngay trong component.
-3. Chú giải "1 square = 1 km": khi bản đồ đang hiện ô 2 km (CAP) hoặc điểm hiện tại là ô `CAP-`, thêm "· cap cells: 2 km".
-4. Nhãn vùng MMO bị nhãn NR1 và "IM-2 Athena" đè: dời nhãn MMO (offset) hoặc ẩn nhãn site khi đang ở mức nhìn toàn cực. Xem `MapMarks.jsx`.
-
-**Xong khi:** build qua, và bốn chỗ trên đều đúng khi xem trên bản preview.
+**Suggestions:**
+- One person does E1 → E5 in sequence (about 5 hours, almost no risk).
+- If a second person is available, they take E6 or E7 in parallel.
+- Do E8 and E9 only if the machine already has `pipeline/raw/` and a timed trial run shows the computation will finish in time.
 
 ---
 
-## E2. Đưa kiểm chứng NASA ra mặt tiền (1–1,5 h)
+## E1. Small-bug sweep (30 minutes)
 
-**Vì sao:** đây là điểm mạnh nhất của nhóm. So với PGDA 69 trên 240 ô: r = 0,983 (nắng) và 0,986 (Trái Đất), sai số trung bình 1,9 và 3,6 điểm %. So với Horizons sai tối đa 0,015°. Hiện các con số này chỉ nằm ở cuối trang About.
+**Tasks:**
+1. `web/index.html`: change `og:image` to the full URL `https://lunar-navigator-six.vercel.app/og-image.png`, and add `og:url`. The preview image shown when a link is pasted only appears with a full URL.
+2. `results.summary` ("{count} cells × …"): when `count === 1`, say "1 cell". Use a separate key `results.summaryOne`, or pick the key by number inside the component.
+3. Legend "1 square = 1 km": when the map is showing 2 km cells (CAP) or the current point is a `CAP-` cell, add "· cap cells: 2 km".
+4. The MMO region label is covered by the NR1 label and "IM-2 Athena": offset the MMO label or hide site labels at the whole-pole zoom level. See `MapMarks.jsx`.
 
-**Việc:**
-1. **Hàm thuần mới** `validationSummary(validation)` trong `web/src/core/validationStats.js`. Trả về `{sunR, earthR, sunMae, earthMae, cellCount, horizonsMaxDeg}`. Lấy từ `pgda69Stats` nếu có; nếu không thì tự tính từ mảng `pgda69`. Viết test cho hàm này bằng dữ liệu tổng hợp.
-2. **Component `ValidationBadge.jsx`:** một chip nhỏ "✓ Validated vs NASA PGDA 69 (r = 0.98) and JPL Horizons (0.015°)". Bấm vào thì chuyển sang màn About.
-   - Đặt ở đầu màn Results và màn Cell detail.
-   - Chỉ cần thêm một prop `onOpenAbout` từ `App.jsx`.
-3. **Component `ValidationScatter.jsx`** (ECharts, lazy-load giống lịch mùa):
-   - 240 điểm, trục x là PGDA 69, trục y là số của nhóm, có đường y = x;
-   - hai tab Sun và Earth.
-   - Đặt trong `AboutView.jsx`, trên bảng hiện có.
-4. **i18n:** thêm key `validation.badge`, `validation.scatterTitle`, `validation.axisNasa`, `validation.axisOurs`.
-
-**Xong khi:** test của `validationStats` qua; chip hiện ở Results và Detail; biểu đồ phân tán vẽ đủ 240 điểm.
+**Done when:** the build passes, and all four items are correct on the preview.
 
 ---
 
-## E3. Nút "tìm cả quanh điểm này" (1–1,5 h)
+## E2. Put the NASA validation up front (1–1.5 h)
 
-**Vì sao:** chế độ Simple chỉ tìm trong 9 ô vuông, nên người dùng tưởng ngoài vùng không khả thi. Kiểm thử bằng Node cho thấy từ `MAL-BASCS` với bán kính 30 km có 500 ô 2 km được tìm, trong đó 337 ô từng pass.
+**Why:** this is the team's strongest point. Against PGDA 69 over 240 cells: r = 0.983 (sun) and 0.986 (Earth), mean error 1.9 and 3.6 percentage points. Against Horizons the maximum error is 0.015°. Right now these numbers appear only at the bottom of the About page.
 
-**Việc:**
-1. **Ở màn Results**, khi `scenario.searchScope === 'region'`, thêm nút "Also search 15 km around this point (includes 2 km cap cells)".
-   - Bấm vào thì gọi lại `runSearch({...scenario, searchScope: 'radius', searchRadiusKm: 15})`.
-   - Không đổi hợp đồng: phạm vi `radius` đã có, `MAX_SEARCH_RADIUS_KM = 50`.
-2. **Dòng giải thích dưới bản đồ** (Map và Results): "Cells outside the 9 regions (2 km cap grid) are searched when you pick one as your point, or with 'Search around this point'."
-3. **Hàm thuần** `suggestWiderSearch(scenario, results)` trong `core/` (tuỳ chọn): trả về `true` khi phạm vi là vùng và tỉ lệ ô đạt thấp, để làm nổi bật nút. Có test.
+**Tasks:**
+1. **New pure function** `validationSummary(validation)` in `web/src/core/validationStats.js`. It returns `{sunR, earthR, sunMae, earthMae, cellCount, horizonsMaxDeg}`. Take the values from `pgda69Stats` if present; otherwise compute them from the `pgda69` array. Write a test for it using synthetic data.
+2. **Component `ValidationBadge.jsx`:** a small chip "✓ Validated vs NASA PGDA 69 (r = 0.98) and JPL Horizons (0.015°)". Clicking it switches to the About screen.
+   - Place it at the top of the Results screen and the Cell detail screen.
+   - It only needs one new prop `onOpenAbout` from `App.jsx`.
+3. **Component `ValidationScatter.jsx`** (ECharts, lazy-loaded like the seasonal calendar):
+   - 240 points, x axis is PGDA 69, y axis is the team's value, with a y = x line;
+   - two tabs, Sun and Earth.
+   - Place it in `AboutView.jsx`, above the existing table.
+4. **i18n:** add keys `validation.badge`, `validation.scatterTitle`, `validation.axisNasa`, `validation.axisOurs`.
 
-**Xong khi:** từ `MAL-BASCS`, bấm nút thì kết quả có ô `CAP-` trong bảng xếp hạng và trên bản đồ.
+**Done when:** the `validationStats` test passes; the chip shows on Results and Detail; the scatter plot draws all 240 points.
 
 ---
 
-## E4. Mẫu tàu thật (1 h)
+## E3. "Also search around this point" button (1–1.5 h)
 
-**Vì sao:** chỉ có "Example lander" nên các con số pin trông tuỳ tiện. `docs/window-finder.md` không có số liệu tàu: mọi số "công bố" phải mở nguồn bên dưới để đối chiếu, số không tìm thấy trong nguồn thì ghi là ước tính.
+**Why:** Simple mode only searches inside the 9 square regions, so users think nothing outside the regions is feasible. A Node test shows that from `MAL-BASCS` with a 30 km radius, 500 cells of 2 km are searched, and 337 of them passed at some point.
 
-**Việc:**
-1. **`web/src/core/scenario.js`, `LANDER_PRESETS`:** thêm các mẫu sau. Mỗi mục có `source`, `sourceUrl`, và cờ `published` hoặc `estimate` cho từng số.
+**Tasks:**
+1. **On the Results screen,** when `scenario.searchScope === 'region'`, add a button "Also search 15 km around this point (includes 2 km cap cells)".
+   - Clicking it calls `runSearch({...scenario, searchScope: 'radius', searchRadiusKm: 15})` again.
+   - No contract change: the `radius` scope already exists, and `MAX_SEARCH_RADIUS_KM = 50`.
+2. **Explanation line under the map** (Map and Results): "Cells outside the 9 regions (2 km cap grid) are searched when you pick one as your point, or with 'Search around this point'."
+3. **Pure function** `suggestWiderSearch(scenario, results)` in `core/` (optional): returns `true` when the scope is a region and the pass rate is low, to highlight the button. Includes a test.
 
-   | id | Tấm pin | Pin | Tiêu thụ | Ở lại |
+**Done when:** from `MAL-BASCS`, clicking the button produces `CAP-` cells in the ranking table and on the map.
+
+---
+
+## E4. Real lander presets (1 h)
+
+**Why:** with only "Example lander", the battery figures look arbitrary. `docs/window-finder.md` has no lander figures: every "published" number must be checked against the sources below, and a number not found in a source is labelled as an estimate.
+
+**Tasks:**
+1. **`web/src/core/scenario.js`, `LANDER_PRESETS`:** add the presets below. Each entry has `source`, `sourceUrl`, and a `published` or `estimate` flag for each number.
+
+   | id | Solar panel | Battery | Consumption | Stay |
    |---|---|---|---|---|
-   | `viper` | 450 W (công bố) | 5.420 Wh (công bố) | ~110 W (ước tính = 5.420 Wh ÷ 50 h chế độ tiết kiệm) | 30 ngày, vì `MAX_STAY_DAYS` = 30; ghi chú "mission planned 100 days" |
-   | `nova-c` | 200 W (công bố) | ~700 Wh (25 Ah × 28 V, ước tính) | ~50 W (ước tính) | 14 ngày |
-   | `blue-ghost-1` | 400 W (công bố) | ~1.400 Wh (ước tính) | ~100 W (ước tính) | 14 ngày |
-   | `vikram` | 738 W (công bố) | ~2.600 Wh (ước tính) | ~185 W (ước tính) | 14 ngày |
+   | `viper` | 450 W (published) | 5,420 Wh (published) | ~110 W (estimate = 5,420 Wh ÷ 50 h power-saving mode) | 30 days, because `MAX_STAY_DAYS` = 30; note "mission planned 100 days" |
+   | `nova-c` | 200 W (published) | ~700 Wh (25 Ah × 28 V, estimate) | ~50 W (estimate) | 14 days |
+   | `blue-ghost-1` | 400 W (published) | ~1,400 Wh (estimate) | ~100 W (estimate) | 14 days |
+   | `vikram` | 738 W (published) | ~2,600 Wh (estimate) | ~185 W (estimate) | 14 days |
 
-   Nguồn:
+   Sources:
    - VIPER: [NTRS 20240013903](https://ntrs.nasa.gov/api/citations/20240013903/downloads/LSIC_2024-Tech%20Infusion_Panel-VIPER_Mob-HW.pdf)
    - Nova-C: [Wikipedia](https://en.wikipedia.org/wiki/Intuitive_Machines_Nova-C)
    - Blue Ghost: [Firefly](https://fireflyspace.com/missions/blue-ghost-mission-1/)
    - Vikram: [ISRO brochure](https://www.isro.gov.in/NSPD2024/assets/pdf/CH3%20Landing%20Brochure-Pagewise.pdf)
 2. **`ScenarioForm.jsx`:**
-   - thêm `stayDays` vào `PRESET_FIELDS` (hoặc chỉ điền khi người dùng chưa sửa tay);
-   - dưới ô chọn mẫu, hiện một dòng nguồn có link, kèm nhãn "published / estimated".
-3. **`scenario.test.js`:** mọi preset đều qua `validateScenario`.
-4. **Ghi rõ trên giao diện:** "Approximate values from public documents, for comparing scenarios."
+   - add `stayDays` to `PRESET_FIELDS` (or fill it only when the user has not edited it by hand);
+   - under the preset selector, show one source line with a link and a "published / estimated" label.
+3. **`scenario.test.js`:** every preset passes `validateScenario`.
+4. **State it clearly in the UI:** "Approximate values from public documents, for comparing scenarios."
 
-**Xong khi:** chọn VIPER thì form tự điền và Find chạy được; test qua.
+**Done when:** choosing VIPER fills the form automatically and Find runs; the test passes.
 
 ---
 
-## E5. Câu tiêu đề "nếu trễ lịch" (1 h)
+## E5. "If the launch slips" headline sentence (1 h)
 
-**Vì sao:** "Can slip" là tính năng độc nhất, nhưng hiện đang nằm trong bảng.
+**Why:** "Can slip" is a unique feature, but right now it is buried in a table.
 
-**Việc:**
-1. **Hàm thuần** `slipSentence(results, landingIndex, windows)` trong `core/format.js`, hoặc file mới `core/slip.js`. Trả về:
-   - nếu điểm hiện tại đang đạt: "Your landing can slip up to **X** and still meet every limit (until …)";
-   - nếu không đạt: "Next window at your point: … (in **Y**). Nearest cell that works now: … (**Z km**)."
-   - Dùng dữ liệu có sẵn: `rankBestWindows` và `summarizeCurrentPoint`.
-   - Viết test cho cả hai nhánh.
-2. **Hiện câu này bằng chữ to** ở đầu `CurrentPointCard.jsx`.
+**Tasks:**
+1. **Pure function** `slipSentence(results, landingIndex, windows)` in `core/format.js`, or a new file `core/slip.js`. It returns:
+   - if the current point passes: "Your landing can slip up to **X** and still meet every limit (until …)";
+   - if it does not pass: "Next window at your point: … (in **Y**). Nearest cell that works now: … (**Z km**)."
+   - Use existing data: `rankBestWindows` and `summarizeCurrentPoint`.
+   - Write tests for both branches.
+2. **Show this sentence in large text** at the top of `CurrentPointCard.jsx`.
 
-**Xong khi:** test qua; luồng `MAL-BASCS` hiện câu đúng với các bảng phía dưới.
+**Done when:** the test passes; the `MAL-BASCS` flow shows a sentence that matches the tables below it.
 
 ---
 
 ## E6. Mission Replay (3–4 h)
 
-**Vì sao:** cho thấy app dự đoán khớp với sứ mệnh thật. Chân trời của `im-1`, `im-2` và `chandrayaan-3` **đã có** trong `web/public/data/sites.json`.
+**Why:** it shows that the app's predictions match real missions. The horizons for `im-1`, `im-2` and `chandrayaan-3` **already exist** in `web/public/data/sites.json`.
 
-**Việc:**
-1. **Pipeline:** thêm tuỳ chọn `--start/--stop/--out` cho `pipeline/fetch_horizons.py` (hoặc viết script nhỏ `fetch_replay.py` dùng lại hàm của D1). Lấy 3 khung, mỗi khung khoảng 3 tuần quanh ngày hạ cánh, ghi ra `web/public/data/replay/<siteId>.json`, cùng định dạng với `ephemeris.json`.
-2. **`web/public/data/replay/index.json`:** với mỗi sứ mệnh ghi `{siteId, name, landedUtc, endedUtc, endedReason, sourceUrls}`.
-   - **Ngày giờ phải lấy từ nguồn chính thức** (NASA, ISRO, Intuitive Machines) và ghi link.
-   - Mốc tham khảo cần kiểm lại: Chandrayaan-3 hạ cánh 23/8/2023 12:33 UTC; IM-1 Odysseus hạ cánh 22/2/2024; IM-2 Athena hạ cánh 6/3/2025.
-3. **Hàm thuần `core/replay.js`:** `replaySummary(site, replayEphemeris, mission)` → `{predictedSunsetUtc, predictedEarthsetUtc, hoursFromLandingToSunset, endedUtc, differenceHours}`. Dùng `computeSunTrack`, `computeEarthTrack`, `nextSunEvent`. Viết test với ephemeris tổng hợp.
-4. **Giao diện:** thẻ "Real missions replayed" trong Learn (hoặc trên About), mỗi sứ mệnh một dòng gồm:
-   - dự đoán giờ Mặt Trời lặn tại site;
-   - thời điểm thực tế sứ mệnh kết thúc, kèm lý do (ví dụ IM-1 nằm nghiêng, IM-2 đổ trong hố lạnh);
-   - chênh lệch tính bằng giờ.
-   - Mỗi dòng có nút mở màn chi tiết của site với ngày hạ cánh thật.
-5. **`check_web_data.py`:** kiểm thư mục `replay/` khi thư mục này tồn tại.
+**Tasks:**
+1. **Pipeline:** add `--start/--stop/--out` options to `pipeline/fetch_horizons.py` (or write a small script `fetch_replay.py` that reuses D1's functions). Fetch 3 windows, each about 3 weeks around the landing date, and write them to `web/public/data/replay/<siteId>.json`, in the same format as `ephemeris.json`.
+2. **`web/public/data/replay/index.json`:** for each mission record `{siteId, name, landedUtc, endedUtc, endedReason, sourceUrls}`.
+   - **Dates and times must come from official sources** (NASA, ISRO, Intuitive Machines) with links.
+   - Reference dates to double-check: Chandrayaan-3 landed 23/8/2023 12:33 UTC; IM-1 Odysseus landed 22/2/2024; IM-2 Athena landed 6/3/2025.
+3. **Pure function `core/replay.js`:** `replaySummary(site, replayEphemeris, mission)` → `{predictedSunsetUtc, predictedEarthsetUtc, hoursFromLandingToSunset, endedUtc, differenceHours}`. Use `computeSunTrack`, `computeEarthTrack`, `nextSunEvent`. Write a test with synthetic ephemeris.
+4. **UI:** a "Real missions replayed" card in Learn (or on About), one line per mission containing:
+   - the predicted sunset time at the site;
+   - the actual time the mission ended, with the reason (for example IM-1 lying on its side, IM-2 tipped over inside a cold crater);
+   - the difference in hours.
+   - Each line has a button that opens the site's detail screen with the real landing date.
+5. **`check_web_data.py`:** check the `replay/` folder when it exists.
 
-**Rủi ro:** tàu nằm nghiêng hay đổ làm mất điện sớm hơn hình học dự đoán. Vì vậy chỉ so **giờ Mặt Trời lặn tại site**, và ghi lý do thực tế cạnh kết quả. Không được ghi "chính xác" nếu số không khớp.
+**Risk:** a lander lying on its side or tipped over loses power earlier than the predicted geometry. So compare only the **sunset time at the site**, and show the real-world reason next to the result. Never write "exact" if the numbers do not match.
 
-**Xong khi:** ba dòng có số; nguồn có link; test qua.
-
----
-
-## E7. Khoảng cách tới bẫy lạnh (PSR) (3–4 h)
-
-**Vì sao:** đề yêu cầu cân nhu cầu của "both science and engineering teams". Hiện app chỉ phục vụ phía kỹ sư.
-
-**Việc:**
-1. **Pipeline:** script mới `pipeline/compute_science_access.py`.
-   - Đọc `LPSR_80S_20MPP_ADJ.TIF` (đã dùng ở D3). Hạ độ phân giải xuống khoảng 100 m, rồi dùng `rasterio.features.shapes` để tạo đa giác.
-   - Giữ các PSR rộng từ 1 km² trở lên (khớp bảng 1.531 PSR của PGDA 90).
-   - Với mỗi ô (vùng và CAP), tính `psrDistanceKm` tới PSR gần nhất bằng `shapely.STRtree`. shapely đi kèm geopandas, nên không thêm thư viện mới.
-2. **Đổi hợp đồng:**
-   - thêm trường `psrDistanceKm` (number | null) cho cell trong `cells_*.json` và `cap/*.json`;
-   - D5 và `build_cap_grid.py` ghép trường này vào;
-   - cập nhật README, `check_web_data.py`, và `make_mock_data.py` (dữ liệu giả).
-3. **Lõi:** `runWindowSearch` chép `psrDistanceKm` của từng ô vào results như `distanceKm`; `rankCells` cho phép `sortBy: 'psrDistanceKm'` (nhỏ hơn là tốt hơn). Cập nhật test.
-4. **Giao diện:**
-   - cột "To cold trap (km)" ở bảng xếp hạng (chế độ Expert);
-   - dòng tương ứng trong popup ô;
-   - một lớp bản đồ "Distance to permanent shadow".
-5. **Learn:** một câu giải thích vì sao PSR quan trọng (bẫy lạnh, nơi có thể có băng nước).
-
-**Xong khi:** checker qua; sắp theo cột mới được; popup hiện số.
+**Done when:** three lines have numbers; sources have links; the test passes.
 
 ---
 
-## E8. Mở chỏm ô 2 km tới 80°S
+## E7. Distance to cold trap (PSR) (3–4 h)
 
-**Vì sao:** vành 80–85°S (quanh IM-1, CAB, NR2, MMP) chưa có ô. Toạ độ tự nhập ở đây đang dùng chân trời mặt cầu, sai nhiều.
+**Why:** the challenge asks to balance the needs of "both science and engineering teams". Right now the app serves only the engineering side.
 
-**Việc:**
-1. Thêm tham số `--south-of -80` cho `build_cap_grid.py`; vành ngoài 85°S có thể dùng ô 4 km để giảm số ô.
-2. **Chạy thử đo thời gian trước:** `python pipeline/build_cap_grid.py --limit 200`. Ước lượng thời gian cho số ô vành mới (gấp khoảng 3 lần chỏm hiện tại ở ô 2 km). Nếu quá 2 giờ thì bỏ.
-3. **Kiểm `MapCapLayer.jsx`:** README ghi lớp này vẽ bằng raster 152 × 152 px, tính cho bán kính 85°S. Phải đổi để kích thước tính từ `index.json`.
-4. Chạy `check_web_data.py`, kiểm mỗi tile dưới 2 MB, kiểm tìm kiếm quanh IM-1 (80,13°S).
+**Tasks:**
+1. **Pipeline:** new script `pipeline/compute_science_access.py`.
+   - Read `LPSR_80S_20MPP_ADJ.TIF` (already used in D3). Downsample to about 100 m, then use `rasterio.features.shapes` to build polygons.
+   - Keep PSRs of 1 km² or larger (matching the table of 1,531 PSRs in PGDA 90).
+   - For each cell (regions and CAP), compute `psrDistanceKm` to the nearest PSR with `shapely.STRtree`. shapely ships with geopandas, so no new library is added.
+2. **Contract change:**
+   - add field `psrDistanceKm` (number | null) to cells in `cells_*.json` and `cap/*.json`;
+   - D5 and `build_cap_grid.py` merge this field in;
+   - update README, `check_web_data.py`, and `make_mock_data.py` (mock data).
+3. **Core:** `runWindowSearch` copies each cell's `psrDistanceKm` into the results as `distanceKm`; `rankCells` allows `sortBy: 'psrDistanceKm'` (smaller is better). Update the tests.
+4. **UI:**
+   - a "To cold trap (km)" column in the ranking table (Expert mode);
+   - a matching row in the cell popup;
+   - a map layer "Distance to permanent shadow".
+5. **Learn:** one sentence explaining why PSRs matter (cold traps, where water ice may exist).
 
-**Xong khi:** gõ toạ độ IM-1 thì dòng "Terrain from the 2 km cap grid" hiện ra; bản đồ phủ tới 80°S.
-
----
-
-## E9. Vùng Artemis gốc ở 1 km (Peak near Shackleton, Connecting Ridge…)
-
-**Vì sao:** đây là những điểm nổi tiếng nắng gần như quanh năm, rất hợp để demo. Hiện chúng chỉ có ô 2 km của chỏm cực.
-
-**Việc:**
-1. **Tải bằng trình duyệt** zip lưới 1 km từ bản phát hành USGS cũ cho 13 vùng: ScienceBase item `67168797d34ebf903f48b6fc`, doi:10.5066/P13FD9ZD. Bản này có Peak_Near_Shackleton, Connecting_Ridge, Connecting_Ridge_Extension, Faustini_Rim_A, Leibnitz_Beta_Plateau, Amundsen_Rim, de_Gerlache-Kocher_Massif…
-2. Thêm mã vùng mới vào `pipeline/common.py`, rồi chạy D2 → D3 → D4 → D5 cho các vùng đó.
-3. **Chạy lại `build_cap_grid.py`** để chỏm 2 km loại cả phạm vi của vùng mới; nếu không, ô sẽ trùng chỗ.
-4. **`regions.json`:** đánh dấu `"artemis2024": false` và nhãn "original 2022 candidate", để không lẫn với 9 vùng chính thức hiện tại.
-
-**Xong khi:** chọn Peak near Shackleton thì có ô 1 km và kết quả tìm kiếm.
+**Done when:** the checker passes; sorting by the new column works; the popup shows the number.
 
 ---
 
-## E10. Lớp lưới LGRS chính thức và toạ độ ACC (tuỳ chọn)
+## E8. Extend the 2 km cap cells to 80°S
 
-**Vì sao:** hiện đúng hệ toạ độ dẫn đường mà phi hành gia Artemis sẽ dùng làm tăng độ tin cậy.
+**Why:** the 80–85°S ring (around IM-1, CAB, NR2, MMP) has no cells yet. Hand-typed coordinates there currently use the spherical horizon, which is badly wrong.
 
-**Việc:**
-1. Tải các shapefile ô 25 km của LGRS cho vùng cực Nam (doi:10.5066/P13YPWQD), rồi xuất GeoJSON nhỏ chứa đường lưới và nhãn ô 25 km.
-2. Thêm lớp bản đồ "LGRS 25 km grid".
-3. Popup ô hiện nhãn ô 25 km và nhãn ACC 1 km. Nhãn ACC đã có sẵn trong `cell.label`.
+**Tasks:**
+1. Add a `--south-of -80` parameter to `build_cap_grid.py`; the outer ring beyond 85°S can use 4 km cells to reduce the cell count.
+2. **Run a timed trial first:** `python pipeline/build_cap_grid.py --limit 200`. Estimate the time for the new ring's cell count (about 3 times the current cap at 2 km cells). If it exceeds 2 hours, drop it.
+3. **Check `MapCapLayer.jsx`:** the README says this layer is drawn as a 152 × 152 px raster, computed for a radius of 85°S. It must change so the size is computed from `index.json`.
+4. Run `check_web_data.py`, check that each tile is under 2 MB, and check a search around IM-1 (80.13°S).
+
+**Done when:** typing the IM-1 coordinates shows the line "Terrain from the 2 km cap grid"; the map covers down to 80°S.
 
 ---
 
-## 2. Dữ liệu LGRS trước đó có dùng được không?
+## E9. Original Artemis regions at 1 km (Peak near Shackleton, Connecting Ridge…)
 
-| Bộ dữ liệu | Đang dùng? | Dùng thêm được gì |
+**Why:** these are the famous points that are sunlit almost all year, which makes them ideal for the demo. Right now they only have the 2 km cap cells.
+
+**Tasks:**
+1. **Download with a browser** the 1 km grid zip from the older USGS release for 13 regions: ScienceBase item `67168797d34ebf903f48b6fc`, doi:10.5066/P13FD9ZD. This release has Peak_Near_Shackleton, Connecting_Ridge, Connecting_Ridge_Extension, Faustini_Rim_A, Leibnitz_Beta_Plateau, Amundsen_Rim, de_Gerlache-Kocher_Massif…
+2. Add the new region codes to `pipeline/common.py`, then run D2 → D3 → D4 → D5 for those regions.
+3. **Re-run `build_cap_grid.py`** so the 2 km cap excludes the new regions' extent; otherwise cells would overlap.
+4. **`regions.json`:** mark `"artemis2024": false` and the label "original 2022 candidate", so they are not confused with the 9 current official regions.
+
+**Done when:** choosing Peak near Shackleton gives 1 km cells and search results.
+
+---
+
+## E10. Official LGRS grid layer and ACC coordinates (optional)
+
+**Why:** showing the exact coordinate system the Artemis astronauts will navigate with adds credibility.
+
+**Tasks:**
+1. Download the LGRS 25 km cell shapefiles for the south polar area (doi:10.5066/P13YPWQD), then export a small GeoJSON containing the grid lines and 25 km cell labels.
+2. Add a map layer "LGRS 25 km grid".
+3. The cell popup shows the 25 km cell label and the 1 km ACC label. The ACC label is already available in `cell.label`.
+
+---
+
+## 2. Can the earlier LGRS data be used?
+
+| Dataset | In use? | What more can it give |
 |---|---|---|
-| **Terrestrial Navigational Training Grids** (ScienceBase `6751db29…`) | Không | **Không dùng được:** lưới tập huấn trên Trái Đất (UTM, WGS84) |
-| **9 vùng "Down Selected"** (`671a6fa8…`, doi:10.5066/P1MEQ6UK) | Có, lưới 1 km (D2) | Zip còn lưới 100 m và 10 m. Có thể dùng để hiện nhãn ACC 100 m của điểm bấm (E10), hoặc để soi chi tiết trong một ô 1 km (chưa khuyên làm hôm nay vì phải tính chân trời lại) |
-| **13 vùng gốc và Apollo 11–17** (`67168797…`, doi:10.5066/P13FD9ZD) | Không | **Hữu ích cho E9:** các vùng cực gốc dùng nguyên pipeline. Lưới Apollo thì chưa có giá trị, vì DEM PGDA 90 chỉ tới 60°S nên ô Apollo không có chân trời địa hình |
-| **LGRS toàn cầu, phép chiếu LTM/LPS** (doi:10.5066/P13YPWQD) | Không | Lớp lưới chính thức và nhãn ô 25 km (E10) |
+| **Terrestrial Navigational Training Grids** (ScienceBase `6751db29…`) | No | **Not usable:** training grids on Earth (UTM, WGS84) |
+| **9 "Down Selected" regions** (`671a6fa8…`, doi:10.5066/P1MEQ6UK) | Yes, 1 km grid (D2) | The zip also has 100 m and 10 m grids. They could show the 100 m ACC label of a clicked point (E10), or let us look inside a 1 km cell (not recommended today because horizons would have to be recomputed) |
+| **13 original regions and Apollo 11–17** (`67168797…`, doi:10.5066/P13FD9ZD) | No | **Useful for E9:** the original polar regions run through the pipeline unchanged. The Apollo grids have no value yet, because the PGDA 90 DEM only reaches 60°S, so Apollo cells have no terrain horizon |
+| **Global LGRS, LTM/LPS projection** (doi:10.5066/P13YPWQD) | No | The official grid layer and 25 km cell labels (E10) |
 
-**Kết luận:** LGRS chỉ cho **vị trí và nhãn ô**, không có dữ liệu chiếu sáng. Giá trị tăng thêm nằm ở E9 (thêm vùng cực ở 1 km) và E10 (hệ toạ độ chính thức); cả hai đều cần chạy pipeline có DEM. Muốn tăng độ phủ của dữ liệu chiếu sáng thì E8 hiệu quả hơn, vì không cần LGRS.
+**Conclusion:** LGRS only provides **cell positions and labels**, not illumination data. The added value lies in E9 (more polar regions at 1 km) and E10 (the official coordinate system); both need a pipeline run with the DEM. To increase the coverage of illumination data, E8 is more effective, because it does not need LGRS.
 
-## 3. Không làm hôm nay
+## 3. Not doing today
 
-- **Globe dùng tile phân giải cao (Moon Trek WMTS):** `globe.gl` mặc định ảnh tile theo phép chiếu Mercator, không phủ vùng cực; rủi ro CORS.
-- **Chân trời cho site xích đạo bằng SLDEM2015:** phải tải DEM mới và đọc phép chiếu khác.
-- **Soi chi tiết 100 m trong ô:** khó kiểm chứng.
-- **Moon Base Network (gộp nắng nhiều ô):** để sau hackathon.
+- **Globe with high-resolution tiles (Moon Trek WMTS):** `globe.gl` assumes Mercator-projected tile images by default, which does not cover the polar areas; CORS risk.
+- **Horizons for equatorial sites using SLDEM2015:** needs a new DEM download and reading a different projection.
+- **100 m detail inside a cell:** hard to validate.
+- **Moon Base Network (combining sunlight across several cells):** left for after the NASA Space Apps Challenge.
 
-## 4. Dữ liệu thô cho E6–E10 (kiểm lúc 18:45 ngày 15/11)
+## 4. Raw data for E6–E10 (checked at 18:45 on 15/11)
 
-`pipeline/raw/` đã được tải lại bằng `pipeline/download_data.py` sau sự cố sáng 15/11. Đủ 8 file của bảng 1 trong `DATA_SOURCES.md`. Thư mục `pipeline/raw/lgrs/` (zip LGRS tải tay) và cache `pipeline/raw/horizons/` không còn.
+`pipeline/raw/` was re-downloaded with `pipeline/download_data.py` after the incident on the morning of 15/11. All 8 files from table 1 of `DATA_SOURCES.md` are present. The folder `pipeline/raw/lgrs/` (hand-downloaded LGRS zips) and the cache `pipeline/raw/horizons/` are gone.
 
-| Module | Cần gì | Tình trạng | Ai làm |
+| Module | Needs | Status | Who |
 |---|---|---|---|
-| E6 | JPL Horizons API, 3 khung ngắn | Script tự gọi API, cache mới vào `pipeline/raw/horizons/` | Tự động |
-| E7 | `LPSR_80S_20MPP_ADJ.TIF` | Có sẵn | Tự động |
-| E8 | `LDEM_80S_80MPP_ADJ`, `LDEM_60S_240MPP_ADJ`, `LDSM_80S_80MPP_ADJ`, `LPSR_80S_20MPP_ADJ` | Có sẵn. Chỉ còn phải đo thời gian chạy | Tự động |
-| E9 | Zip lưới 1 km của các vùng gốc: ScienceBase `67168797d34ebf903f48b6fc`, doi:10.5066/P13FD9ZD | **Chưa có.** ScienceBase chặn script, phải tải bằng trình duyệt vào `pipeline/raw/lgrs/` | **Người trong nhóm tải tay** |
-| E10 | Shapefile lưới LGRS 25 km cực Nam, doi:10.5066/P13YPWQD | **Chưa có.** Tải bằng trình duyệt vào `pipeline/raw/lgrs_global/` | **Người trong nhóm tải tay** |
+| E6 | JPL Horizons API, 3 short windows | The script calls the API itself, a fresh cache goes into `pipeline/raw/horizons/` | Automatic |
+| E7 | `LPSR_80S_20MPP_ADJ.TIF` | Available | Automatic |
+| E8 | `LDEM_80S_80MPP_ADJ`, `LDEM_60S_240MPP_ADJ`, `LDSM_80S_80MPP_ADJ`, `LPSR_80S_20MPP_ADJ` | Available. Only the run time still needs to be measured | Automatic |
+| E9 | 1 km grid zip of the original regions: ScienceBase `67168797d34ebf903f48b6fc`, doi:10.5066/P13FD9ZD | **Not present.** ScienceBase blocks scripts, so it must be downloaded with a browser into `pipeline/raw/lgrs/` | **A team member downloads it by hand** |
+| E10 | LGRS 25 km south-pole grid shapefile, doi:10.5066/P13YPWQD | **Not present.** Download with a browser into `pipeline/raw/lgrs_global/` | **A team member downloads it by hand** |
 
-- Zip 1 km của 9 vùng hiện tại (doi:10.5066/P1MEQ6UK) cũng đã mất. Không cần tải lại, vì `pipeline/out/grid_<CODE>.json` đã commit; chỉ cần khi chạy lại D2 cho 9 vùng.
-- E9 chạy lại D2 → D5 cho vùng mới và chạy lại `build_cap_grid.py`, nên cần cả DEM ở hàng E8.
+- The 1 km zip of the 9 current regions (doi:10.5066/P1MEQ6UK) is also gone. It does not need to be downloaded again, because `pipeline/out/grid_<CODE>.json` is committed; it is only needed when re-running D2 for the 9 regions.
+- E9 re-runs D2 → D5 for the new regions and re-runs `build_cap_grid.py`, so it also needs the DEMs listed in the E8 row.

@@ -1,140 +1,140 @@
-# Lunar Landing Site Navigator: ý tưởng "Window Finder"
+# Lunar Landing Site Navigator: the "Window Finder" idea
 
-NASA Space Apps Challenge 2026, Challenge 10 (CLPS). Tài liệu thiết kế cho nhóm, cập nhật 14/11/2026.
+NASA Space Apps Challenge 2026, Challenge 10 (CLPS). Design document for the team, updated 14/11/2026.
 
-## 1. Một câu định vị
+## 1. One-sentence pitch
 
-Người dùng nhập điểm hạ cánh đang dự kiến và giới hạn của sứ mệnh. Công cụ tìm những điểm và thời điểm hạ cánh tốt nhất trong cùng vùng, rồi cho kéo thanh thời gian để xem bảng xếp hạng thay đổi theo ngày hạ cánh.
+The user enters the planned landing spot and the mission's limits. The tool finds the best landing sites and times in the same region. Then the user drags a time slider and watches the ranking change with the landing date.
 
-Câu tiếng Anh cho slide: *"Tell us your landing spot and your mission's limits. We find the best nearby sites and dates, ranked hour by hour."*
+English line for the slides: *"Tell us your landing spot and your mission's limits. We find the best nearby sites and dates, ranked hour by hour."*
 
-## 2. Vì sao làm vậy (bám phần Background của đề)
+## 2. Why we build it this way (following the Background of the challenge)
 
-- Đề nói thẳng: lịch sứ mệnh hay bị trễ, nên kỹ sư phải đánh giá nhanh "site khác trong cùng vùng" hoặc "ngày khác ở cùng site". Window Finder trả lời đúng hai câu này.
-- Ở cực Nam, dời vài km hoặc vài ngày là nắng và liên lạc đổi hẳn.
-- Quickmap, Moon Trek, Horizons đều mạnh nhưng khó dùng để so nhanh nhiều kịch bản.
-- Điểm khác các đội: không chỉ báo % có nắng, mà quy ra "pin có sống được suốt sứ mệnh không", và tìm ngược từ yêu cầu thay vì bắt người dùng thử từng site.
+- The challenge says it plainly: mission schedules often slip. So engineers must quickly check "another site in the same region" or "another date at the same site". Window Finder answers exactly these two questions.
+- Near the south pole, moving a few km or a few days changes sunlight and communication a lot.
+- Quickmap, Moon Trek and Horizons are all strong, but they are hard to use for comparing many scenarios quickly.
+- What makes us different from other teams: we do not only report the % of sunlit time. We turn it into "does the battery survive the whole mission?", and we search backwards from the requirements instead of making the user try site after site.
 
-## 3. Luồng sử dụng
+## 3. User flow
 
-### 3.1 Bản đồ chọn điểm
+### 3.1 Map for picking a point
 
-- Bản đồ 2D vùng cực Nam (chiếu stereographic) có 9 vùng ứng viên Artemis III. Mỗi vùng chia thành ô 1 km theo lưới LGRS của USGS.
-- Chỉ tô màu các ô khả thi để hạ cánh (xem 5.3): không quá dốc, không nằm trong vùng tối vĩnh cửu. Ô không khả thi để xám.
-- Có thêm ghim cho các site nổi tiếng (xem 5.5).
-- Bấm vào một ô sẽ mở popup gồm:
-  - ID ô, kinh độ, vĩ độ, độ cao, độ dốc.
-  - Mặt Trời và Trái Đất ở thời điểm đang xem: góc cao, còn bao lâu tới lúc lặn.
-  - Nút "Sao chép ID" và nút "Dùng làm điểm hiện tại" (điền ID vào form).
+- A 2D map of the south polar region (stereographic projection) shows the 9 Artemis III candidate regions. Each region is split into 1 km cells using the USGS LGRS grid.
+- Only cells that are feasible for landing are colored (see 5.3): not too steep, not inside a permanently shadowed region. Infeasible cells stay gray.
+- There are also pins for famous sites (see 5.5).
+- Clicking a cell opens a popup with:
+  - cell ID, longitude, latitude, height, slope.
+  - Sun and Earth at the time being viewed: elevation, and how long until they set.
+  - A "Copy ID" button and a "Use as current point" button (fills the ID into the form).
 
-### 3.2 Form kịch bản
+### 3.2 Scenario form
 
-| Trường | Ví dụ | Ghi chú |
+| Field | Example | Note |
 |---|---|---|
-| Điểm hạ cánh hiện tại | ID ô `MAL-…` hoặc kinh/vĩ độ | Nhận cả toạ độ tuỳ ý (đề yêu cầu) |
-| Khoảng ngày dự kiến | 01/01/2028 – 30/06/2028 | Tối đa 6 tháng mỗi lần chạy |
-| Số ngày ở lại | 6 | Tiêu chí chọn vùng của NASA dùng khoảng 5,75–6,25 ngày |
-| Tối liên tục tối đa | 24 giờ | "Tối" là khi lộ dưới 50% đĩa Mặt Trời |
-| Mất liên lạc tối đa | 12 giờ | "Mất" là khi lộ dưới 50% đĩa Trái Đất |
-| Công suất tấm pin tối đa | 1.000 W | Ở 1 AU, đĩa lộ hết, nắng chiếu vuông góc |
-| Dung lượng pin | 10 kWh | Coi như pin đầy lúc hạ cánh |
-| Mức tiêu thụ | 300 W | Trung bình, không đổi theo giờ |
-| Kiểu tấm pin | Tự động | Đứng (hợp ở cực) hoặc nằm ngang (hợp ở xích đạo) |
-| Phạm vi tìm | Cùng vùng | Cùng vùng, bán kính R km, hoặc cả 9 vùng |
+| Current landing point | Cell ID `MAL-…` or lon/lat | Also accepts any coordinates (the challenge requires this) |
+| Planned date range | 01/01/2028 – 30/06/2028 | At most 6 months per run |
+| Days on the surface | 6 | NASA's region selection criteria use about 5.75–6.25 days |
+| Maximum continuous darkness | 24 hours | "Dark" means less than 50% of the Sun's disk is visible |
+| Maximum communication loss | 12 hours | "Lost" means less than 50% of the Earth's disk is visible |
+| Maximum solar panel power | 1,000 W | At 1 AU, full disk visible, sunlight hitting at a right angle |
+| Battery capacity | 10 kWh | Assumed full at landing |
+| Power consumption | 300 W | Average, constant over the hours |
+| Panel type | Automatic | Vertical (good near the poles) or horizontal (good near the equator) |
+| Search scope | Same region | Same region, radius R km, or all 9 regions |
 
-Các số trong cột "Ví dụ" chỉ để minh hoạ, không phải thông số thật của tàu nào; giao diện phải ghi rõ điều này.
+The numbers in the "Example" column are only for illustration. They are not the real specifications of any lander. The interface must say this clearly.
 
-Có hai chế độ: **Đơn giản** dùng mẫu chọn sẵn và chỉ hỏi điểm, ngày, số ngày ở lại; **Chuyên gia** mở toàn bộ trường.
+There are two modes: **Simple** uses a ready-made preset and only asks for the point, the dates and the days on the surface. **Expert** opens all fields.
 
-Không có trường "độ dốc xe leo được". Trường đó chỉ cần cho tính năng tìm đường đi của rover, mà tính năng này đã bỏ.
+There is no "slope the rover can climb" field. That field is only needed for rover path finding, and that feature has been dropped.
 
-### 3.3 Kết quả sau khi bấm Submit
+### 3.3 Results after pressing Submit
 
-1. **Thanh trượt thời điểm hạ cánh** (bước 6 giờ) kèm nút Play.
-   - Bản đồ tô màu từng ô theo kết quả ở thời điểm đang chọn: xanh là đạt, vàng là đạt nhưng sát ngưỡng (pin thấp nhất dưới 20%), đỏ là không đạt.
-   - Bảng xếp hạng top 10 ô ở thời điểm đó cập nhật ngay khi kéo.
-2. **Thẻ "Điểm hiện tại của bạn"**: đạt hay không và lý do; thời điểm đạt gần nhất; ô đạt gần nhất cách bao nhiêu km.
-3. **Dải thời gian của điểm hiện tại**: mỗi thời điểm hạ cánh trong khoảng ngày được tô xanh hoặc đỏ (heatmap một hàng của ECharts).
-4. **Top 10 cặp (ô, thời điểm) tốt nhất** trong toàn bộ khoảng ngày.
+1. **Landing-time slider** (6-hour step) with a Play button.
+   - The map colors each cell by its result at the selected time: green means it passes, yellow means it passes but is close to the limit (lowest battery below 20%), red means it fails.
+   - The top 10 ranking table for that time updates as soon as the user drags.
+2. **"Your current point" card**: whether it passes and why; the nearest time it passes; how many km away the nearest passing cell is.
+3. **Timeline of the current point**: each landing time in the date range is colored green or red (a one-row ECharts heatmap).
+4. **Top 10 best (cell, time) pairs** over the whole date range.
 
-Bảng xếp hạng gồm các cột: hạng, ID ô, khoảng cách tới điểm hiện tại (km), pin thấp nhất (%), tối dài nhất (giờ), mất liên lạc dài nhất (giờ), % có nắng, % thấy Trái Đất, góc cao Mặt Trời trung bình, số giờ để sạc đầy lại, trạng thái.
+The ranking table has these columns: rank, cell ID, distance to the current point (km), lowest battery (%), longest darkness (hours), longest communication loss (hours), % sunlit, % Earth visible, mean Sun elevation, hours to recharge fully, status.
 
-Thứ tự xếp mặc định:
+Default order:
 
-1. Ô đạt đứng trước ô không đạt.
-2. Pin thấp nhất cao hơn đứng trước.
-3. % thời gian vừa có nắng vừa thấy Trái Đất cao hơn đứng trước.
-4. Gần điểm hiện tại hơn đứng trước.
-5. Liên lạc liền mạch nhất.
+1. Passing cells come before failing cells.
+2. Higher lowest battery comes first.
+3. Higher % of time with both Sun and Earth visible comes first.
+4. Closer to the current point comes first.
+5. Most continuous communication comes first.
 
-Bấm tiêu đề cột để đổi cách xếp. Không dùng điểm tổng có trọng số, để người dùng luôn hiểu vì sao một ô đứng trên ô khác.
+Clicking a column header changes the sort. We do not use a weighted total score, so the user always understands why one cell ranks above another.
 
-### 3.4 Màn hình chi tiết (bấm một dòng trong bảng)
+### 3.4 Detail screen (click a row in the table)
 
-- **Horizon view 2D**: trục ngang là phương vị 0–360°, trục dọc là góc cao. Vẽ bóng địa hình (chân trời 360°) cùng đường đi của Mặt Trời và Trái Đất suốt thời gian sứ mệnh, có con trỏ thời gian kéo được.
-- **Đồng hồ đếm ngược**: "Mặt Trời lặn sau 3 giờ 20 phút", "Trái Đất lặn sau 18 giờ", "nắng trở lại sau …".
-- **Góc cao Mặt Trời** hiển thị to, nổi bật (đề nhấn mạnh chỉ số này).
-- **Biểu đồ pin theo giờ**, nền tô các đoạn có nắng, tối và mất liên lạc.
-- **So sánh cạnh nhau với điểm hiện tại**: hai chân trời chồng lên nhau, kèm một câu giải thích, ví dụ "Dời 2,3 km sang ô X: tối dài nhất giảm từ 72 giờ còn 10 giờ vì sườn núi phía bắc thấp hơn 1,5°".
-- Nút xuất CSV (chế độ Chuyên gia).
+- **2D horizon view**: the horizontal axis is azimuth 0–360°, the vertical axis is elevation. It draws the terrain silhouette (the 360° horizon) with the paths of the Sun and the Earth over the whole mission, and a time cursor the user can drag.
+- **Countdown**: "Sunset in 3 hours 20 minutes", "Earthset in 18 hours", "sunlight returns in …".
+- **Sun elevation** is shown big and prominent (the challenge stresses this value).
+- **Hourly battery chart**, with the background shaded for sunlit, dark and communication-loss periods.
+- **Side-by-side comparison with the current point**: two horizons overlaid, with one explanatory sentence, for example "Moving 2.3 km to cell X: the longest darkness drops from 72 hours to 10 hours because the northern ridge is 1.5° lower".
+- CSV export button (Expert mode).
 
-### 3.5 Quả cầu 3D (globe.gl)
+### 3.5 3D globe (globe.gl)
 
-- Mặt Trăng dùng texture của NASA, ghim các site nổi tiếng và 9 vùng.
-- Từ site đang chọn, vẽ mũi tên chỉ hướng Mặt Trời và Trái Đất.
-- Bấm vào vùng cực Nam thì chuyển sang bản đồ 2D.
+- The Moon uses a NASA texture, with pins for the famous sites and the 9 regions.
+- From the selected site, it draws arrows pointing to the Sun and the Earth.
+- Clicking the south polar region switches to the 2D map.
 
-### 3.6 Chế độ học (giáo viên, công chúng)
+### 3.6 Learning mode (teachers, the public)
 
-- Mỗi chỉ số có một câu giải thích bằng lời thường.
-- Thẻ "Vì sao dời 1 km thay đổi nhiều": tự tìm cặp ô sát nhau có kết quả chênh nhau nhiều nhất, rồi so hai chân trời.
-- Thẻ "Mặt Trăng khác Trái Đất ở đâu": không có khí quyển nên không có khúc xạ, bầu trời đen cả ban ngày; ở cực Nam Mặt Trời chỉ cao vài độ; một ngày Mặt Trăng dài khoảng 29,5 ngày Trái Đất.
+- Every metric has a one-sentence explanation in plain words.
+- Card "Why moving 1 km changes so much": it automatically finds the pair of neighboring cells whose results differ the most, then compares the two horizons.
+- Card "How the Moon differs from the Earth": no atmosphere, so no refraction and the sky is black even in the daytime; near the south pole the Sun stays only a few degrees high; one lunar day lasts about 29.5 Earth days.
 
-## 4. Thuật toán
+## 4. Algorithm
 
-### 4.1 Nhật ký từng giờ của một ô
+### 4.1 Hourly log of one cell
 
-Với mỗi giờ t và mỗi ô c:
+For each hour t and each cell c:
 
-1. Tính góc cao và phương vị của Mặt Trời và Trái Đất tại ô (mục 4.3).
-2. Lấy độ cao chân trời của ô ở đúng phương vị đó.
-3. Tính phần đĩa Mặt Trời lộ ra (`sun_frac`), phần đĩa Trái Đất lộ ra (`earth_frac`), và hệ số nắng (`sun_factor`).
+1. Compute the elevation and azimuth of the Sun and the Earth at the cell (section 4.3).
+2. Take the horizon elevation of the cell at that same azimuth.
+3. Compute the visible fraction of the Sun's disk (`sun_frac`), the visible fraction of the Earth's disk (`earth_frac`), and the sunlight factor (`sun_factor`).
 
-### 4.2 Khung trượt
+### 4.2 Sliding window
 
-Với mỗi ô c trong phạm vi tìm và mỗi thời điểm hạ cánh s (bước 6 giờ), khung là các giờ từ s tới s + số ngày × 24.
+For each cell c in the search scope and each landing time s (6-hour step), the window is the hours from s to s + days × 24.
 
-Các chỉ số trong khung:
+Metrics in the window:
 
-- `longest_dark`: chuỗi giờ liền nhau dài nhất có `sun_frac < 0.5`.
-- `longest_comm_loss`: chuỗi giờ liền nhau dài nhất có `earth_frac < 0.5`.
-- `pct_sun`, `pct_earth`, `pct_both`: tỷ lệ số giờ có nắng, thấy Trái Đất, có cả hai.
-- Mô phỏng pin:
-  - Pin ban đầu bằng dung lượng.
-  - Mỗi giờ: pin = min(dung lượng, pin + công suất tối đa × `sun_factor` − mức tiêu thụ).
-  - `min_battery` là mức pin thấp nhất. Nếu pin chạm 0 thì ghi lại "hết pin ở giờ thứ …".
-- `recharge_hours`: số giờ từ lúc pin thấp nhất tới lúc đầy lại, hoặc "không sạc đầy trong khung".
-- `time_to_sunset`: số giờ từ lúc hạ cánh tới giờ tối đầu tiên.
+- `longest_dark`: the longest run of consecutive hours with `sun_frac < 0.5`.
+- `longest_comm_loss`: the longest run of consecutive hours with `earth_frac < 0.5`.
+- `pct_sun`, `pct_earth`, `pct_both`: the share of hours with sunlight, with the Earth visible, and with both.
+- Battery simulation:
+  - The battery starts at full capacity.
+  - Each hour: battery = min(capacity, battery + max power × `sun_factor` − power consumption).
+  - `min_battery` is the lowest battery level. If the battery reaches 0, we record "battery dead at hour …".
+- `recharge_hours`: the hours from the lowest battery point until the battery is full again, or "not fully recharged within the window".
+- `time_to_sunset`: the hours from landing until the first dark hour.
 
-Một ô đạt khi cả ba điều kiện đúng: `longest_dark ≤ tối tối đa`, `longest_comm_loss ≤ mất liên lạc tối đa`, và `min_battery > 0`.
+A cell passes when all three conditions hold: `longest_dark ≤ max darkness`, `longest_comm_loss ≤ max communication loss`, and `min_battery > 0`.
 
-### 4.3 Công thức
+### 4.3 Formulas
 
-Hằng số: bán kính Mặt Trăng R = 1737,4 km; bán kính Mặt Trời 696.000 km; bán kính Trái Đất 6.371 km; 1 AU = 149.597.870,7 km.
+Constants: Moon radius R = 1737.4 km; Sun radius 696,000 km; Earth radius 6,371 km; 1 AU = 149,597,870.7 km.
 
-**Vị trí ô** (kinh độ λ, vĩ độ φ, độ cao h tính bằng km):
+**Cell position** (longitude λ, latitude φ, height h in km):
 
 ```
 P = (R + h) · (cos φ cos λ, cos φ sin λ, sin φ)
 ```
 
-**Vị trí Mặt Trời hoặc Trái Đất** tính từ điểm dưới thiên thể (λb, φb) và khoảng cách D tới tâm Mặt Trăng:
+**Sun or Earth position**, computed from the sub-body point (λb, φb) and the distance D to the Moon's center:
 
 ```
 B = D · (cos φb cos λb, cos φb sin λb, sin φb)
 ```
 
-**Góc cao và phương vị tại ô:**
+**Elevation and azimuth at the cell:**
 
 ```
 d    = B − P
@@ -142,57 +142,57 @@ up   = P / |P|
 east = (−sin λ, cos λ, 0)
 north = up × east
 el = asin( d·up / |d| )
-az = atan2( d·east, d·north )   (đổi về 0–360°, tính từ hướng Bắc theo chiều kim đồng hồ)
+az = atan2( d·east, d·north )   (convert to 0–360°, measured from North, clockwise)
 ```
 
-**Phần đĩa lộ ra** (gần đúng tuyến tính), với ρ là bán kính góc của đĩa (Mặt Trời khoảng 0,27°, Trái Đất khoảng 0,95°) và H là độ cao chân trời ở phương vị az:
+**Visible fraction of the disk** (linear approximation), where ρ is the angular radius of the disk (Sun about 0.27°, Earth about 0.95°) and H is the horizon elevation at azimuth az:
 
 ```
 frac = clamp( (el − H + ρ) / (2ρ), 0, 1 )
 ```
 
-**Hệ số nắng:**
+**Sunlight factor:**
 
 ```
-sun_factor = (1 AU / D_sun)² × sun_frac × hệ_số_tấm_pin
+sun_factor = (1 AU / D_sun)² × sun_frac × panel_factor
 ```
 
-- Tấm pin đứng, xoay theo phương vị: `hệ_số_tấm_pin = cos(el)`.
-- Tấm pin nằm ngang: `hệ_số_tấm_pin = max(sin(el), 0)`.
-- Chế độ Tự động: |vĩ độ| ≥ 60° thì dùng tấm đứng, còn lại dùng tấm nằm ngang.
+- Vertical panel, rotating to follow the azimuth: `panel_factor = cos(el)`.
+- Horizontal panel: `panel_factor = max(sin(el), 0)`.
+- Automatic mode: |latitude| ≥ 60° uses the vertical panel, otherwise the horizontal panel.
 
-Công suất mỗi giờ = công suất tấm pin tối đa × `sun_factor`.
+Power per hour = maximum panel power × `sun_factor`.
 
-### 4.4 Khối lượng tính
+### 4.4 Amount of computation
 
-- Một vùng có khoảng 225 ô. Với 6 tháng (730 thời điểm hạ cánh, bước 6 giờ) và khung 144 giờ, tổng cỡ 24 triệu bước, chạy được trong khoảng 1–2 giây.
-- Cả 9 vùng (khoảng 2.000 ô) nặng hơn khoảng 10 lần, nên chạy trong Web Worker và hiện thanh tiến độ.
-- Tính sẵn các mảng theo giờ của từng ô một lần, sau đó mới trượt khung trên các mảng đó.
+- One region has about 225 cells. With 6 months (730 landing times, 6-hour step) and a 144-hour window, the total is about 24 million steps, which runs in about 1–2 seconds.
+- All 9 regions (about 2,000 cells) are about 10 times heavier, so they run in a Web Worker with a progress bar.
+- Precompute the hourly arrays of each cell once, then slide the window over those arrays.
 
-## 5. Dữ liệu và tiền xử lý (Python, chạy một lần)
+## 5. Data and preprocessing (Python, run once)
 
-Thư viện: `requests`, `numpy`, `rasterio`, `geopandas`, `pyproj`.
+Libraries: `requests`, `numpy`, `rasterio`, `geopandas`, `pyproj`.
 
-### 5.1 Lịch thiên văn chung: `ephemeris.json`
+### 5.1 Shared ephemeris: `ephemeris.json`
 
-- Gọi Horizons API: `COMMAND='301'`, `CENTER='500@399'`, `QUANTITIES='14,15,19,20'`, `STEP_SIZE='1h'`, `CSV_FORMAT='YES'`, từ 2027-01-01 tới 2029-01-31 (dư một tháng cuối để khung trượt không bị hụt). Nếu một lần gọi quá dài thì chia theo quý.
-- Các mã cần lấy:
-  - Mã 14: điểm dưới người quan sát. Với người quan sát ở tâm Trái Đất, đây là điểm dưới Trái Đất trên Mặt Trăng, và sự dịch chuyển của điểm này chính là libration.
-  - Mã 15: điểm dưới Mặt Trời trên Mặt Trăng.
-  - Mã 19: khoảng cách Mặt Trăng – Mặt Trời.
-  - Mã 20: khoảng cách Trái Đất – Mặt Trăng.
-- Mỗi giờ lưu: `t, earth_sub_lon, earth_sub_lat, earth_dist_km, sun_sub_lon, sun_sub_lat, sun_dist_au`. Đọc header kết quả để chắc đơn vị và tên cột.
-- Kinh độ dùng kinh độ Đông dương, hệ toạ độ mean-Earth của Mặt Trăng.
-- **Kiểm chứng bắt buộc**: chọn 2 ô, gọi Horizons trực tiếp (`COMMAND='10'` và `'399'`, `CENTER='coord@301'`, `SITE_COORD`, `QUANTITIES='4'`), rồi so góc cao và phương vị với cách tính vector ở 4.3. Sai lệch phải rất nhỏ (cỡ 0,1° trở xuống); nếu lớn hơn thì xem lại quy ước kinh độ và hệ toạ độ.
-- **Phương án dự phòng** nếu cách dùng điểm dưới thiên thể không ổn: gọi Horizons lấy góc cao, phương vị trực tiếp cho tâm mỗi vùng và cho các site nổi tiếng (khoảng 30 lần gọi), các ô trong vùng dùng chung kết quả của tâm. Cách này kém chính xác hơn, lệch tới khoảng 0,25° ở mép vùng.
+- Call the Horizons API: `COMMAND='301'`, `CENTER='500@399'`, `QUANTITIES='14,15,19,20'`, `STEP_SIZE='1h'`, `CSV_FORMAT='YES'`, from 2027-01-01 to 2029-01-31 (one extra month at the end so the sliding window is never cut short). If one call is too long, split it by quarter.
+- The codes to request:
+  - Code 14: the sub-observer point. For an observer at the Earth's center, this is the sub-Earth point on the Moon, and its movement is exactly the libration.
+  - Code 15: the sub-Sun point on the Moon.
+  - Code 19: the Moon–Sun distance.
+  - Code 20: the Earth–Moon distance.
+- Each hour we store: `t, earth_sub_lon, earth_sub_lat, earth_dist_km, sun_sub_lon, sun_sub_lat, sun_dist_au`. Read the header of the result to confirm the units and column names.
+- Longitude uses positive East longitude, in the Moon's mean-Earth coordinate system.
+- **Mandatory validation**: pick 2 cells, call Horizons directly (`COMMAND='10'` and `'399'`, `CENTER='coord@301'`, `SITE_COORD`, `QUANTITIES='4'`), then compare the elevation and azimuth with the vector method in 4.3. The difference must be very small (about 0.1° or less). If it is larger, recheck the longitude convention and the coordinate system.
+- **Fallback** if the sub-body-point approach does not work: call Horizons for elevation and azimuth directly for the center of each region and for the famous sites (about 30 calls). Cells in a region share the result of the center. This is less accurate, with an error of up to about 0.25° at the edge of a region.
 
-### 5.2 Lưới ô: từ USGS
+### 5.2 Cell grid: from USGS
 
-- Dùng bộ lưới LGRS dạng ACC cho 9 vùng Artemis III; mỗi vùng có shapefile lưới 1 km, 100 m và 10 m. Không dùng bộ "Terrestrial Navigational Training Grids", vì đó là lưới tập huấn trên Trái Đất (UTM, WGS84).
-- Đọc lưới 1 km bằng `geopandas`, lấy tâm ô rồi đổi sang kinh/vĩ độ Mặt Trăng. USGS khuyên dùng hệ toạ độ đã đăng ký như `IAU_2015:30100` hoặc `ESRI:104903`.
-- ID ô có dạng `<mã vùng>-<nhãn ô 1 km>`. Mã vùng:
+- Use the LGRS grid in ACC form for the 9 Artemis III regions. Each region has shapefiles for the 1 km, 100 m and 10 m grids. Do not use the "Terrestrial Navigational Training Grids", because those are training grids on Earth (UTM, WGS84).
+- Read the 1 km grid with `geopandas`, take the cell centers, then convert them to lunar longitude/latitude. USGS recommends a registered coordinate system such as `IAU_2015:30100` or `ESRI:104903`.
+- A cell ID looks like `<region code>-<1 km cell label>`. Region codes:
 
-| Mã | Vùng |
+| Code | Region |
 |---|---|
 | CAB | Peak near Cabeus B |
 | HAW | Haworth |
@@ -204,132 +204,132 @@ Thư viện: `requests`, `numpy`, `rasterio`, `geopandas`, `pyproj`.
 | DGR | de Gerlache Rim 2 |
 | SLP | Slater Plain |
 
-- Nhãn ô lấy theo thuộc tính có sẵn trong shapefile (kiểm khi mở file); nếu không có thì tự đặt `r<hàng>c<cột>`.
+- The cell label comes from an existing attribute in the shapefile (check when opening the file). If there is none, name it `r<row>c<column>` ourselves.
 
-### 5.3 Ô khả thi
+### 5.3 Feasible cells
 
-- **Độ dốc**: PGDA 90 `LDSM_80S_80MPP_ADJ.TIF` (231 MB). Ô khả thi nếu trung vị độ dốc trong ô không vượt ngưỡng; ngưỡng mặc định 20°, theo bản đồ NASA trình bày cho Space Apps 2025 (tô đen vùng dốc trên 20°), chỉnh được trong code.
-- **Vùng tối vĩnh cửu**: PGDA 90 `LPSR_80S_20MPP_ADJ.TIF` (148 MB). Ô có trên 50% diện tích là vùng tối vĩnh cửu vẫn hiện trên bản đồ, nhưng tô xám và ghi "không có nắng".
-- Các file PGDA là Cloud-Optimized GeoTIFF, nên `rasterio` có thể đọc riêng từng cửa sổ quanh 9 vùng qua HTTP mà không cần tải cả file.
+- **Slope**: PGDA 90 `LDSM_80S_80MPP_ADJ.TIF` (231 MB). A cell is feasible if the median slope in the cell does not exceed the threshold. The default threshold is 20°, following the map NASA showed for Space Apps 2025 (areas steeper than 20° painted black). It can be changed in the code.
+- **Permanently shadowed regions**: PGDA 90 `LPSR_80S_20MPP_ADJ.TIF` (148 MB). A cell with more than 50% of its area permanently shadowed still appears on the map, but it is colored gray and labeled "no sunlight".
+- The PGDA files are Cloud-Optimized GeoTIFFs, so `rasterio` can read just the windows around the 9 regions over HTTP, without downloading the whole file.
 
-### 5.4 Chân trời từng ô: `cells_<mã vùng>.json`
+### 5.4 Horizon of each cell: `cells_<region code>.json`
 
-- DEM: PGDA 90 `LDEM_80S_80MPP_ADJ.TIF` (181 MB) cho phần gần; `LDEM_60S_240MPP_ADJ.TIF` (210 MB) cho phần xa nằm ngoài 80°S.
-- Bắn 360 tia (mỗi độ phương vị một tia), lấy mẫu dọc tia từ 100 m tới 150 km với bước tăng dần.
-- Góc nâng của mỗi mẫu:
+- DEM: PGDA 90 `LDEM_80S_80MPP_ADJ.TIF` (181 MB) for the near part; `LDEM_60S_240MPP_ADJ.TIF` (210 MB) for the far part outside 80°S.
+- Cast 360 rays (one per degree of azimuth) and sample along each ray from 100 m to 150 km with a growing step.
+- Elevation angle of each sample:
 
 ```
-góc = atan2( h_mẫu − h_ô − cột − d² / (2R), d )
+angle = atan2( h_sample − h_cell − mast − d² / (2R), d )
 ```
 
-  trong đó d là khoảng cách ngang tới mẫu. Số hạng d²/(2R) là độ cong Mặt Trăng, nên chân trời tự gồm cả "mép mặt cầu" như đề nhắc. `cột` là độ cao đặt tấm pin hoặc anten, mặc định 2 m.
-- Chân trời ở mỗi phương vị là góc lớn nhất dọc tia đó.
-- Mỗi ô lưu: `id, lat, lon, h, slope, psr, horizon` (360 số nguyên, đơn vị 0,1°).
+  where d is the horizontal distance to the sample. The term d²/(2R) is the curvature of the Moon, so the horizon automatically includes the "spherical edge" mentioned by the challenge. `mast` is the height of the solar panel or antenna, 2 m by default.
+- The horizon at each azimuth is the largest angle along that ray.
+- Each cell stores: `id, lat, lon, h, slope, psr, horizon` (360 integers, unit 0.1°).
 
-### 5.5 Site nổi tiếng: `sites.json`
+### 5.5 Famous sites: `sites.json`
 
-Đề gợi ý danh sách gồm site Apollo, mục tiêu CLPS, sứ mệnh thương mại khác và sứ mệnh của các nước khác:
+The challenge suggests a list with Apollo sites, CLPS targets, other commercial missions and missions of other countries:
 
-| Nhóm | Site |
+| Group | Sites |
 |---|---|
 | Apollo | Apollo 11, 12, 14, 15, 16, 17 |
-| CLPS / thương mại | IM-1 (gần Malapert A), IM-2 (vùng Mons Mouton), Blue Ghost Mission 1 (Mare Crisium), IM-3 (Reiner Gamma, sắp tới) |
-| Nước khác | Chang'e 3, 4, 5, 6; Chandrayaan-3; SLIM |
+| CLPS / commercial | IM-1 (near Malapert A), IM-2 (Mons Mouton region), Blue Ghost Mission 1 (Mare Crisium), IM-3 (Reiner Gamma, upcoming) |
+| Other countries | Chang'e 3, 4, 5, 6; Chandrayaan-3; SLIM |
 
-- Toạ độ lấy từ nguồn chính thức (LROC/NASA hoặc cơ quan vũ trụ tương ứng) và ghi vào References.
-- Site nằm trong vùng phủ của DEM PGDA 90 (tới 60°S, ví dụ Chandrayaan-3) thì tính chân trời địa hình. Các site khác chỉ dùng chân trời mặt cầu (góc cao > 0°), và giao diện ghi rõ "chưa tính địa hình".
+- Take coordinates from official sources (LROC/NASA or the relevant space agency) and list them in References.
+- A site inside the coverage of the PGDA 90 DEM (down to 60°S, for example Chandrayaan-3) gets a terrain horizon. Other sites only use the spherical horizon (elevation > 0°), and the interface clearly says "terrain not included".
 
-### 5.6 Kiểm chứng
+### 5.6 Validation
 
-- So % có nắng và % thấy Trái Đất của vài ô với bản đồ PGDA 69. PGDA 69 là trung bình 18,6 năm, còn mình chỉ tính 2 năm, nên chỉ so được về độ lớn.
-- So một ô với công cụ Compute Visibility của QuickMap, chụp màn hình cho slide.
-- So cách tính vector với Horizons như mục 5.1.
+- Compare the % sunlit and % Earth visible of a few cells with the PGDA 69 map. PGDA 69 is an 18.6-year average, while we only compute 2 years, so we can only compare the order of magnitude.
+- Compare one cell with QuickMap's Compute Visibility tool and take a screenshot for the slides.
+- Compare the vector method with Horizons as in section 5.1.
 
-### 5.7 Dung lượng file
+### 5.7 File sizes
 
-- `ephemeris.json`: khoảng 18.000 giờ × 7 số, cỡ 1–2 MB (Vercel tự nén khi gửi).
-- `cells_*.json`: khoảng 2.000 ô × 360 số, cỡ 3–4 MB tổng. Tách theo vùng (khoảng 400 KB mỗi vùng) và chỉ tải vùng đang dùng.
+- `ephemeris.json`: about 18,000 hours × 7 numbers, around 1–2 MB (Vercel compresses it when sending).
+- `cells_*.json`: about 2,000 cells × 360 numbers, around 3–4 MB in total. Split by region (about 400 KB per region) and load only the region in use.
 
-## 6. Đối chiếu với yêu cầu của đề
+## 6. Mapping to the challenge requirements
 
 ### 6.1 Objectives
 
-| Yêu cầu của đề | Tính năng đáp ứng |
+| Challenge requirement | Feature that meets it |
 |---|---|
-| Interactive site selection and comparison: danh sách site nổi tiếng, toạ độ tuỳ ý, so sánh nhiều site | Lưới ô 1 km có ID, danh sách site nổi tiếng (5.5), nhập kinh/vĩ độ, bảng xếp hạng, so sánh cạnh nhau (3.4) |
-| Date and time flexibility: chọn ngày giờ, xem thay đổi theo ngày Mặt Trăng và theo mùa | Khoảng ngày dự kiến, thanh trượt bước 6 giờ, dải thời gian 2 năm của điểm hiện tại (thấy rõ mùa) |
-| Sun and Earth position visualization, thời gian còn lại tới sunset/Earthset | Horizon view 2D, đồng hồ đếm ngược (3.4), popup trên bản đồ (3.1) |
-| Power and communication assessment: góc cao Mặt Trời, thời lượng có nắng, cửa sổ thấy Trái Đất | Góc cao hiển thị nổi bật, % có nắng, tối dài nhất, % thấy Trái Đất, mất liên lạc dài nhất, thêm mô phỏng pin |
-| Multiple visualization approaches | Bản đồ 2D, horizon view, quả cầu 3D, biểu đồ pin, heatmap |
-| Temporal dynamics: hoạt hình, timeline | Nút Play trên thanh trượt, con trỏ thời gian trong horizon view, đường đi của Mặt Trời và Trái Đất |
-| Accessibility across skill levels | Chế độ Đơn giản và Chuyên gia, chế độ học (3.6) |
+| Interactive site selection and comparison: list of famous sites, any coordinates, compare several sites | 1 km cell grid with IDs, list of famous sites (5.5), lon/lat input, ranking table, side-by-side comparison (3.4) |
+| Date and time flexibility: pick date and time, see changes over the lunar day and over the seasons | Planned date range, 6-hour slider, 2-year timeline of the current point (seasons are easy to see) |
+| Sun and Earth position visualization, time left until sunset/Earthset | 2D horizon view, countdown (3.4), popup on the map (3.1) |
+| Power and communication assessment: Sun elevation, sunlit duration, Earth visibility windows | Prominent elevation display, % sunlit, longest darkness, % Earth visible, longest communication loss, plus battery simulation |
+| Multiple visualization approaches | 2D map, horizon view, 3D globe, battery chart, heatmap |
+| Temporal dynamics: animation, timeline | Play button on the slider, time cursor in the horizon view, paths of the Sun and the Earth |
+| Accessibility across skill levels | Simple and Expert modes, learning mode (3.6) |
 
 ### 6.2 Potential Considerations
 
-| Gợi ý của đề | Cách xử lý |
+| Hint from the challenge | How we handle it |
 |---|---|
-| Dùng Horizons hoặc dữ liệu tính sẵn | Horizons API, tính sẵn thành `ephemeris.json` |
-| Dùng LOLA để có chân trời chính xác | Chân trời 360° từ DEM PGDA 90 |
-| Không có khí quyển; chân trời do địa hình và mép mặt cầu | Không tính khúc xạ; số hạng d²/(2R) trong công thức chân trời |
-| Góc cao Mặt Trời là chỉ số quan trọng | Hiển thị to; đưa vào hệ số tấm pin |
-| Ưu tiên so sánh nhanh nhiều kịch bản | Tìm ngược, bảng xếp hạng, thanh trượt cập nhật tức thì |
-| Thông báo rõ thời gian tới sunset/Earthset | Đồng hồ đếm ngược |
-| Làm nổi bật khác biệt Mặt Trăng và Trái Đất | Thẻ "Mặt Trăng khác Trái Đất ở đâu" |
-| Giải thích vì sao thay đổi nhỏ gây khác biệt lớn | Thẻ "Vì sao dời 1 km thay đổi nhiều", so sánh hai chân trời |
-| Tính địa hình thật | Chân trời và độ dốc từ LOLA |
-| Libration, biến thiên quỹ đạo Mặt Trăng | Điểm dưới Trái Đất (mã 14) đã gồm libration; khoảng cách thay đổi theo giờ (mã 19, 20) |
-| Sườn dốc, hố sâu ở cực Nam | Bộ lọc độ dốc, lớp vùng tối vĩnh cửu |
-| Hỗ trợ khi lịch thay đổi | Lõi của Window Finder: ngày khác cùng site, site khác cùng vùng |
-| Công cụ giáo dục | Chế độ học |
+| Use Horizons or precomputed data | Horizons API, precomputed into `ephemeris.json` |
+| Use LOLA for an accurate horizon | 360° horizon from the PGDA 90 DEM |
+| No atmosphere; the horizon is set by terrain and the spherical edge | No refraction; the d²/(2R) term in the horizon formula |
+| Sun elevation is an important metric | Shown big; used in the panel factor |
+| Favor quick comparison of many scenarios | Backward search, ranking table, instantly updating slider |
+| Clearly report the time to sunset/Earthset | Countdown |
+| Highlight differences between the Moon and the Earth | Card "How the Moon differs from the Earth" |
+| Explain why small changes cause big differences | Card "Why moving 1 km changes so much", two-horizon comparison |
+| Account for real terrain | Horizon and slope from LOLA |
+| Libration, variation of the Moon's orbit | The sub-Earth point (code 14) already includes libration; distances change by the hour (codes 19, 20) |
+| Steep slopes, deep craters near the south pole | Slope filter, permanently shadowed region layer |
+| Support when the schedule changes | The core of Window Finder: another date at the same site, another site in the same region |
+| Educational tool | Learning mode |
 
-## 7. Giới hạn (ghi trung thực trong bài nộp)
+## 7. Limitations (state them honestly in the submission)
 
-- Dữ liệu theo bước 1 giờ; đồng hồ đếm ngược nội suy tuyến tính nên có thể lệch vài phút tới cỡ một giờ.
-- Phần đĩa lộ ra tính gần đúng tuyến tính.
-- Chân trời tính tại tâm ô 1 km với DEM 80 m, không thấy đá tảng hay gờ nhỏ.
-- Site ngoài vùng phủ DEM chỉ có chân trời mặt cầu.
-- Mô hình pin đơn giản: tải không đổi, chưa tính nhiệt độ và suy giảm hiệu suất.
-- "Thấy Trái Đất" đã xét khả năng liên lạc thực tế tới mạng lưới 3 trạm mặt đất NASA Deep Space Network (DSN: Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43 với dữ liệu góc cao từ JPL Horizons API, yêu cầu góc cao Mặt Trăng ≥ 10°).
-- Không phải công cụ chính thức của NASA.
+- Data has a 1-hour step; the countdown is linearly interpolated, so it can be off by a few minutes up to about an hour.
+- The visible fraction of the disk is a linear approximation.
+- The horizon is computed at the center of a 1 km cell with an 80 m DEM, so it does not see boulders or small ridges.
+- Sites outside the DEM coverage only have the spherical horizon.
+- The battery model is simple: constant load, no temperature and no efficiency degradation.
+- "Earth visible" takes into account real communication with the network of 3 NASA Deep Space Network (DSN) ground stations (Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43, with elevation data from the JPL Horizons API, requiring a Moon elevation ≥ 10°).
+- This is not an official NASA tool.
 
-## 8. Kế hoạch làm
+## 8. Work plan
 
-**Ngày 1 (14/11)**
+**Day 1 (14/11)**
 
-- Dữ liệu (Python):
-  - Sáng: tạo `ephemeris.json` và làm bước kiểm chứng vector với Horizons.
-  - Chiều: lưới và chân trời cho một vùng (Malapert Massif).
-  - Tối: chạy cho đủ 9 vùng.
+- Data (Python):
+  - Morning: create `ephemeris.json` and do the vector validation against Horizons.
+  - Afternoon: grid and horizon for one region (Malapert Massif).
+  - Evening: run all 9 regions.
 - Web:
-  - Khung app, bản đồ 2D một vùng (dùng dữ liệu giả trong lúc chờ), form kịch bản.
-  - Web Worker tính khung trượt, bảng xếp hạng, thanh trượt.
-- Mục tiêu cuối ngày 1: chạy được trọn luồng cho một vùng.
+  - App skeleton, 2D map of one region (using mock data while waiting), scenario form.
+  - Web Worker for the sliding window, ranking table, slider.
+- Goal for the end of day 1: the full flow runs for one region.
 
-**Ngày 2 (15/11)**
+**Day 2 (15/11)**
 
-- Horizon view, đồng hồ đếm ngược, biểu đồ pin, so sánh cạnh nhau.
-- Site nổi tiếng, quả cầu 3D, chế độ học.
-- Deploy Vercel, kiểm chứng với PGDA 69 và QuickMap.
-- Slide hoặc video tiếng Anh, trang project tiếng Anh.
-- Nộp sớm vài giờ trước khi cổng đóng (23:59 ngày 15/11).
+- Horizon view, countdown, battery chart, side-by-side comparison.
+- Famous sites, 3D globe, learning mode.
+- Deploy to Vercel, validate against PGDA 69 and QuickMap.
+- Slides or video in English, project page in English.
+- Submit a few hours before the portal closes (23:59 on 15/11).
 
-Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi "cả 9 vùng".
+If we run late, drop in this order: 3D globe, learning mode, the "all 9 regions" scope.
 
-## 9. Bài nộp
+## 9. Submission
 
-- **Space Agency Data**: JPL Horizons, LOLA (PGDA 90, PGDA 69), lưới LGRS của USGS, texture Mặt Trăng của NASA.
-- **References**: liệt kê mọi nguồn ở mục 10, và ghi rõ phần nào có AI hỗ trợ, dùng như thế nào.
-- **Demo**: video 30 giây hoặc tối đa 7 slide.
+- **Space Agency Data**: JPL Horizons, LOLA (PGDA 90, PGDA 69), the USGS LGRS grid, NASA's Moon texture.
+- **References**: list every source in section 10, and state clearly which parts had AI help and how it was used.
+- **Demo**: a 30-second video or at most 7 slides.
 
-## 10. Nguồn
+## 10. Sources
 
-- Đề bài: https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/
+- Challenge page: https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/
 - Horizons API: https://ssd-api.jpl.nasa.gov/doc/horizons.html
-- Horizons manual (mã QUANTITIES): https://ssd.jpl.nasa.gov/horizons/manual.html
-- PGDA 90, DEM, độ dốc, vùng tối vĩnh cửu cực Nam: https://pgda.gsfc.nasa.gov/products/90
-- PGDA 69, bản đồ chiếu sáng và tầm nhìn Trái Đất trung bình: https://pgda.gsfc.nasa.gov/products/69
-- Lưới LGRS dạng ACC cho 9 vùng Artemis III (USGS): https://www.sciencebase.gov/catalog/item/671a6fa8d34efed5620f89f8
-- Chín vùng ứng viên và tiêu chí chọn (LPSC 2026): https://ntrs.nasa.gov/citations/20250011660
-- Tài liệu NASA về HLS cho Space Apps 2025 (ngưỡng độ dốc, yêu cầu chiếu sáng và liên lạc): https://ntrs.nasa.gov/api/citations/20250009323/downloads/ArtemisOverview2025IntSPAPPSChallenge.pdf
-- Texture Mặt Trăng, NASA SVS: https://svs.gsfc.nasa.gov/4720
-- Công cụ đối chiếu: QuickMap https://quickmap.lroc.im-ldi.com , Moon Trek https://trek.nasa.gov/moon/
+- Horizons manual (QUANTITIES codes): https://ssd.jpl.nasa.gov/horizons/manual.html
+- PGDA 90, south pole DEM, slope, permanently shadowed regions: https://pgda.gsfc.nasa.gov/products/90
+- PGDA 69, average illumination and Earth visibility maps: https://pgda.gsfc.nasa.gov/products/69
+- LGRS grid in ACC form for the 9 Artemis III regions (USGS): https://www.sciencebase.gov/catalog/item/671a6fa8d34efed5620f89f8
+- The nine candidate regions and selection criteria (LPSC 2026): https://ntrs.nasa.gov/citations/20250011660
+- NASA HLS document for Space Apps 2025 (slope threshold, lighting and communication requirements): https://ntrs.nasa.gov/api/citations/20250009323/downloads/ArtemisOverview2025IntSPAPPSChallenge.pdf
+- Moon texture, NASA SVS: https://svs.gsfc.nasa.gov/4720
+- Cross-check tools: QuickMap https://quickmap.lroc.im-ldi.com , Moon Trek https://trek.nasa.gov/moon/

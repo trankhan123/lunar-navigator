@@ -177,3 +177,7 @@ Built in 48 hours for the NASA Space Apps Challenge 2026 by a team of five:
 AI coding assistants (Claude Code, OpenAI Codex) were used under the team's direction. Every use is listed in [AI_USAGE.md](AI_USAGE.md). Scientific values come only from the cited datasets, and all tests use synthetic values that are marked as such.
 
 Thanks to NASA GSFC (PGDA, LOLA, SVS), NASA/JPL (Horizons, DSN), the USGS Astrogeology Science Center (LGRS) and the NASA Space Apps organisers.
+
+## License
+
+The code is released under the [MIT License](LICENSE). The NASA, JPL and USGS data and imagery used here are public data from their providers; credits are in [REFERENCES.md](REFERENCES.md).
