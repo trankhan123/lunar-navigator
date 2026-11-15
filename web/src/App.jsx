@@ -515,6 +515,8 @@ export default function App() {
                     point={searchedPoint}
                     onSelectLanding={selectLanding}
                     onOpenCell={(cellId) => openDetail(cellId, results.landingTimes[landingIndex])}
+                    results={results}
+                    landingIndex={landingIndex}
                   />
                   <LandingTimeSlider landingTimes={results.landingTimes} value={landingIndex} onChange={selectLanding} />
                   <CurrentPointStrip statuses={results.status.subarray(0, results.landingCount)} value={landingIndex} onSelectLanding={selectLanding} />

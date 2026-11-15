@@ -226,6 +226,12 @@ export const TRANSLATIONS = {
     'currentPoint.noTerrain': 'Smooth-sphere horizon: terrain not included',
     'currentPoint.capGrid': 'Terrain from the 2 km cap grid (coarser than the 1 km LGRS cells)',
     'currentPoint.searchedOnly': 'Only this point was searched: it is outside the south polar terrain grid.',
+    'slip.canSlip': 'Your landing can slip up to {duration} and still meet every limit (until {time}).',
+    'slip.orLonger': ' Or longer: the search range ends there.',
+    'slip.noSlack': 'No slack: landing 6 h later breaks a limit.',
+    'slip.nextWindow': 'Next window at your point: {time} (in {duration}).',
+    'slip.nearestCell': ' Nearest cell that works now: {cell} ({km} km).',
+    'slip.none': 'No passing window at your point in this search.',
 
     // Detail View
     'detail.back': '← Back',
@@ -503,6 +509,12 @@ export const TRANSLATIONS = {
     'currentPoint.noTerrain': 'Đường chân trời là mặt cầu nhẵn: chưa tính địa hình',
     'currentPoint.capGrid': 'Địa hình lấy từ lưới mũ cực 2 km (thô hơn ô LGRS 1 km)',
     'currentPoint.searchedOnly': 'Chỉ tìm kiếm điểm này: nó nằm ngoài lưới địa hình cực Nam.',
+    'slip.canSlip': 'Lần hạ cánh có thể trễ tới {duration} mà vẫn đạt mọi giới hạn (đến {time}).',
+    'slip.orLonger': ' Hoặc lâu hơn: phạm vi tìm kiếm kết thúc ở đó.',
+    'slip.noSlack': 'Không còn dư địa: hạ cánh trễ 6 h là vi phạm một giới hạn.',
+    'slip.nextWindow': 'Cửa sổ tiếp theo tại điểm của bạn: {time} (sau {duration}).',
+    'slip.nearestCell': ' Ô gần nhất dùng được lúc này: {cell} ({km} km).',
+    'slip.none': 'Không có cửa sổ đạt nào tại điểm của bạn trong lần tìm này.',
 
     // Detail View
     'detail.back': '← Quay lại',
