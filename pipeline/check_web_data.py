@@ -23,6 +23,7 @@ MAX_TILE_BYTES = 300_000
 MAP_KINDS = {"hillshade", "sun-visibility", "earth-visibility", "psr", "slope"}
 MAX_POSITION_ERROR_M = 100
 CELL_HALF_SIZE_M = 500  # boundsM must contain whole 1 km squares, not only their centres
+ISO_MINUTE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$")
 ISO_HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00Z$")
 EPHEMERIS_START_TIME = f"{EPHEMERIS_START}T00:00Z"
 EPHEMERIS_HOURS = ((date.fromisoformat(EPHEMERIS_STOP) - date.fromisoformat(EPHEMERIS_START)).days + 1) * 24
@@ -75,8 +76,7 @@ def check_horizon(file_name, owner, horizon):
         problem(file_name, f"{owner}: horizon must be null or 360 integers in 0.1° units")
 
 
-def check_ephemeris(data, expect_mock):
-    name = "ephemeris.json"
+def check_ephemeris(data, expect_mock, name="ephemeris.json"):
     if not ISO_HOUR.match(str(data.get("startTime"))):
         problem(name, "startTime must look like 2027-01-01T00:00Z")
     if type(data.get("stepHours")) is not int or data["stepHours"] != 1:
@@ -85,7 +85,7 @@ def check_ephemeris(data, expect_mock):
     if type(hours) is not int or hours <= 0:
         problem(name, "hours must be a positive integer")
         return
-    if not expect_mock and (data.get("startTime"), hours) != (EPHEMERIS_START_TIME, EPHEMERIS_HOURS):
+    if not expect_mock and name == "ephemeris.json" and (data.get("startTime"), hours) != (EPHEMERIS_START_TIME, EPHEMERIS_HOURS):
         problem(name, f"must start at {EPHEMERIS_START_TIME} and cover {EPHEMERIS_HOURS} hours (to {EPHEMERIS_STOP} 23:00)")
     for key in EPHEMERIS_ARRAYS:
         values = data.get(key)
@@ -95,6 +95,26 @@ def check_ephemeris(data, expect_mock):
         low, high = {"Lon": (-180, 180), "Lat": (-90, 90), "Au": (0.9, 1.1), "Km": (3.4e5, 4.1e5)}[re.search("Lon|Lat|Au|Km", key)[0]]
         if not all(in_range(v, low, high) for v in values):
             problem(name, f"{key} has values outside {low}..{high}")
+
+
+def check_replay(folder):
+    """E6 replay/: index.json fields, and one short ephemeris per mission in the ephemeris.json format."""
+    index = load(folder, "index.json", False)
+    if index is None:
+        return
+    for mission in index.get("missions", []):
+        site_id = mission.get("siteId")
+        for key in ("landedUtc", "endedUtc"):
+            if not ISO_MINUTE.match(str(mission.get(key))) and not (key == "endedUtc" and mission.get(key) is None):
+                problem("replay/index.json", f"{site_id}: {key} must look like 2024-02-22T23:23Z (endedUtc may be null)")
+        if not (isinstance(mission.get("name"), str) and isinstance(mission.get("endedReason"), str)):
+            problem("replay/index.json", f"{site_id}: name and endedReason must be strings")
+        urls = mission.get("sourceUrls")
+        if not (isinstance(urls, list) and urls and all(str(url).startswith("https://") for url in urls)):
+            problem("replay/index.json", f"{site_id}: sourceUrls must be a non-empty list of https URLs")
+        data = load(folder, f"{site_id}.json", False)
+        if data is not None:
+            run_check(f"replay/{site_id}.json", check_ephemeris, data, False, f"replay/{site_id}.json")
 
 
 def check_cell(file_name, code, cell):
@@ -365,6 +385,8 @@ def main():
             load(folder, path.name, expect_mock)
     if not expect_mock and (folder / "cap" / "index.json").exists():  # mock data has no cap grid
         run_check("cap", check_cap, folder)
+    if not expect_mock and (folder / "replay").is_dir():
+        run_check("replay", check_replay, folder / "replay")
     print(f"checked {folder}")
     for line in problems:
         print("  problem:", line)

@@ -72,3 +72,18 @@ def test_check_cap_flags_bad_id_short_horizon_and_cell_inside_a_region(tmp_path)
     checker.check_cap(tmp_path)
     assert any("horizon must be" in line for line in checker.problems)
     assert any("must match CAP-r###c###" in line for line in checker.problems)
+
+
+def test_check_replay_accepts_a_valid_folder_and_flags_bad_fields(tmp_path):
+    # Synthetic mission and 2-hour ephemeris, not real data.
+    arrays = {"sunSubLonDeg": [0, 1], "sunSubLatDeg": [0, 0], "sunDistanceAu": [1, 1], "earthSubLonDeg": [0, 0], "earthSubLatDeg": [0, 0], "earthDistanceKm": [384400, 384400]}
+    mission = {"siteId": "x", "name": "X", "landedUtc": "2024-02-22T23:23Z", "endedUtc": None, "endedReason": "r", "sourceUrls": ["https://example.org"]}
+    (tmp_path / "x.json").write_text(json.dumps({"startTime": "2024-02-22T00:00Z", "stepHours": 1, "hours": 2, **arrays}))
+    (tmp_path / "index.json").write_text(json.dumps({"missions": [mission]}))
+    checker.problems.clear()
+    checker.check_replay(tmp_path)
+    assert checker.problems == []
+    (tmp_path / "index.json").write_text(json.dumps({"missions": [{**mission, "landedUtc": "2024-02-22", "sourceUrls": []}]}))
+    checker.check_replay(tmp_path)
+    assert any("landedUtc must look like" in line for line in checker.problems)
+    assert any("sourceUrls" in line for line in checker.problems)

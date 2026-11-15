@@ -100,13 +100,13 @@ def parse_ephemeris(text):
     } for row in read_table(text)]
 
 
-def write_ephemeris_json(rows, retrieved):
+def write_ephemeris_json(rows, retrieved, path=WEB_DATA_FOLDER / "ephemeris.json"):
     """Columnar ephemeris.json: degrees rounded to 2 decimals, km to 0, AU to 5. Rows must be consecutive hours."""
     for previous, current in zip(rows, rows[1:]):
         if current["time"] - previous["time"] != timedelta(hours=1):
             raise RuntimeError(f"Gap or duplicate in ephemeris at {current['time']}")
     column = lambda key, digits: [round(row[key], digits) for row in rows]
-    write_json(WEB_DATA_FOLDER / "ephemeris.json", {
+    write_json(path, {
         "source": "JPL Horizons API (DE441): COMMAND=301 CENTER=500@399 QUANTITIES=14,15,19,20, MOON_ME frame, "
                   f"retrieved {retrieved:%Y-%m-%d}",
         "startTime": rows[0]["time"].strftime(TIME_FORMAT),
