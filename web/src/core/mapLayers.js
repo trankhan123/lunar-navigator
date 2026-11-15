@@ -22,6 +22,7 @@ export const MAP_LAYERS = [
   },
   { id: 'feasibility', label: 'Feasibility', needs: null, legend: entries([[INFEASIBLE_COLOR, 'Too steep or in permanent shadow'], ['#0ea5e9', 'Feasible cell']]) },
 ]
+export const CELL_FILL_OPACITY = 0.65 // lets the relief (craters, ridges) show through while the colours stay readable
 const layersById = new Map(MAP_LAYERS.map((layer) => [layer.id, layer]))
 
 /** 0 shadow (< half the disk), 1 partial (half or more: counts as sunlit, as in the ranking), 2 full disk. */
@@ -64,12 +65,22 @@ const FRACTION_FIELDS = { sunPercent: 'fractionSun', earthPercent: 'fractionEart
 
 /** Image overlays in panel order; kind matches maps.json (relief = the hillshade images). */
 export const MAP_OVERLAYS = [
-  { kind: 'relief', label: 'Relief (LOLA hillshade)', defaultEnabled: true, defaultOpacity: 1 },
+  { kind: 'relief', label: 'Relief (LOLA DEM: shading, elevation, contours)', defaultEnabled: true, defaultOpacity: 1 },
   { kind: 'sun-visibility', label: 'NASA % sunlight (PGDA 69, 60 m)', defaultEnabled: false, defaultOpacity: 0.7 },
   { kind: 'earth-visibility', label: 'NASA % Earth in view (PGDA 69, 60 m)', defaultEnabled: false, defaultOpacity: 0.7 },
   { kind: 'psr', label: 'Permanent shadow (PGDA 90, 20 m)', defaultEnabled: false, defaultOpacity: 0.8 },
+  { kind: 'slope', label: 'Slope classes (PGDA 90, 80 m)', defaultEnabled: false, defaultOpacity: 0.6 },
   { kind: 'labels', label: 'LGRS cell labels (when zoomed in)', defaultEnabled: true }, // text, no opacity
 ]
+
+/** Colours of the whole-pole slope image (pipeline SLOPE_PALETTE); the last class is the app's infeasible colour with hatch. */
+export const SLOPE_CLASSES = entries([['#009e73', '0–10°'], ['#f0e442', '10–15°'], ['#e69f00', '15–20°'], [INFEASIBLE_COLOR, 'Over 20° (not feasible)']])
+
+/** The maps.json entry to draw for an overlay kind: the region's own, else the whole-pole one (south_pole) at the overview and for slope. */
+export function overlayEntry(maps, kind, regionCode) {
+  const own = regionCode && maps.find((entry) => entry.id === regionCode && entry.kind === kind)
+  return own || (!regionCode || kind === 'slope' ? maps.find((entry) => entry.id === 'south_pole' && entry.kind === kind) : undefined)
+}
 
 const CELL_HALF_SIZE_M = 500
 

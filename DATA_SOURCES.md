@@ -14,8 +14,8 @@ Link `https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/` (thư mục) trả 404, nhưn
 | LDSM_80S_80MPP_ADJ.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_80S_80MPP_ADJ.TIF | pipeline/raw | 231 MB | Độ dốc 80 m/px, 80–90°S (PGDA 90) → module D3 ô khả thi (ngưỡng 20°) |
 | LPSR_80S_20MPP_ADJ.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ.TIF | pipeline/raw | 148 MB | Vùng tối vĩnh cửu 20 m/px, 80–90°S (PGDA 90) → module D3 + lớp phủ bản đồ (D8) |
 | LDEM_60S_240MPP_ADJ.TIF | https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_240MPP_ADJ.TIF | pipeline/raw | 210 MB | DEM 240 m/px, 60–90°S (PGDA 90) → module D4 phần chân trời xa ngoài 80°S, site như Chandrayaan-3 |
-| AVGVISIB_85S_060M_201608.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF | pipeline/raw | 32 MB | % thời gian thấy Mặt Trời, 85–90°S (PGDA 69) → kiểm chứng + lớp phủ bản đồ |
-| AVGVISIB_85S_060M_201608_EARTH.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF | pipeline/raw | 24 MB | % thời gian thấy Trái Đất (PGDA 69) → kiểm chứng + lớp phủ bản đồ (D8) |
+| AVGVISIB_85S_060M_201608.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF | pipeline/raw | 32 MB | % thời gian thấy Mặt Trời, 85–90°S (PGDA 69) → kiểm chứng + lớp phủ bản đồ. D7 so sánh: trung bình các pixel 60 m trong mỗi ô 1 km, 240 ô mẫu (8 vùng × 30) |
+| AVGVISIB_85S_060M_201608_EARTH.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF | pipeline/raw | 24 MB | % thời gian thấy Trái Đất (PGDA 69) → kiểm chứng + lớp phủ bản đồ (D8). D7 so sánh: trung bình các pixel 60 m trong mỗi ô 1 km, 240 ô mẫu (8 vùng × 30) |
 | LPSR_85S_060M_201608.TIF | https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_85S_060M_201608.TIF | pipeline/raw | 0.6 MB | Vùng tối vĩnh cửu (PGDA 69) → tính năng phụ "viền vùng tối vĩnh cửu" |
 | lroc_color_2k.jpg | https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg | web/public/textures | 0.4 MB | Texture Mặt Trăng cho globe.gl (NASA SVS 4720, CGI Moon Kit) |
 
@@ -23,10 +23,15 @@ Trang gốc: PGDA 90 https://pgda.gsfc.nasa.gov/products/90 · PGDA 69 https://p
 
 ## 2. API
 
+Optional chat only: Google Gemini API (https://aistudio.google.com/docs/structured-output)
+extracts form parameters; Upstash Redis REST (https://upstash.com/docs/redis/features/restapi)
+stores usage counters. Neither supplies scientific results or new lunar data.
+
 | Nguồn | URL | Dùng để |
 |---|---|---|
 | JPL Horizons API (ephemeris) | https://ssd.jpl.nasa.gov/api/horizons.api | Module D1: `COMMAND=301`, `CENTER=500@399`, `QUANTITIES=14,15,19,20`, bước 1h, 2027-01-01 → 2029-01-31, chia theo quý → `web/public/data/ephemeris.json`. Cache vào `pipeline/raw/horizons/` |
 | JPL Horizons API (kiểm chứng) | https://ssd.jpl.nasa.gov/api/horizons.api | Azimuth/elevation Mặt Trời (`COMMAND=10`) và Trái Đất (`COMMAND=399`) tại điểm (`CENTER=coord@301`, `QUANTITIES=4`) → fixture `web/src/core/fixtures/horizons_check.json`. Bước 1h OK, 1 tháng = 745 dòng |
+| JPL Horizons API (trạm DSN - Task 11) | https://ssd.jpl.nasa.gov/api/horizons.api | Góc cao biểu kiến của Mặt Trăng (`COMMAND=301`) nhìn từ 3 trạm DSN trên Trái Đất (`CENTER=coord@399`, `QUANTITIES=4`: Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43), bước 1h, 2027-01-01 → 2029-01-31 (18.288h) → `web/public/data/dsn.json` (đơn vị 0.1°). Cache vào `pipeline/raw/horizons_dsn/` |
 
 ## 3. Toạ độ site (`pipeline/sites.json`, không bịa)
 
@@ -63,3 +68,19 @@ NASA chỉ công bố tên và bản đồ của 9 vùng Artemis III, không cô
 | echarts | 6.1.0 | web |
 | echarts-for-react | 3.0.6 | web |
 | astronomy-engine | 2.1.19 | web (`src/astronomy.js`) |
+| three | 0.187.0 (ghim chính xác; globe.gl dùng cùng bản) | web (`components/TerrainView3D.jsx`) |
+| Pillow | chưa ghi trong `pipeline/requirements.txt` | pipeline (`export_map_background.py`, `export_relief_tiles.py`: JPEG và PNG) |
+
+## 5. Dữ liệu dẫn xuất và ảnh (không tải; không có nguồn mới)
+
+Các file dưới đây được sinh từ dữ liệu ở mục 1 hoặc từ ảnh NASA SVS. Mục này không nằm trong bảng tải của `download_data.py`.
+
+| File | Nguồn gốc | Lưu vào | Dùng để |
+|---|---|---|---|
+| Relief tiles (5 mức, JPEG) | LOLA DEM `LDEM_80S_80MPP_ADJ` (PGDA 90), cùng nguồn với D4 | web/public/maps/relief | Nền địa hình có đường đồng mức 500/250 m (D8b, lớp Relief của W2) |
+| Lớp phủ toàn cực: `south_pole_sun.png`, `_earth.png`, `_psr.png`, `_slope.png` | PGDA 69 (Sun, Earth), PGDA 90 `LPSR_80S_20MPP_ADJ` (PSR), PGDA 90 `LDSM_80S_80MPP_ADJ` (slope) | web/public/maps | Lớp % nắng, % Trái Đất, vùng tối vĩnh cửu, độ dốc trên toàn cực (D8, mục `maps.json`) |
+| Lưới CAP 2 km (`cap/index.json`, `cap_<tx>_<ty>.json`) | PGDA 90 `LDSM` 80 m, `LPSR` 20 m, `LDEM` 80 m và 240 m; quy tắc của D3, D4 | web/public/data/cap | Ô 2 km toàn chỏm cực ngoài 9 vùng (D9) |
+| Địa hình 3D (`<CODE>.bin`, `index.json`) | PGDA 90 `LDEM_80S_80MPP_ADJ` | web/public/terrain | Khối địa hình 9 vùng cho `TerrainView3D.jsx` (D10) |
+| `lroc_color_4k.jpg`, `ldem_bump_1440.png` | NASA SVS 4720 (`lroc_color_16bit_srgb_4k.tif`, `ldem_4_uint.tif`). Trang: https://svs.gsfc.nasa.gov/4720. Credit: NASA's Scientific Visualization Studio | web/public/textures | Texture và bump cho quả cầu W6 (4K màu, 1440 px độ cao) |
+
+- NASA/JPL DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and Geometry", Rev. K (2016): DSN station positions (Table 5) and the 10° elevation limit (sec. 2.2.1, 2.2.4), used by the optional DSN check. https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf

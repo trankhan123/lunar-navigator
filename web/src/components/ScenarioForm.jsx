@@ -1,5 +1,5 @@
 import { cloneElement } from 'react'
-import { LANDER_PRESETS, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
+import { LANDER_PRESETS, MAX_SEARCH_RADIUS_KM, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
 import { useI18n } from '../i18n/index.jsx'
 
 const PRESET_FIELDS = ['maxDarkHours', 'maxCommLossHours', 'panelMaxW', 'batteryCapacityWh', 'loadW', 'panelMode']
@@ -33,9 +33,9 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
     ['coordinates', t('scenario.pointTypes.coordinates')],
   ]
   const scopeLabels = {
-    region: t('scenario.scopes.region'),
+    region: `${t('scenario.scopes.region')} ${t('scenario.scopeTime', { seconds: 5 })}`,
     radius: t('scenario.scopes.radius'),
-    all: t('scenario.scopes.all'),
+    all: `${t('scenario.scopes.all')} ${t('scenario.scopeTime', { seconds: 20 })}`,
   }
   const panelLabels = {
     auto: t('scenario.panels.auto'),
@@ -211,7 +211,12 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
               ))}
             </select>,
           )}
-          {value.searchScope === 'radius' && numberField(t('scenario.searchRadius'), 'searchRadiusKm', 'km')}
+          {value.searchScope === 'radius' && numberField(`${t('scenario.searchRadius')} (${t('scenario.searchRadiusMax', { km: MAX_SEARCH_RADIUS_KM })})`, 'searchRadiusKm', 'km')}
+          <label className="col-span-2 flex items-start gap-2 text-xs text-slate-300">
+            <input type="checkbox" checked={value.requireDsn} onChange={(event) => update({ requireDsn: event.target.checked })} className="mt-0.5 accent-amber-400" />
+            {t('scenario.requireDsn')}
+          </label>
+          <p className="col-span-2 text-xs text-slate-400">{t('scenario.scopeTimeNote')} {t('scenario.scopeCapNote')}</p>
         </div>
       )}
 

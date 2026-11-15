@@ -1,4 +1,5 @@
 // W1 — data loading and hour ↔ time helpers. Contract: README "Data files" and "W1".
+import { capCellContaining } from './capGrid.js'
 
 /**
  * @typedef {Object} Ephemeris  web/public/data/ephemeris.json; hour i = startTime + i h
@@ -39,13 +40,60 @@ async function loadJson(path) {
   return response.json()
 }
 
-export const loadEphemeris = (useMock) => loadJson(`${dataFolder(useMock)}/ephemeris.json`)
+/** Attaches DSN data only when it covers exactly the same hours; otherwise null with a warning. */
+export function attachDsn(ephemeris, dsn) {
+  const aligned = dsn && dsn.startTime === ephemeris.startTime && dsn.hours === ephemeris.hours
+  if (dsn && !aligned) console.warn('dsn.json does not match ephemeris.json (startTime/hours); DSN ignored.')
+  return { ...ephemeris, dsn: aligned ? dsn : null }
+}
+
+export async function loadEphemeris(useMock) {
+  const ephemeris = await loadJson(`${dataFolder(useMock)}/ephemeris.json`)
+  const dsn = await loadDsn(useMock).catch(() => null)
+  return attachDsn(ephemeris, dsn)
+}
+export const loadDsn = (useMock) => loadJson(`${dataFolder(useMock)}/dsn.json`)
 export const loadRegions = (useMock) => loadJson(`${dataFolder(useMock)}/regions.json`)
 export const loadCells = (useMock, cellsFile) => loadJson(`${dataFolder(useMock)}/${cellsFile}`)
 export const loadSites = (useMock) => loadJson(`${dataFolder(useMock)}/sites.json`)
 export const loadValidation = (useMock) => loadJson(`${dataFolder(useMock)}/validation.json`)
+/** README D9 index of the whole-cap 2 km grid; null when the data set has none (mock data, older deploys). */
+export const loadCapIndex = () => loadJson('/data/cap/index.json').catch(() => null)
+
+const capTileRequests = new Map() // tile id → promise, so each file is fetched once
+/** Cells of the given CAP tiles (README D9), loaded in parallel and cached; a failed tile can be retried. */
+export function loadCapTiles(tileIds) {
+  return Promise.all(
+    tileIds.map((tileId) => {
+      if (!capTileRequests.has(tileId)) {
+        capTileRequests.set(tileId, loadJson(`/data/cap/${tileId}.json`).then((file) => file.cells).catch((error) => {
+          capTileRequests.delete(tileId)
+          throw error
+        }))
+      }
+      return capTileRequests.get(tileId)
+    }),
+  )
+}
 /** README D8 map backgrounds; the map works without them. */
 export const loadMaps = () => loadJson('/maps/maps.json').then((file) => file.maps).catch(() => [])
+/** Relief tile pyramid index (pipeline/export_relief_tiles.py); null when the tiles are missing. Fetched once. */
+let reliefIndexPromise
+export const loadReliefIndex = () => (reliefIndexPromise ??= loadJson('/maps/relief/index.json').catch(() => null))
+
+let terrainIndexPromise = null
+/** README D10 terrain height map of one region: {entry, heights} (Int16 metres, row 0 = north); the 3D view only. */
+export async function loadTerrain(regionCode) {
+  terrainIndexPromise ??= loadJson('/terrain/index.json').catch((error) => {
+    terrainIndexPromise = null
+    throw error
+  })
+  const entry = (await terrainIndexPromise).regions.find((region) => region.code === regionCode)
+  if (!entry) throw new Error(`No terrain for ${regionCode}`)
+  const response = await fetch(entry.file)
+  if (!response.ok) throw new Error(`Could not load ${entry.file} (${response.status})`)
+  return { entry, heights: new Int16Array(await response.arrayBuffer()) }
+}
 
 const HOUR_MS = 3600 * 1000
 
@@ -80,10 +128,10 @@ export function toPolarXY(latDeg, lonDeg) {
  * @param {Object<string, Cell[]>} cellsByRegion  regions loaded so far
  * @returns {Cell}
  */
-export function resolveCurrentCell(currentPoint, cellsByRegion, sites) {
+export function resolveCurrentCell(currentPoint, cellsByRegion, sites, capCells = []) {
   if (!currentPoint) throw new Error('Pick a current landing point first')
   if (currentPoint.type === 'cell') {
-    const cell = Object.values(cellsByRegion).flat().find((candidate) => candidate.id === currentPoint.cellId)
+    const cell = [...Object.values(cellsByRegion).flat(), ...capCells].find((candidate) => candidate.id === currentPoint.cellId)
     if (!cell) throw new Error(`Cell ${currentPoint.cellId} is not in the loaded grid`)
     return cell
   }
@@ -92,9 +140,23 @@ export function resolveCurrentCell(currentPoint, cellsByRegion, sites) {
     const site = sites.find((candidate) => candidate.id === currentPoint.siteId)
     if (!site) throw new Error(`Unknown site ${currentPoint.siteId}`)
     const position = toPolarXY(site.lat, site.lon)
-    return { id: `SITE-${site.id}`, label: site.name, lat: site.lat, lon: site.lon, ...position, ...unknownTerrain, horizon: site.horizon ?? null }
+    return withCapHorizon({ id: `SITE-${site.id}`, label: site.name, lat: site.lat, lon: site.lon, ...position, ...unknownTerrain, horizon: site.horizon ?? null }, cellsByRegion, capCells)
   }
   if (currentPoint.type !== 'coordinates') throw new Error(`Unknown point type ${currentPoint.type}`)
   const { lat, lon } = currentPoint
-  return { id: 'CUSTOM', label: 'Custom point', lat, lon, ...toPolarXY(lat, lon), ...unknownTerrain, horizon: null }
+  return withCapHorizon({ id: 'CUSTOM', label: 'Custom point', lat, lon, ...toPolarXY(lat, lon), ...unknownTerrain, horizon: null }, cellsByRegion, capCells)
 }
+
+const LGRS_SNAP_M = 1000 // a point this close to an LGRS cell keeps the 1 km grid (README C5 "region" scope)
+
+/** A point with no horizon of its own, outside the 9 regions but on the cap, takes the horizon of the 2 km CAP cell that contains it. */
+function withCapHorizon(point, cellsByRegion, capCells) {
+  if (point.horizon || point.xM === null || capCells.length === 0) return point
+  const nearLgrsCell = Object.values(cellsByRegion).flat().some((cell) => Math.hypot(cell.xM - point.xM, cell.yM - point.yM) <= LGRS_SNAP_M)
+  const capCell = nearLgrsCell ? null : capCellContaining(capCells, point.xM, point.yM)
+  return capCell ? { ...point, horizon: capCell.horizon, horizonSource: 'cap' } : point
+}
+
+/** The cell the Detail screen shows: a grid cell by id, else the point that was searched (never the form's live point). */
+export const detailCellFor = (cellsById, selectedCellId, searchedPoint) =>
+  cellsById.get(selectedCellId) ?? (searchedPoint?.id === selectedCellId ? searchedPoint : null)

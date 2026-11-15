@@ -131,7 +131,7 @@ WF3 optimizer.js, explain.js ──> WEB (kết quả, chi tiết, chế độ h
 
 **Các bước:**
 
-1. **Phần không cần C1/C2/C4:** `metricsAt`, `rankCells`, `rankBestPairs`, `summarizeCurrentPoint`, `selectSearchCells` (dùng `distanceKm` của C0). Test có sẵn trong `optimizer.test.js`.
+1. **Phần không cần C1/C2/C4:** `metricsAt`, `rankCells`, `rankBestWindows`, `summarizeCurrentPoint`, `selectSearchCells` (dùng `distanceKm` của C0). Test có sẵn trong `optimizer.test.js`.
    - **Thứ tự mặc định:** đạt hoặc sát ngưỡng trước → `minBatteryFraction` cao hơn → `fractionBoth` cao hơn → `distanceKm` nhỏ hơn → `longestCommLossHours` nhỏ hơn (liên lạc liền mạch nhất).
    - Không dùng điểm có trọng số.
 2. **`evaluateWindow` và `runWindowSearch`,** khi WF1/WF2/WF4 đã push C1/C2/C4: mỗi ô tính hai track một lần, trượt khung, rồi bỏ track đi.

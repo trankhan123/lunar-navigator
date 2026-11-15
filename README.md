@@ -75,7 +75,7 @@ LGRS shapefiles cannot be downloaded by script (ScienceBase returns 403). See [D
    - If the contract has to change, agree with the team first. Then update this README, the contract test and `pipeline/check_web_data.py` in the same commit.
 4. **Implement:**
    - remove the `eslint-disable` stub line at the top of the JS file;
-   - replace `throw notImplemented(...)` or `raise NotImplementedError` with real code.
+   - replace `raise NotImplementedError` (Python stubs) with real code.
 5. **Done** means all of these are true:
    - the module's *Done when* list holds;
    - its contract test passes (`cd web && node --test src/core/<file>.test.js`);
@@ -96,9 +96,12 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D3 | WF5 | Landing feasibility (slope, permanent shadow) | `pipeline/compute_feasibility.py` | D2 | S | trankhan123 (Claude Code) | done (9 regions) |
 | D4 | WF1 | Terrain horizon | `pipeline/compute_horizon.py` | D2 (D6 for sites) | L | Quoc_Bao | done |
 | D5 | WF5 | Build web data | `pipeline/build_site_data.py` | D2, D3, D4 | S | trankhan123 (Claude Code) | done (9 regions; MMP trimmed to 900 cells, see region table) |
-| D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | chubin271-blip | todo |
-| D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | todo |
-| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade, PGDA 69 Sun/Earth and PSR overlays) |
+| D6 | WF2 | Famous sites (coordinates) | `pipeline/sites.json` | — | S | chubin271-blip | done (24 of 25 sites have coordinates; IM-3 TODO) |
+| D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | done (PGDA 69 only; QuickMap not done) |
+| D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade, whole-pole Sun, Earth, PSR and slope overlays) |
+| D8b | WF5 | Relief tiles (zoomable shaded relief, contours) | `pipeline/export_relief_tiles.py`, `web/public/maps/relief/` | D8, D5 | M | trankhan123 (Claude Code) | done (152 tiles, 5 levels, finest 74 m/px) |
+| D9 | WF5 | Whole-cap 2 km grid (CAP cells) | `pipeline/build_cap_grid.py`, `web/public/data/cap/` | D2, D3, D4 | M | trankhan123 (Claude Code) | done (17,336 cells, 14,996 feasible, 60 tiles) |
+| D10 | WF5 | Terrain meshes for the 3D view | `pipeline/export_terrain_mesh.py`, `web/public/terrain/` | LDEM 80 m (raw), D2 | M | trankhan123 (Claude Code) | done (9 regions, each ≤ 205 kB) |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
 | C1 | WF1 | Sunlight | `web/src/core/sunlight.js` | C0 | M | Quoc_Bao | done |
 | C2 | WF2 | Communication (sóng liên lạc, direct-to-Earth) | `web/src/core/communication.js` | C0 | S | chubin271-blip | done |
@@ -106,12 +109,13 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | C4 | WF4 | Charging (sạc năng lượng, battery) | `web/src/core/charging.js` | track shape only | S | hoanggbach | done |
 | C5 | WF3 | Optimizer: best nearby cell and date (quãng đường tối ưu) | `web/src/core/optimizer.js` | C1–C4 | L | vominhuy28 | done |
 | W1 | WEB | App shell, data loading, share link, modes, About | `web/src/App.jsx`, `core/shareLink.js` | — | M | trankhan123 | done |
-| W2 | WEB | South-pole map and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `CellHoverCard`, `DirectionCard`, `MapSearch`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js` | W1, D8 | L | trankhan123 | done (map v2) |
+| W2 | WEB | South-pole map (relief tiles, whole-cap raster, 3D view) and cell popup | `components/SouthPoleMap.jsx` (+ `MapCells`, `MapMarks`, `MapLegend`, `MapLayersPanel`, `MapTimeBar`, `MapMinimap`, `MapReliefTiles`, `CellHoverCard`, `DirectionCard`, `MapSearch`, `TerrainView3D`), `CellPopup.jsx`, `core/mapView.js`, `mapLayers.js`, `mapSky.js`, `mapSearch.js`, `mapTiles.js`, `capGrid.js`, `capSearch.js` | W1, D8, D8b, D9, D10 | L | trankhan123 | done (map v2 + relief, cap raster, 3D view) |
 | W3 | WEB | Scenario form | `components/ScenarioForm.jsx`, `core/scenario.js` | — | M | trankhan123 | done |
-| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx` | C5 | L | trankhan123 | done |
+| W4 | WEB | Results: slider, ranking, current-point card | `components/LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestWindowsTable.jsx` | C5 | L | trankhan123 | done |
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
-| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | doing (texture done; Sun/Earth arrows left) |
+| W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | done (lit by the real Sun, Sun/Earth rays, SVS 4720 textures) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
+| W8 | WF2 | Optional mission chat | `components/MissionChat.jsx`, `core/missionChat.js`, `web/server/`, `web/api/mission-chat.js` | W3 + owner API resources | S | chubin271-blip (Codex) | done; live Preview verified; awaiting review |
 | S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
 | X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
 
@@ -169,6 +173,31 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 - `sun*` are the sub-solar point on the Moon and the Moon-centre → Sun distance.
 - `earth*` are the sub-Earth point (libration is included) and the Moon-centre → Earth-centre distance.
 - The file covers 2027-01-01T00:00Z … 2029-01-31T23:00Z (18,288 h), so any 6-month range in 2027–2028 plus a 30-day stay fits.
+
+### `dsn.json` (Task 11)
+
+```json
+{
+  "source": "JPL Horizons API (DE441): COMMAND=301 CENTER=coord@399 QUANTITIES=4, retrieved 2026-11-15",
+  "startTime": "2027-01-01T00:00Z",
+  "stepHours": 1,
+  "hours": 18288,
+  "elevationUnitDeg": 0.1,
+  "stations": {
+    "goldstone": { "name": "Goldstone (DSS-14)", "code": "DSS-14", "lat": 35.4259, "lon": -116.8895, "heightKm": 1.001 },
+    "madrid": { "name": "Madrid (DSS-63)", "code": "DSS-63", "lat": 40.4314, "lon": -4.248, "heightKm": 0.834 },
+    "canberra": { "name": "Canberra (DSS-43)", "code": "DSS-43", "lat": -35.4014, "lon": 148.9813, "heightKm": 0.689 }
+  },
+  "goldstone": [],
+  "madrid": [],
+  "canberra": []
+}
+```
+
+- Apparent elevation of the Moon from the 3 Deep Space Network (DSN) complexes.
+- Station arrays have length `hours` (18,288 h for real, 5,112 h for mock).
+- Values are integer in units of 0.1° (multiplied by 10 then rounded).
+- With the opt-in DSN check, communication needs Moon elevation $\ge 10^\circ$ at any station (default: not used).
 
 ### `regions.json` (D5)
 
@@ -236,7 +265,8 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 
 ```json
 {
-  "pgda69": [{ "cellId": "MAL-…", "pgdaSunFraction": 0, "pgdaEarthFraction": 0, "ourSunFraction": 0, "ourEarthFraction": 0 }],
+  "pgda69": [{ "cellId": "MAL-…", "region": "MAL", "pgdaSunFraction": 0, "pgdaEarthFraction": 0, "pgdaSunCentreFraction": 0, "pgdaEarthCentreFraction": 0, "ourSunHalfDiskFraction": 0, "ourSunAnyPartFraction": 0, "ourSunMeanDiskFraction": 0, "ourEarthHalfDiskFraction": 0, "ourEarthAnyPartFraction": 0, "ourEarthMeanDiskFraction": 0 }],
+  "pgda69Stats": [{ "region": "MAL", "sun": { "halfDisk": { "n": 0, "meanOurs": 0, "meanPgda": 0, "meanDifference": 0, "rmse": 0, "pearsonR": 0 }, "anyPart": {}, "meanDisk": {} }, "earth": {} }],
   "horizons": { "pointCount": 30, "maxAzimuthErrorDeg": 0, "maxElevationErrorDeg": 0, "checkedAt": "2026-11-15" },
   "quickmap": [{ "cellId": "MAL-…", "image": "/validation/quickmap_MAL.png", "note": "" }]
 }
@@ -252,8 +282,16 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 - `kind` is one of:
   - `hillshade`: grey PGDA 90 relief, `south_pole` at 500 m/px and each region at its native 80 m;
   - `sun-visibility` / `earth-visibility`: PGDA 69 value × 4e-05 (share of time the Sun / Earth is in view), RGBA with the ramp `#440154 → #3b528b → #21918c → #5ec962 → #fde725` for 0 → 1, transparent where there is no data; only for regions that overlap the ±151.74 km square (about 85°S to the pole), with `boundsM` clipped to it (CAB has none, NR2 and MMP are partly covered);
-  - `psr`: PGDA 90 LPSR 20 m, `#cc79a7` on permanent shadow, transparent elsewhere; one entry per region.
+  - `psr`: PGDA 90 LPSR 20 m, `#cc79a7` on permanent shadow, transparent elsewhere; one entry per region;
+  - `slope`: PGDA 90 LDSM 80 m in classes < 10° `#009e73`, 10–15° `#f0e442`, 15–20° `#e69f00`, > 20° `#334155` with light diagonal hatch (the app's infeasible-cell colour; the limit is `common.SLOPE_LIMIT_DEG`); only `south_pole`.
+- **Whole-pole overlays** use `id: "south_pole"` with kind `sun-visibility`, `earth-visibility`, `psr` or `slope` (no new field: (`id`, `kind`) stays unique, and `south_pole` already means "the whole map"). Their `boundsM` is the raster's own extent (±151.74 km for PGDA 69, ±304 km for the others), indexed PNG, possibly at a coarser `metersPerPixel` so the file stays ≤ 1 MB. The web map draws them at the overview, and `slope` inside a region too.
 - Each PNG is ≤ 1 MB; `python pipeline/check_web_data.py` also checks `maps.json` (kinds, duplicates, files, sizes, `boundsM`).
+
+### `web/public/maps/relief/index.json` (D8b relief tiles)
+
+- Pyramid of 512 px JPEG tiles `relief/<z>/<x>_<y>.jpg`: level `z` splits the ±304 km square into 2^z × 2^z tiles, `x` grows east, `y` grows south (row 0 = north edge). Levels 0–4, level 4 is about 74 m/px and is written only for tiles that touch the 85°S disk or a region frame; tiles without DEM data are not written.
+- Index: `{tileSizePx, boundsM, levels: [{z, tileSizeM, metersPerPixel, contourIntervalM, tiles: ["x_y", …]}], elevationLegend: [{elevationM, color}], contourIntervalsM: [500, 250]}`.
+- Each tile is multidirectional shaded relief (4 lights, altitude 35°, 2× vertical exaggeration) times a neutral slate elevation tint (dark slate low to light grey-blue high, no data colours), with thin contour lines every 500 m (levels 0–2) or 250 m (levels 3–4), no labels. Each tile ≤ 300 kB, checked by `check_web_data.py`.
 
 ### Pipeline intermediate files (`pipeline/out/`, committed so others can build without raw data)
 
@@ -303,6 +341,7 @@ Core files are pure functions with no React, no DOM and no fetch (`data.js` is t
 | `panelMode` | `'auto'` \| `'vertical'` \| `'horizontal'` | auto | one of the three; auto = vertical when \|lat\| ≥ 60°, else horizontal |
 | `searchScope` | `'region'` \| `'radius'` \| `'all'` | region | one of the three |
 | `searchRadiusKm` | number | 10 | > 0 when scope is `radius` |
+| `requireDsn` | boolean | false | opt-in DSN check, see C2 (Expert mode checkbox) |
 
 `validateScenario(scenario, ephemeris)` returns at most one `{field, message}` per field, or `[]` when the scenario is valid.
 
@@ -368,7 +407,7 @@ File: `communication.js`.
 
 | Function | Returns |
 |---|---|
-| `computeEarthTrack(cell, ephemeris, firstHour, hourCount)` | `EarthTrack` |
+| `computeEarthTrack(cell, ephemeris, firstHour, hourCount, requireDsn = false)` | `EarthTrack` |
 | `summarizeEarthWindow(earthTrack, startIndex, lengthHours)` | `{longestCommLossHours, fractionEarth}` |
 | `nextEarthEvent(earthTrack, atIndex)` | `{event: 'earthset'|'earthrise', hoursFromNow}` or `null` |
 
@@ -376,7 +415,10 @@ Rules:
 
 - Use `EARTH_DISK_RADIUS_DEG`.
 - Always use the cell position, never the Moon centre. Earth is close enough that parallax shifts it by up to 0.26°.
-- **Known limitation:** the model does not check whether a ground station on Earth can see the Moon.
+- **Default (`requireDsn = false`): line of sight only.** Earth is visible when ≥ 50 % of its disk is above the terrain horizon. `ephemeris.dsn` is ignored, so the rankings, comm-loss numbers and the PGDA 69 comparison use this rule.
+- **Optional DSN check (Task 11, `scenario.requireDsn = true`, Expert-mode checkbox):** an hour also counts as comm loss (`diskFraction = 0`) when none of the three Deep Space Network stations (Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43) sees the Moon at ≥ 10° elevation (`dsn.json`, 0.1° units). The flag is passed explicitly to `computeEarthTrack` by the search and the detail view; the map layers and hover cards stay on line of sight. The UI states when the check is on. Without loaded or aligned DSN data the flag has no effect.
+  - `loadEphemeris` attaches `dsn` only when `dsn.startTime` and `dsn.hours` equal the ephemeris's; otherwise `null` and a console warning.
+  - Sources: NASA/JPL DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and Geometry", Rev. K (2016), <https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf>: Table 5 for station positions (the code's numbers agree to 0.001°, except DSS-63 height 0.834 km vs 0.865 km and DSS-43 latitude −35.4014 vs −35.4024), sec. 2.2.1 and 2.2.4 for the 10° lower elevation limit. Per-station horizon masks are not used.
 
 ### C3 Energy need
 
@@ -431,7 +473,7 @@ Files: `optimizer.js`. The Web Worker files `windowSearchWorker.js` and `startWi
 | `runWindowSearch(cells, ephemeris, scenario, onProgress)` | `WindowResults` |
 | `metricsAt(results, cellIndex, landingIndex)` | `WindowMetrics` + `{cellIndex, cellId, landingIndex, landingTime, distanceKm}` |
 | `rankCells(results, landingIndex, {sortBy, direction, limit = 10})` | rows of `metricsAt` + `rank` |
-| `rankBestPairs(results, {limit = 10})` | best (cell, landing time) pairs over the whole range |
+| `rankBestWindows(results, {limit = 10})` | one row per cell (its best landing window), see "Best windows" below |
 | `summarizeCurrentPoint(results, landingIndex)` | `{metrics, nearestPassingLanding: {landingIndex, landingTime, offsetHours} \| null, nearestPassingCell: {cellIndex, cellId, distanceKm} \| null}` |
 | `startWindowSearch({cells, ephemeris, scenario, onProgress})` | `{promise (resolves WindowResults), cancel}` |
 
@@ -452,9 +494,9 @@ Rules:
 - **Status:** `fail` if there is any fail reason, otherwise `marginal` if `minBatteryFraction < 0.2`, otherwise `pass`. Codes: `STATUS = {fail: 0, marginal: 1, pass: 2}`; `failReasonBits` = dark 1 | commLoss 2 | battery 4.
 - **`selectSearchCells`:**
   - `region` = feasible cells of the current point's region;
-  - `radius` = feasible cells of all loaded regions within `searchRadiusKm`;
-  - `all` = feasible cells of all 9 regions;
-  - for a site or typed coordinates, "its region" is the region of the nearest grid cell within 1 km; if there is none, only the current point is searched;
+  - `radius` = feasible LGRS cells of the loaded regions plus feasible CAP cells (D9) within `searchRadiusKm`; CAP leaves out the region interiors, so there are no duplicates;
+  - `all` = feasible cells of all 9 regions (no CAP cell);
+  - for a site or typed coordinates, "its region" is the region of the nearest grid cell within 1 km; if there is none, the feasible CAP cells within 15 km (`CAP_REGION_SEARCH_KM`) are searched, and if no CAP tile is loaded only the current point;
   - the current point is always index 0, even when it is infeasible or custom, and there are no duplicate ids.
 - **Default ranking order:**
   1. pass or marginal before fail;
@@ -476,6 +518,10 @@ Rules:
   - main → worker: `{type:'run', requestId, cells, ephemeris, scenario}`;
   - worker → main: `{type:'progress', requestId, doneCells, totalCells}`, then `{type:'done', requestId, results}` (typed array buffers are transferred) or `{type:'error', requestId, message}`.
   - the same worker also answers the W2 map's `{type:'fractions', requestId, cells, ephemeris, firstHour, hourCount}` with `{type:'done', requestId, results: {fractionSun, fractionEarth}}` (Float32Array per cell, buffers transferred; no progress messages). `startWindowSearch.js` exports `startVisibilityFractions` next to `startWindowSearch`.
+- **Best windows:** the worker only returns `WindowResults`; `App.jsx` ranks them on the main thread (about 13 ms for 906 cells × 728 landings).
+  - a window is a run of consecutive landing times (6 h step) of one cell whose status is not `fail` (pass or marginal); `slipHours = 6 × (last − first)`, so 0 for a single time;
+  - the best landing inside a window and the best window of a cell use the default order (pass, higher lowest battery, higher % Sun and Earth, nearer, shorter comm loss, shorter dark), then the longer window; cells that never pass are left out;
+  - `rankBestWindows` rows are `metricsAt` of the best landing + `{rank, windowStartTime, windowEndTime, slipHours}`; `landingTime` is the best landing.
 - **Speed:** region scope (about 225 cells × 730 landings × 144 h) in under 3 s on a laptop.
 
 ## Web UI modules (`web/src/components/`, one component per file)
@@ -498,12 +544,13 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
   - The real `/data/ephemeris.json` (D1) is loaded even in mock mode, so mock cells get real Sun and Earth positions; the mock ephemeris is only a fallback.
 - **State it holds:** `scenario`, `results`, `landingIndex`, `selectedCellId`, `mode` (`'simple'|'expert'`).
 - **Share link query keys:**
-  - `point` (`cell:MAL-r3c4` \| `site:apollo-11` \| `coords:-85.9,-1.2`), `start`, `end`, `stay`, `dark`, `comm`, `panel`, `battery`, `load`, `panelMode`, `scope`, `radius`, `landing`, `cell`, `mode`, `screen`;
+  - `point` (`cell:MAL-r3c4` \| `site:apollo-11` \| `coords:-85.9,-1.2`), `start`, `end`, `stay`, `dark`, `comm`, `panel`, `battery`, `load`, `panelMode`, `scope`, `radius`, `dsn` (`1` = DSN check on; absent = off), `landing`, `cell`, `mode`, `screen`;
   - missing keys take `DEFAULT_SCENARIO` values;
   - a link opened on the Results screen (`screen=results`) with a current point runs the search on open;
   - untrusted values in the link (empty, not a number, unknown option, malformed point) fall back to the defaults.
 - **Keyboard path to the map:** a Cell list next to the Region list selects any cell without a mouse.
-- **Search:** before starting the worker, load the cells of every region the search needs (all regions for `radius` and `all`).
+- **Search:** before starting the worker, load what the search needs (`capSearch.js`): the regions touching the circle (`radius`; all regions while the point's position is unknown, and for `all`) and the CAP tiles the circle touches (`radius`), or within 15 km of a point outside the regions (`region`). The point's own CAP tile is always loaded, so a typed point on the cap gets the real horizon of its 2 km cell. The worker and the ranking are unchanged: CAP cells have the cell schema.
+- **CAP on the map (D9):** `SouthPoleMap` draws the loaded CAP cells as one 152 × 152 px raster (`MapCapLayer.jsx`, one pixel per 2 km cell, `image-rendering: pixelated`) coloured by the active layer, or by the search result; region cells keep their 1 km rects on top. Click and hover work as for a cell. Wide screens (≥ 768 px) load all tiles in the background after the first paint; phones load the tiles in view once zoomed in. The form's cell field and the map find box accept `CAP-r075c112`; a point (site or coordinates) outside the regions and inside a CAP cell uses that cell's horizon and shows "2 km cap grid". Without `cap/index.json` (mock data) none of this appears.
 - **About screen:** known limitations (window-finder.md §7), data sources and AI usage.
 - **Done when:** `shareLink.test.js` passes; the mock flow map → form → results → detail works; `npm run build` passes.
 
@@ -522,6 +569,10 @@ Files: `SouthPoleMap.jsx` (+ `MapCells.jsx`, `MapMarks.jsx`, `MapLegend.jsx`, `M
   - square cells 1 km wide;
   - one SVG in PGDA metres, viewBox ±304 km, SVG y = −yM; pan and zoom with d3-zoom 3.0.0, the only map library. Every d3 package, globe.gl's included, is pinned with `overrides` in `web/package.json`;
   - the wheel zooms only once the map has focus (click it) or with Ctrl/⌘, so page scrolling is never captured; region frames take clicks at the overview only.
+- **Relief and overlays:**
+  - the Relief layer is the tile pyramid above (`MapReliefTiles.jsx`, tile choice in `core/mapTiles.js`): the level follows the screen metres per pixel, only tiles in view load (≤ 30 `<image>`s), and the next coarser level stays under them so nothing blanks while tiles load. Without `relief/index.json` the old single hillshade image is used;
+  - at the overview the NASA layers (% sunlight, % Earth, permanent shadow, slope classes) are the whole-pole `south_pole` images; inside a region they are that region's images (slope: the whole-pole image);
+  - cell fills are 65 % opaque so the relief shows through.
 - **Colours:**
   - before Submit: feasible cells blue, infeasible cells grey (the tooltip gives the reason);
   - after Submit: green pass, yellow marginal, red fail, grey infeasible.
@@ -553,7 +604,7 @@ Files: `ScenarioForm.jsx`, `core/scenario.js`.
 
 **Logic (pure, tested):** `currentPointSentence(summary, scenario)` in `core/format.js` turns `summarizeCurrentPoint` into the card's plain-English verdict (full wording in its JSDoc). The map colours come from `results.status[cellIndex × landingCount + landingIndex]`.
 
-Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestPairsTable.jsx`.
+Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `CurrentPointStrip.jsx`, `BestWindowsTable.jsx`.
 
 - **`LandingTimeSlider`** `{landingTimes, value, onChange(index)}`: steps of 6 h, its own Play/Pause (one step every 300 ms), shows the UTC time.
 - **`RankingTable`** `{rows, sortBy, direction, onSort(key), onSelectRow(row), currentCellId, mode}`:
@@ -562,7 +613,7 @@ Files: `LandingTimeSlider.jsx`, `RankingTable.jsx`, `CurrentPointCard.jsx`, `Cur
   - the first click on a heading sorts better-first, the next click reverses (`aria-sort` set); "Back to the default order" resets.
 - **`CurrentPointCard`** `{summary, scenario, onSelectLanding(index), onOpenCell(cellId)}`: the `currentPointSentence` verdict, plus buttons "Details of my point", "Go to <nearest passing time>" and "Open <nearest passing cell>".
 - **`CurrentPointStrip`** `{statuses, value, onSelectLanding(index)}`: SVG strip of cell 0 over all landing times (`results.status.subarray(0, landingCount)`), consecutive equal statuses drawn as one rectangle; click jumps.
-- **`BestPairsTable`** `{rows, onSelectRow(row)}`: the output of `rankBestPairs`.
+- **`BestWindowsTable`** `{rows, onSelectRow(row)}`: the output of `rankBestWindows`; a row click opens the cell at `row.landingTime`.
 - **Map:** the Results screen reuses `SouthPoleMap` with `statusByCellId` at the selected landing time (✓ ! ✕ symbols).
 - **While the worker runs:** a progress bar fed by `onProgress`.
 - **Done when:** dragging the slider updates the map colours and the table in under 100 ms for region scope.
@@ -597,13 +648,16 @@ Files: `DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.
 
 File: `MoonGlobe.jsx`.
 
-- **Props:** `{sites, regions, selectedSiteId, sunDirection, earthDirection, onSelectSite(site), onOpenSouthPoleMap()}`. `sunDirection` and `earthDirection` are `{azimuthDeg, elevationDeg}` or `null`.
+- **Props:** `{sites, regions, ephemeris, hour, selectedSiteId, onSelectSite(site), onOpenRegion(code)}`. `hour` is an ephemeris hour index (App passes the map's current hour, else hour 0). The card for the Sun and Earth is computed inside from `bodyDirections` (`core/mapSky.js`).
 - **Content:**
-  - texture `/textures/lroc_color_2k.jpg` (NASA SVS 4720);
-  - pins for the sites and the 9 regions;
-  - arrows toward the Sun and Earth from the selected site.
-- **Interaction:** a click at lat < −80° opens the map screen.
-- **Lifecycle:** keep `new Globe(container)`, the `_destructor()` cleanup and stable callbacks.
+  - texture `/textures/lroc_color_4k.jpg` (`lroc_color_2k.jpg` below 768 px) plus the LOLA elevation `/textures/ldem_bump_1440.png` as `bumpImageUrl` (NASA SVS 4720);
+  - real light: a directional light at the sub-solar point of `hour` plus a dim ambient light, so the terminator is real; the text "Sunlight at <UTC time>" states the time;
+  - HTML pins for the sites (small, coloured by group, hover title with name, group, lat/lon), the selected site named and highlighted, a colour legend, rings on the 9 Artemis III regions;
+  - labelled markers at the sub-solar and sub-Earth points (`core/globeSky.js` `subBodyPoints`, ephemeris columns of C0) and ground-track arcs from the selected site to each (Sun `#e69f00`, Earth `#56b4e9`);
+  - a card with azimuth, elevation and in view / hidden for the Sun and Earth ("terrain not included" for sites without a horizon);
+  - camera buttons South pole (default view), Near side, Far side.
+- **Interaction:** a click on a region centre site or inside its ring (`regionAtPoint`, 2.5°) calls `onOpenRegion(code)` and App opens the 2D map with that region; a click on any other site selects it as the current point.
+- **Lifecycle:** keep `new Globe(container)`, the `_destructor()` cleanup, the `ResizeObserver` and stable callbacks (kept in a ref).
 
 ### W7 Learn mode
 
@@ -719,7 +773,7 @@ File: `build_site_data.py`.
 
 File: `pipeline/sites.json`.
 
-- **Task:** fill `lat/lon` for the 13 entries marked `"source": "TODO"`:
+- **Status (15/11):** 24 of 25 entries have coordinates. Only IM-3 is still TODO (no official measured position found). The list below was the original work list:
   - Apollo 12, 14 and 16;
   - IM-1, IM-2, IM-3 and Blue Ghost 1;
   - Chang'e 3–6, Chandrayaan-3 and SLIM.
@@ -731,29 +785,63 @@ File: `pipeline/sites.json`.
 
 ### D7 Validation
 
-File: `validate.py`.
+Files: `compute_our_visibility.mjs` and `validate.py`. Re-run in this order (about 6 s for the node script, then a few seconds of raster reads):
+
+```bash
+node pipeline/compute_our_visibility.mjs   # -> pipeline/out/our_visibility.json
+python pipeline/validate.py                # -> web/public/data/validation.json, prints the statistics
+```
 
 - **Input:**
-  - PGDA 69 `AVGVISIB_85S_060M_201608*.TIF`: pixel × 4e-05 = fraction of time visible, an 18.6-year average;
-  - `pipeline/out/our_visibility.json`, written by a small node script that imports `sunlight.js` and `communication.js` and runs over the whole ephemeris.
-- **Output:** `validation.json`.
+  - PGDA 69 `AVGVISIB_85S_060M_201608*.TIF`: int16, pixel × 4e-05, nodata −32768, 60 m, ±151,740 m square, an hourly 18.6-year (nutation cycle) average. NASA's page says the Earth counts as visible if any part of its disc is unobscured; the products are "average illumination", not a share of hours with at least half a disc;
+  - `pipeline/out/our_visibility.json`: the node script imports `sunlight.js`, `communication.js` and `timeSeries.js`, takes 30 evenly spaced cells per region (MAL, HAW, MMO, NR1, DGR, SLP, NR2, MMP; only cells whose 1 km square lies inside the PGDA square) and runs the whole ephemeris (2027-01 → 2029-01, hourly). Per body it stores three readings: `halfDisk` (share of hours with diskFraction ≥ 0.5, the app's rule), `anyPart` (share with diskFraction > 0) and `meanDisk` (mean disk fraction).
+- **Matching:** the PGDA value of a cell is the mean of the 60 m pixels whose centre lies inside the 1 km square around `xM, yM` (cells with under half valid pixels are dropped). The centre-pixel value is kept as `pgda*CentreFraction`.
+- **Output:** `validation.json` gets `pgda69` (one row per cell) and `pgda69Stats` (per region and `ALL`, for Sun and Earth and each reading: `n, meanOurs, meanPgda, meanDifference` = ours − NASA, `rmse, pearsonR`). The About screen shows the `halfDisk` reading.
 - **Rules:**
-  - PGDA 69 covers 85–90°S only, so CAB, MMP and NR2 have no PGDA value;
-  - expect the same trend, not equality (2 years against 18.6 years).
+  - PGDA 69 covers 85–90°S only: CAB has no value, MMP and NR2 only in the covered part;
+  - expect the same pattern, not equal means: PGDA 69 is an 18.6-year average with its own disk and height assumptions, ours is 2027–2028;
+  - nothing is tuned: the numbers are reported as computed.
 - **Done when:**
   - `validation.json` is written;
   - the comparison is shown on the About screen and in the README;
-  - one QuickMap "Compute Visibility" screenshot is saved for the slides.
+  - one QuickMap "Compute Visibility" screenshot is saved for the slides (**not done yet**, `quickmap` is still empty).
 
 ### D8 Map background
 
 File: `export_map_background.py`.
 
 - **Input:** the hillshade `LDEM_80S_80MPP_ADJ_HILL.TIF`, the PGDA 69 Sun and Earth visibility rasters (`AVGVISIB_85S_060M_201608.TIF`, `…_EARTH.TIF`), the PGDA 90 permanent-shadow raster `LPSR_80S_20MPP_ADJ.TIF` and `regions.json`.
-- **Output:** `web/public/maps/south_pole.png`, `<CODE>.png`, `<CODE>_sun.png`, `<CODE>_earth.png`, `<CODE>_psr.png` and `maps.json` (35 entries today).
+- **Output:** `web/public/maps/south_pole.png`, `<CODE>.png`, `<CODE>_sun.png`, `<CODE>_earth.png`, `<CODE>_psr.png`, the whole-pole `south_pole_sun.png`, `_earth.png`, `_psr.png`, `_slope.png` and `maps.json` (39 entries); relief tiles come from `export_relief_tiles.py` (see `relief/index.json`).
 - **Rules:**
   - write the PNGs with rasterio (GDAL PNG driver), no new library;
   - each image is ≤ 1 MB.
+
+### D9 — Whole-cap 2 km grid (CAP)
+
+File: `build_cap_grid.py` (tests: `test_build_cap_grid.py`; checker: `check_cap` in `check_web_data.py`). The web app reads it through `loadCapIndex` / `loadCapTiles` (`data.js`) and the helpers in `capGrid.js` (W1/W2/C5).
+
+- **Grid:** square 2000 m cells in `PGDA_CRS`; centres at `x = (i + 0.5) × 2000`, `y = (j + 0.5) × 2000`. A cell is kept when its centre is at or south of 85°S (projected distance from the pole ≤ that of 85°S, 151.7 km).
+- **Exclusion:** a cell is dropped when its centre lies inside the `boundsM` of any of the 9 regions in `regions.json` (they already have 1 km LGRS cells). `excludedRegionCodes` in `index.json` lists them.
+- **Id:** `CAP-r<row>c<col>`, `row = j − jMin`, `col = i − iMin` (minimum over the kept cells), each zero-padded to 3 digits; `label` is the part after `CAP-`.
+- **Cell:** exactly the `cells_<CODE>.json` cell (`id, label, lat, lon, xM, yM, heightM, slopeDeg, psrFraction, feasible, infeasibleReason, horizon`). Feasibility is D3 on the 2 km square (slope median from `LDSM` 80 m, PSR share from `LPSR` 20 m, same limits and reasons). Horizon is D4 with its defaults (360 rays, 100 m to 150 km, 2 m mast, near DEM 80 m, far DEM 240 m). Cells are assembled by D5's `build_cell`.
+- **Files:**
+  - `pipeline/out/grid_CAP.json` (list), `feasibility_CAP.json` and `horizon_CAP.json` (objects keyed by id), same shapes as the region files;
+  - `web/public/data/cap/index.json` = `{cellSizeM: 2000, tileSizeM: 40000, southOfLatDeg: -85, excludedRegionCodes, cellCount, feasibleCount, tiles: [{id: "cap_<tx>_<ty>", boundsM: [xMin, yMin, xMax, yMax], cellCount, feasibleCount}]}`;
+  - `web/public/data/cap/cap_<tx>_<ty>.json` = `{tileId, cells: [...]}`; tiles are 40 km squares aligned to multiples of 40000 m (`tx = floor(xM / 40000)`, can be negative), only non-empty tiles are written, each < 2 MB.
+- **Re-run:** `python pipeline/build_cap_grid.py` (needs the raw rasters; horizons use all CPU cores, `--jobs N` to limit; `--limit 200` is a dry timing run that writes nothing), then `python pipeline/check_web_data.py`. The checker runs `check_cap` only when `cap/index.json` exists.
+
+### D10 Terrain meshes
+
+File: `export_terrain_mesh.py` (3D view of an open region, `TerrainView3D.jsx`).
+
+- **Input:** `LDEM_80S_80MPP_ADJ.TIF` (optional path argument) and `regions.json`.
+- **Output:** `web/public/terrain/<CODE>.bin` for the 9 regions and `web/public/terrain/index.json` = `{"regions": [{"code", "boundsM", "width", "height", "file", "metresPerSample", "minHeightM", "maxHeightM", "curvatureRemoved": true}]}`.
+- **Rules:**
+  - window = region `boundsM` + 8 km on each side, resampled (average) to at most 320 samples on the longer side;
+  - `.bin` = little-endian Int16 metres, row-major, row 0 = north edge, column 0 = west edge, size `width × height × 2` bytes (≤ 300 KB);
+  - the Moon's curvature relative to the window centre is already subtracted: `height = DEM − d²/(2R)`, R = 1737.4 km;
+  - `boundsM` = image edges in `PGDA_CRS`, containing the region; `check_web_data.py` checks files, sizes and bounds.
+- **Browser:** scene axes x = PGDA x, y = up, z = −PGDA y; Sun direction from `sunLightDirection(azimuthDeg, elevationDeg, lonDeg)` in `core/terrainLight.js` (map angle = azimuth + longitude, README D4).
 
 ## Site coordinates
 
@@ -785,6 +873,18 @@ Vercel, static site:
 
 - set **Root Directory = `web`**, framework preset Vite (`npm run build`, output `dist`);
 - the final link must open in a private window without login.
+
+Optional mission chat adds a Node Vercel Function at `POST /api/mission-chat`. The chat box is shown only when the build-time flag `VITE_CHAT_UI=true` is set (non-secret, off by default; set it in the Vite or Vercel build environment); the server keys stay disabled unless `AI_CHAT_ENABLED` and the keys are set.
+It prepares a validated partial Scenario draft; review and Apply are required,
+then the existing form submits to the browser worker. Request fields:
+`{requestId, message, history: [{role, content}], scenario}`. Response:
+`{message, questions, patch, scenario, errors, canApply}`. Quantities from the
+model use `{value, unit}` and are converted to the existing Scenario units in code.
+The model examines all fields; `null` means keep the current value. Missing or
+ambiguous details block Apply until clarified. Live verification cases and
+remaining limits are recorded in [mission chat evaluation](docs/mission-chat-evaluation.md).
+No scientific data contract changes. Configuration, privacy, quotas and the
+Hobby owner deployment workflow: [mission chat setup](docs/mission-chat-setup.md).
 
 ## Claude Code (optional)
 

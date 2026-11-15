@@ -289,7 +289,7 @@ góc = atan2( h_mẫu − h_ô − cột − d² / (2R), d )
 - Chân trời tính tại tâm ô 1 km với DEM 80 m, không thấy đá tảng hay gờ nhỏ.
 - Site ngoài vùng phủ DEM chỉ có chân trời mặt cầu.
 - Mô hình pin đơn giản: tải không đổi, chưa tính nhiệt độ và suy giảm hiệu suất.
-- "Thấy Trái Đất" chưa xét trạm mặt đất có đang thấy Mặt Trăng hay không.
+- "Thấy Trái Đất" đã xét khả năng liên lạc thực tế tới mạng lưới 3 trạm mặt đất NASA Deep Space Network (DSN: Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43 với dữ liệu góc cao từ JPL Horizons API, yêu cầu góc cao Mặt Trăng ≥ 10°).
 - Không phải công cụ chính thức của NASA.
 
 ## 8. Kế hoạch làm

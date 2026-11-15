@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { loadValidation } from '../core/data.js'
 import { useI18n } from '../i18n/index.jsx'
 
 const LIMITATIONS = [
@@ -6,7 +8,6 @@ const LIMITATIONS = [
   'The terrain horizon is computed at the centre of each 1 km cell from 80 m LOLA terrain, so boulders and small ridges are not seen.',
   'Sites outside the terrain model use a smooth-sphere horizon ("terrain not included").',
   'The battery model is simple: constant load, no temperature effects, no panel or battery ageing.',
-  '"Earth visible" does not check whether a ground station on Earth can see the Moon at that time.',
   'This is a hackathon project, not an official NASA tool.',
 ]
 
@@ -18,8 +19,71 @@ const SOURCES = [
   ['NASA SVS 4720', 'Moon colour texture for the globe.'],
 ]
 
+const percent = (fraction) => (fraction * 100).toFixed(1)
+const signedPoints = (fraction) => `${fraction >= 0 ? '+' : '−'}${Math.abs(fraction * 100).toFixed(1)}`
+
+// Horizons check and the PGDA 69 comparison from validation.json (written by pipeline/validate.py).
+function ValidationDetails({ validation, t }) {
+  const { horizons, pgda69Stats: stats = [] } = validation
+  const overall = stats.find((entry) => entry.region === 'ALL')
+  const headerCell = 'px-2 py-1 text-right font-medium text-slate-100'
+  return (
+    <div className="space-y-3">
+      <p>{t('about.horizonsCheck', { azimuth: horizons.maxAzimuthErrorDeg, elevation: horizons.maxElevationErrorDeg, count: horizons.pointCount })}</p>
+      {overall && (
+        <>
+          <p>{t('about.pgdaMethod', { cells: overall.sun.halfDisk.n })}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[34rem] border-collapse text-xs tabular-nums">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th rowSpan={2} className="px-2 py-1 text-left font-medium text-slate-100">{t('about.tableRegion')}</th>
+                  <th rowSpan={2} className={headerCell}>{t('about.tableCells')}</th>
+                  <th colSpan={4} className={headerCell}>{t('about.tableSun')}</th>
+                  <th colSpan={4} className={headerCell}>{t('about.tableEarth')}</th>
+                </tr>
+                <tr className="border-b border-slate-700">
+                  {['Sun', 'Earth'].flatMap((body) => [t('about.tableOurs'), t('about.tableNasa'), t('about.tableRmse'), 'r'].map((label) => (
+                    <th key={body + label} className={headerCell}>{label}</th>
+                  )))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...stats.slice(-1), ...stats.slice(0, -1)].map(({ region, sun, earth }) => (
+                  <tr key={region} className={`border-b border-slate-800 ${region === 'ALL' ? 'font-semibold text-slate-100' : ''}`}>
+                    <td className="px-2 py-1">{region === 'ALL' ? t('about.tableAll') : region}</td>
+                    <td className="px-2 py-1 text-right">{sun.halfDisk.n}</td>
+                    {[sun.halfDisk, earth.halfDisk].flatMap((row, index) => [
+                      percent(row.meanOurs), percent(row.meanPgda), percent(row.rmse), row.pearsonR.toFixed(3),
+                    ].map((value, column) => <td key={`${index}-${column}`} className="px-2 py-1 text-right">{value}</td>))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p>
+            {t('about.pgdaReading', {
+              sunR: overall.sun.halfDisk.pearsonR.toFixed(2),
+              earthR: overall.earth.halfDisk.pearsonR.toFixed(2),
+              sunDiff: signedPoints(overall.sun.halfDisk.meanDifference),
+              earthDiff: signedPoints(overall.earth.halfDisk.meanDifference),
+              sunAny: percent(overall.sun.anyPart.meanOurs),
+              earthAny: percent(overall.earth.anyPart.meanOurs),
+            })}
+          </p>
+        </>
+      )}
+      <p>{t('about.libration')}</p>
+    </div>
+  )
+}
+
 export default function AboutView() {
   const { t } = useI18n()
+  const [validation, setValidation] = useState(null)
+  useEffect(() => {
+    loadValidation(false).then(setValidation).catch(() => setValidation(null))
+  }, [])
   return (
     <article className="max-w-3xl space-y-6 text-sm leading-relaxed text-slate-300">
       <section>
@@ -40,15 +104,15 @@ export default function AboutView() {
               <dd className="inline">{use}</dd>
             </div>
           ))}
+          <div>
+            <dt className="inline font-medium text-slate-100">NASA DSN handbook 810-005: </dt>
+            <dd className="inline">{t('about.sourceDsn')}</dd>
+          </div>
         </dl>
       </section>
       <section>
         <h2 className="mb-2 text-base font-semibold text-slate-100">{t('about.validationTitle')}</h2>
-        <p>
-          Sun and Earth directions computed in your browser match JPL Horizons topocentric positions within 0.015° in azimuth
-          and 0.010° in elevation (30 checks at Malapert Massif, Haworth and Apollo 11). Comparison with NASA PGDA average
-          visibility maps will be added here.
-        </p>
+        {validation ? <ValidationDetails validation={validation} t={t} /> : <p>{t('about.pgdaUnavailable')}</p>}
       </section>
       <section>
         <h2 className="mb-2 text-base font-semibold text-slate-100">{t('about.limitationsTitle')}</h2>
@@ -56,6 +120,8 @@ export default function AboutView() {
           {LIMITATIONS.map((limitation) => (
             <li key={limitation}>{limitation}</li>
           ))}
+          <li>{t('about.limitationDsn')}</li>
+          <li>{t('about.limitationQuickmap')}</li>
         </ul>
       </section>
       <section>

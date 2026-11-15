@@ -1,6 +1,8 @@
 // W7 learn mode (README "W7 Learn mode"): plain-English explanations for teachers and the public.
-import { explainDifference, findMostDifferentNeighbors } from './explain.js'
-import { formatDuration } from './format.js'
+import { hourIndexOf } from './data.js'
+import { differenceReason, explainDifference, findMostDifferentNeighbors } from './explain.js'
+import { cellDisplayName, formatDuration } from './format.js'
+import { computeSunTrack } from './sunlight.js'
 
 const percent = (fraction) => `${Math.round(fraction * 100)} %`
 const RESULT_WORDS = { pass: 'Meets all limits', marginal: 'Meets limits, battery low', fail: 'Fails a limit' }
@@ -82,12 +84,25 @@ export function metricSentences(metrics) {
   ]
 }
 
+const MIN_USEFUL_IMPROVEMENT_HOURS = 12
+const darkPeriodWords = (hours) => (hours === 0 ? 'no dark period' : `a ${Math.round(hours)} h dark period`)
+
 /**
- * "Why moving 1 km matters": the neighbouring pair whose longest dark period differs most, darker cell first.
- * @returns {{darkerCell, lighterCell, darkerHours, lighterHours, distanceKm, sentence}|null}
+ * "Why moving 1 km matters": a neighbouring pair (within 1.5 km) whose longest dark period differs at this landing time.
+ * Prefers a pair that contains the current point (results cell 0); otherwise the most different pair in the region,
+ * and the sentence then says "Elsewhere in this region". The numbers are the search results Results shows;
+ * the reason compares the two horizons at the Sun's azimuth over the stay from that landing time.
+ * @param {{ephemeris: object, scenario: object}} context  ephemeris and the scenario of the search
+ * @returns {{scope: 'current'|'elsewhere', darkerCell, lighterCell, darkerHours, lighterHours, distanceKm, sentence}|null}
  */
-export function neighborLesson(results, cellsById, landingIndex) {
-  const pair = findMostDifferentNeighbors(results, cellsById, landingIndex)
+export function neighborLesson(results, cellsById, landingIndex, { ephemeris, scenario }) {
+  const currentId = results.cellIds[0]
+  // A neighbour that cuts the dark period noticeably is what a planner wants; otherwise the biggest difference.
+  const better = findMostDifferentNeighbors(results, cellsById, landingIndex, 1.5, currentId, true)
+  const worthMoving = better && Math.abs(better.longestDarkHoursA - better.longestDarkHoursB) >= MIN_USEFUL_IMPROVEMENT_HOURS
+  const currentPair = worthMoving ? better : findMostDifferentNeighbors(results, cellsById, landingIndex, 1.5, currentId)
+  const scope = currentPair && currentPair.longestDarkHoursA !== currentPair.longestDarkHoursB ? 'current' : 'elsewhere'
+  const pair = scope === 'current' ? currentPair : findMostDifferentNeighbors(results, cellsById, landingIndex)
   if (!pair || pair.longestDarkHoursA === pair.longestDarkHoursB) return null
   const cellOf = (id) => (cellsById instanceof Map ? cellsById.get(id) : cellsById[id])
   const aIsDarker = pair.longestDarkHoursA > pair.longestDarkHoursB
@@ -95,10 +110,25 @@ export function neighborLesson(results, cellsById, landingIndex) {
   const [darkerHours, lighterHours] = aIsDarker
     ? [pair.longestDarkHoursA, pair.longestDarkHoursB]
     : [pair.longestDarkHoursB, pair.longestDarkHoursA]
-  return {
-    darkerCell, lighterCell, darkerHours, lighterHours, distanceKm: pair.distanceKm,
-    sentence: explainDifference(darkerCell, lighterCell, { longestDarkHours: darkerHours }, { longestDarkHours: lighterHours }),
+
+  const landingHour = hourIndexOf(ephemeris, results.landingTimes[landingIndex])
+  const lengthHours = Math.min(scenario.stayDays * 24, ephemeris.hours - landingHour)
+  const windowOf = (cell, longestDarkHours) => ({
+    cell, metrics: { longestDarkHours }, startIndex: 0, lengthHours,
+    sunTrack: computeSunTrack(cell, ephemeris, landingHour, lengthHours, scenario.panelMode),
+  })
+  const darker = windowOf(darkerCell, darkerHours)
+  const lighter = windowOf(lighterCell, lighterHours)
+
+  let sentence
+  if (scope === 'current') {
+    const [from, to] = darkerCell.id === results.cellIds[0] ? [darker, lighter] : [lighter, darker]
+    const moving = explainDifference(from, to)
+    sentence = `From your current point ${cellDisplayName(from.cell)}: ${moving[0].toLowerCase()}${moving.slice(1)}`
+  } else {
+    sentence = `Elsewhere in this region, ${cellDisplayName(darkerCell)} and ${cellDisplayName(lighterCell)} are ${pair.distanceKm.toFixed(1)} km apart, yet ${cellDisplayName(darkerCell)} has ${darkPeriodWords(darkerHours)} and ${cellDisplayName(lighterCell)} has ${darkPeriodWords(lighterHours)}${differenceReason(lighter, darker, `at ${cellDisplayName(darkerCell)}`)}`
   }
+  return { scope, darkerCell, lighterCell, darkerHours, lighterHours, distanceKm: pair.distanceKm, sentence }
 }
 
 const sunHeightWords = (sunHeight) => (sunHeight >= 0

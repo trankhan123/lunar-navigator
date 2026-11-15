@@ -1,20 +1,25 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AboutView from './components/AboutView.jsx'
-import BestPairsTable from './components/BestPairsTable.jsx'
+import BestWindowsTable from './components/BestWindowsTable.jsx'
 import CellPopup from './components/CellPopup.jsx'
 import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
 import LandingTimeSlider from './components/LandingTimeSlider.jsx'
 import LanguageSwitcher from './components/LanguageSwitcher.jsx'
 import MapTimeBar from './components/MapTimeBar.jsx'
+import MissionChat from './components/MissionChat.jsx'
 import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
-import { hourIndexOf, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
+import { capTileIdsInBounds } from './core/capGrid.js'
+import { capTileIdsForSearch, pointRegionCode, regionCodesForSearch, searchAnchor } from './core/capSearch.js'
+import { detailCellFor, hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell } from './core/data.js'
+import { cellDisplayName } from './core/format.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
-import { rankBestPairs, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
+import { isCellOnPolarMap } from './core/mapView.js'
+import { CAP_REGION_SEARCH_KM, rankBestWindows, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
 import { validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
 import { startWindowSearch } from './core/startWindowSearch.js'
@@ -45,31 +50,23 @@ async function loadAllData() {
   const useMock = regionsFile === null
   if (useMock) regionsFile = await loadRegions(true)
   // The real ephemeris (D1) exists already, so even mock cells get real Sun and Earth positions.
-  const [ephemeris, sitesFile, maps] = await Promise.all([
+  const [ephemeris, sitesFile, maps, capIndex] = await Promise.all([
     loadEphemeris(false).catch(() => loadEphemeris(true)),
     loadSites(useMock),
     useMock ? [] : loadMaps(),
+    useMock ? null : loadCapIndex(), // README D9; null = no cap grid, everything works as before
   ])
-  return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites, maps }
+  return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites, maps, capIndex }
 }
 
-/** Regions whose cells the search needs: all of them for radius/all scopes, else the current point's region. */
-function regionCodesForSearch(scenario, regions, sites) {
-  if (scenario.searchScope !== 'region') return regions.map((region) => region.code)
-  const point = scenario.currentPoint
-  if (point.type === 'cell') return [point.cellId.split('-')[0]]
-  if (point.type === 'site') return [sites.find((site) => site.id === point.siteId)?.region].filter(Boolean)
-  const { xM, yM } = toPolarXY(point.lat, point.lon)
-  return regions
-    .filter(({ boundsM: [x0, y0, x1, y1] }) => xM !== null && xM >= x0 && xM <= x1 && yM >= y0 && yM <= y1)
-    .map((region) => region.code)
-}
+const CAP_BATCH_SIZE = 10 // tiles per batch of the background load, so the map fills in steps
 
 export default function App() {
   const { t } = useI18n()
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [cellsByRegion, setCellsByRegion] = useState({})
+  const [capTiles, setCapTiles] = useState({}) // README D9: tile id → cells, filled as tiles load
   const [regionCode, setRegionCode] = useState(initialCellId?.split('-')[0] ?? null)
   const [screen, setScreen] = useState(SCREENS.some(([id]) => id === initialState.screen) ? initialState.screen : 'map')
   const [mode, setMode] = useState(initialState.mode)
@@ -81,6 +78,7 @@ export default function App() {
   const focusRequests = useRef(0)
   const [search, setSearch] = useState({ status: 'idle' })
   const [ranking, setRanking] = useState({ sortBy: undefined, direction: undefined })
+  const requestedCapTiles = useRef(new Set())
   const cellRequests = useRef(new Map()) // region code → pending or finished request, so each file is fetched once
   const latestSearch = useRef(0)
   const cancelSearch = useRef(null)
@@ -109,6 +107,45 @@ export default function App() {
     },
     [data],
   )
+
+  const capCells = useMemo(() => Object.values(capTiles).flat(), [capTiles])
+  // Loads CAP tiles not requested yet; resolves with the cells of all the asked tiles.
+  const needCapTiles = useCallback(async (tileIds, { failLoudly = false } = {}) => {
+    const fresh = tileIds.filter((tileId) => !requestedCapTiles.current.has(tileId))
+    fresh.forEach((tileId) => requestedCapTiles.current.add(tileId))
+    try {
+      const lists = await loadCapTiles(tileIds)
+      if (fresh.length > 0) setCapTiles((loaded) => ({ ...loaded, ...Object.fromEntries(tileIds.map((tileId, index) => [tileId, lists[index]])) }))
+      return lists.flat()
+    } catch (error) {
+      fresh.forEach((tileId) => requestedCapTiles.current.delete(tileId)) // allow a retry
+      if (failLoudly) throw error // a search must not run on a partial cap
+      setLoadError(error.message)
+      return []
+    }
+  }, [])
+  // Wide screens load the whole cap grid in the background after the first paint; phones load tiles as the map zooms in (MapCapLayer).
+  useEffect(() => {
+    if (!data?.capIndex || !window.matchMedia('(min-width: 768px)').matches) return
+    const tileIds = data.capIndex.tiles.map((tile) => tile.id)
+    let isStopped = false
+    const timer = setTimeout(async () => {
+      for (let first = 0; first < tileIds.length && !isStopped; first += CAP_BATCH_SIZE) await needCapTiles(tileIds.slice(first, first + CAP_BATCH_SIZE))
+    }, 300)
+    return () => {
+      isStopped = true
+      clearTimeout(timer)
+    }
+  }, [data, needCapTiles])
+  // A form point on the cap needs its own tile (a CAP cell id, or the real horizon of a typed point).
+  useEffect(() => {
+    const point = scenario.currentPoint
+    if (!data?.capIndex || !point) return
+    const anchor = searchAnchor(point, data.sites, {})
+    // Loads a file for the form's point: syncing with an external resource, setState happens when it arrives.
+    // eslint-disable-next-line react/set-state-in-effect
+    if (anchor) needCapTiles(capTileIdsInBounds(data.capIndex, [anchor.xM, anchor.yM, anchor.xM, anchor.yM]))
+  }, [data, scenario.currentPoint, needCapTiles])
 
   // null = the south-pole overview (README W2); a link with a cell opens that cell's region.
   const activeRegion = data?.regions.find((region) => region.code === regionCode) ?? null
@@ -144,20 +181,38 @@ export default function App() {
     setScreen('results')
     setSearch({ status: 'running', doneCells: 0, totalCells: 0 })
     try {
-      const codes = regionCodesForSearch(searchScenario, data.regions, data.sites)
+      const point = searchScenario.currentPoint
+      // An LGRS cell point is read first: a radius search needs to know where it is.
+      const pointRegion = point.type === 'cell' ? data.regions.find((region) => region.code === point.cellId.split('-')[0]) : null
+      const pointLoaded = pointRegion ? { [pointRegion.code]: await loadRegionCells(pointRegion) } : {}
+      const anchor = searchAnchor(point, data.sites, { ...cellsByRegion, ...pointLoaded })
+      // The point's own region, from the point and region bounds: loaded before anything is resolved, so loading order never changes a search.
+      const ownRegionCode = pointRegionCode(point, data.regions, data.sites, anchor)
+      const codes = regionCodesForSearch(searchScenario, data.regions, data.sites, anchor)
       const neededRegions = data.regions.filter((region) => codes.includes(region.code))
       const loadedLists = await Promise.all(neededRegions.map(async (region) => [region.code, await loadRegionCells(region)]))
+      const ownRegionCells = Object.fromEntries(loadedLists)[ownRegionCode] ?? pointLoaded[ownRegionCode] ?? []
+      const isOnRegionCell = !!anchor && ownRegionCells.some((cell) => Math.hypot(cell.xM - anchor.xM, cell.yM - anchor.yM) <= 1000)
+      const searchCapCells = await needCapTiles(
+        [...new Set([...capTileIdsForSearch(searchScenario, data.capIndex, anchor, isOnRegionCell), ...(anchor && data.capIndex ? capTileIdsInBounds(data.capIndex, [anchor.xM, anchor.yM, anchor.xM, anchor.yM]) : [])])],
+        { failLoudly: true },
+      )
       if (!isLatest()) return
-      const loaded = { ...cellsByRegion, ...Object.fromEntries(loadedLists) }
-      const currentCell = resolveCurrentCell(searchScenario.currentPoint, loaded, data.sites)
-      const cells = selectSearchCells(searchScenario, currentCell, loaded)
+      const loaded = { ...cellsByRegion, ...pointLoaded, ...Object.fromEntries(loadedLists) }
+      const ordered = { ...(ownRegionCode && { [ownRegionCode]: loaded[ownRegionCode] }), ...loaded } // the point's region first: it wins duplicate positions
+      const currentCell = resolveCurrentCell(point, loaded, data.sites, searchCapCells)
+      const cells = selectSearchCells(searchScenario, currentCell, ordered, searchCapCells, ownRegionCode)
       // Open the searched region so the Results map shows its ✓ ! ✕ colours: the current point's own region, else the region of the
       // nearest searched grid cell (a site with no region, coordinates outside every frame); otherwise keep the open one.
-      const ownRegion = regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites)[0]
-      const searchedRegion = ownRegion ?? nearestRegionCode(currentCell, cells, data.regions)
+      const searchedRegion = ownRegionCode ?? nearestRegionCode(currentCell, cells, data.regions)
       if (searchedRegion) {
         setRegionCode(searchedRegion)
         setMapFocus(null)
+      } else if (anchor && cells.some((cell) => cell.id.startsWith('CAP-'))) {
+        // Only CAP cells were searched: show the overview, zoomed to the searched area.
+        const halfM = Math.max(searchScenario.searchScope === 'radius' ? searchScenario.searchRadiusKm : CAP_REGION_SEARCH_KM, 4) * 1200
+        setRegionCode(null)
+        setMapFocus({ boundsM: [anchor.xM - halfM, anchor.yM - halfM, anchor.xM + halfM, anchor.yM + halfM], requestId: ++focusRequests.current })
       }
       const { promise, cancel } = startWindowSearch({
         cells,
@@ -195,7 +250,7 @@ export default function App() {
     [results, landingIndex],
   )
   const rankedRows = useMemo(() => results && rankCells(results, landingIndex, { ...ranking, limit: 10 }), [results, landingIndex, ranking])
-  const bestPairs = useMemo(() => results && rankBestPairs(results, { limit: 10 }), [results])
+  const bestWindows = useMemo(() => results && rankBestWindows(results, { limit: 10 }), [results])
   const currentPointSummary = useMemo(() => results && summarizeCurrentPoint(results, landingIndex), [results, landingIndex])
 
   const selectCell = useCallback((cell) => setSelectedCellId(cell.id), [])
@@ -239,14 +294,22 @@ export default function App() {
     () => (search.status === 'done' ? mapHourRange(data.ephemeris, search.scenario.startDate, search.scenario.endDate) : null),
     [data, search],
   )
-  const cellsById = useMemo(() => new Map(Object.values(cellsByRegion).flat().map((cell) => [cell.id, cell])), [cellsByRegion])
+  // The point that was searched (not the form's live one), to name it and to decide whether the polar map and cell table apply.
+  const searchedPoint = useMemo(() => {
+    try {
+      return search.status === 'done' ? resolveCurrentCell(search.scenario.currentPoint, cellsByRegion, data.sites, capCells) : null
+    } catch {
+      return null
+    }
+  }, [data, search, cellsByRegion, capCells])
+  const cellsById = useMemo(() => new Map([...Object.values(cellsByRegion).flat(), ...capCells].map((cell) => [cell.id, cell])), [cellsByRegion, capCells])
   const currentCell = useMemo(() => {
     try {
-      return data ? resolveCurrentCell(scenario.currentPoint, cellsByRegion, data.sites) : null
+      return data ? resolveCurrentCell(scenario.currentPoint, cellsByRegion, data.sites, capCells) : null
     } catch {
       return null // no current point chosen yet, or its region is not loaded yet
     }
-  }, [data, scenario.currentPoint, cellsByRegion])
+  }, [data, scenario.currentPoint, cellsByRegion, capCells])
 
   // First click sorts a column better-first (README C5 "Sorting by column"), the next click reverses it.
   function sortRanking(key) {
@@ -262,8 +325,8 @@ export default function App() {
   }
 
   const cells = activeRegion ? (cellsByRegion[activeRegion.code] ?? null) : null
-  const selectedCell = cells?.find((cell) => cell.id === selectedCellId) ?? null
-  const detailCell = cellsById.get(selectedCellId) ?? (currentCell?.id === selectedCellId ? currentCell : null)
+  const selectedCell = cells?.find((cell) => cell.id === selectedCellId) ?? (selectedCellId?.startsWith('CAP-') ? (cellsById.get(selectedCellId) ?? null) : null)
+  const detailCell = detailCellFor(cellsById, selectedCellId, searchedPoint)
   const detailScenario = search.status === 'done' ? search.scenario : scenario
   const detailLandingTime = landingTime ?? `${detailScenario.startDate}T00:00Z`
   const currentCellId = scenario.currentPoint?.type === 'cell' ? scenario.currentPoint.cellId : null
@@ -294,6 +357,9 @@ export default function App() {
     focus: mapFocus,
     cellsByRegion,
     onNeedRegionCells: needRegionCells,
+    capIndex: data.capIndex,
+    capCells,
+    onNeedCapTiles: needCapTiles,
   }
 
   return (
@@ -381,6 +447,14 @@ export default function App() {
                     onClose={() => setSelectedCellId(null)}
                   />
                 )}
+                {import.meta.env.VITE_CHAT_UI === 'true' && <MissionChat
+                  value={scenario}
+                  sites={data.sites}
+                  ephemeris={data.ephemeris}
+                  busy={search.status === 'running'}
+                  useMock={data.useMock}
+                  onApply={(next) => { setScenario(next); setMode('expert') }}
+                />}
                 <ScenarioForm
                   mode={mode}
                   value={scenario}
@@ -415,11 +489,17 @@ export default function App() {
                   <CurrentPointCard
                     summary={currentPointSummary}
                     scenario={search.scenario}
+                    point={searchedPoint}
                     onSelectLanding={selectLanding}
                     onOpenCell={(cellId) => openDetail(cellId, results.landingTimes[landingIndex])}
                   />
                   <LandingTimeSlider landingTimes={results.landingTimes} value={landingIndex} onChange={selectLanding} />
                   <CurrentPointStrip statuses={results.status.subarray(0, results.landingCount)} value={landingIndex} onSelectLanding={selectLanding} />
+                  {searchedPoint && !isCellOnPolarMap(searchedPoint) ? (
+                    <p className="rounded border border-slate-700 p-3 text-slate-300">
+                      {t('currentPoint.searchedOnly')}
+                    </p>
+                  ) : (
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                     <div className="space-y-2">
                       {regionPicker}
@@ -431,6 +511,7 @@ export default function App() {
                           {t('results.defaultOrderReset')}
                         </button>
                       )}
+                      {search.scenario?.requireDsn && <p className="text-xs text-amber-300">{t('scenario.dsnActiveNote')}</p>}
                       <RankingTable
                         rows={rankedRows}
                         sortBy={ranking.sortBy}
@@ -438,11 +519,13 @@ export default function App() {
                         onSort={sortRanking}
                         onSelectRow={(row) => openDetail(row.cellId, row.landingTime)}
                         currentCellId={results.cellIds[0]}
+                        currentPointName={searchedPoint && cellDisplayName(searchedPoint)}
                         mode={mode}
                       />
                     </div>
                   </div>
-                  <BestPairsTable rows={bestPairs} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
+                  )}
+                  <BestWindowsTable rows={bestWindows} currentCell={searchedPoint} onSelectRow={(row) => openDetail(row.cellId, row.landingTime)} />
                 </>
               )}
             </section>
@@ -454,7 +537,7 @@ export default function App() {
               <DetailView
                 key={`${detailCell.id}|${detailLandingTime}`}
                 cell={detailCell}
-                currentCell={currentCell}
+                currentCell={search.status === 'done' ? searchedPoint : currentCell}
                 ephemeris={data.ephemeris}
                 scenario={detailScenario}
                 landingTime={detailLandingTime}
@@ -469,16 +552,26 @@ export default function App() {
 
           {data && screen === 'globe' && (
             <section className="space-y-2">
-              <Suspense fallback={<p className="text-slate-400">Loading globe…</p>}>
-                <MoonGlobe sites={data.sites} onSelectSite={selectSite} />
+              <Suspense fallback={<p className="text-slate-400">{t('globe.loading')}</p>}>
+                <MoonGlobe
+                  sites={data.sites}
+                  regions={data.regions}
+                  ephemeris={data.ephemeris}
+                  hour={shownMapHour ?? 0}
+                  selectedSiteId={scenario.currentPoint?.type === 'site' ? scenario.currentPoint.siteId : null}
+                  onSelectSite={selectSite}
+                  onOpenRegion={(code) => {
+                    openRegion(code)
+                    setScreen('map')
+                  }}
+                />
               </Suspense>
-              <p className="text-xs text-slate-400">Click a site to use it as the current point.</p>
             </section>
           )}
 
           {data && screen === 'learn' && (
             <Suspense fallback={<p className="text-slate-400">Loading learn mode…</p>}>
-              <LearnView results={results} cellsById={cellsById} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
+              <LearnView results={results} cellsById={searchedPoint ? new Map(cellsById).set(searchedPoint.id, searchedPoint) : cellsById} ephemeris={data.ephemeris} scenario={search.scenario} landingIndex={landingIndex} onStartSearch={() => setScreen('map')} />
             </Suspense>
           )}
 

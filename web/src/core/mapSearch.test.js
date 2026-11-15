@@ -42,3 +42,11 @@ test('nearestRegionCode: the region of the searched grid cell nearest the point 
   assert.equal(nearestRegionCode(im2, cells, regions), 'MMP')
   assert.equal(nearestRegionCode(im2, [cells[0]], regions), null)
 })
+
+test('searchMap: CAP cell ids by prefix; a full id whose tile is not loaded asks for it; no CAP grid means no CAP matches (synthetic cells)', () => {
+  const capCells = [{ id: 'CAP-r076c076' }, { id: 'CAP-r076c077' }, { id: 'CAP-r010c010' }]
+  assert.deepEqual(searchMap('cap-r076', regions, sites, {}, capCells).matches.map((match) => [match.label, match.regionCode]), [['CAP-r076c076', null], ['CAP-r076c077', null]])
+  assert.deepEqual(searchMap('CAP-r075c112', regions, sites, {}, capCells).capPointToLoad, { xM: 73000, yM: -1000 })
+  assert.equal(searchMap('CAP-r076c076', regions, sites, {}, capCells).capPointToLoad, null)
+  assert.deepEqual(searchMap('CAP-r076', regions, sites, {}).matches, [])
+})

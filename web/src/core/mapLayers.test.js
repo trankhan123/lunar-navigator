@@ -1,7 +1,7 @@
 // W2 map v2 — layers, levels and colours (plan Task 2). Synthetic samples, not real data.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { INFEASIBLE_COLOR, MAP_LAYERS, NOT_SEARCHED_COLOR, NO_VALUE_COLOR, cellColor, cellLevel, earthLevel, fractionColor, nasaCoverageNote, sunEarthLevel, sunLevel } from './mapLayers.js'
+import { INFEASIBLE_COLOR, MAP_LAYERS, NOT_SEARCHED_COLOR, NO_VALUE_COLOR, cellColor, cellLevel, earthLevel, fractionColor, nasaCoverageNote, overlayEntry, sunEarthLevel, sunLevel } from './mapLayers.js'
 
 const legend = (layerId) => MAP_LAYERS.find((layer) => layer.id === layerId).legend
 
@@ -58,4 +58,17 @@ test('nasaCoverageNote: whole 1 km squares inside the NASA image', () => {
   assert.equal(nasaCoverageNote('Malapert Massif', [inside, edge], overlay), null)
   assert.equal(nasaCoverageNote('Nobile Rim 2', [inside, outside], overlay), 'NASA data covers only part of Nobile Rim 2.')
   assert.equal(nasaCoverageNote('Peak near Cabeus B', [inside], undefined), 'NASA data covers about 85°S to the pole; not available for Peak near Cabeus B.')
+})
+
+test('overlayEntry: a region uses its own image, the overview and slope use the whole-pole one', () => {
+  const maps = [
+    { id: 'south_pole', kind: 'psr', image: '/maps/pole_psr.png' },
+    { id: 'south_pole', kind: 'slope', image: '/maps/pole_slope.png' },
+    { id: 'MAL', kind: 'psr', image: '/maps/MAL_psr.png' },
+  ]
+  assert.equal(overlayEntry(maps, 'psr', null).image, '/maps/pole_psr.png')
+  assert.equal(overlayEntry(maps, 'psr', 'MAL').image, '/maps/MAL_psr.png')
+  assert.equal(overlayEntry(maps, 'psr', 'HAW'), undefined) // not the pole image: it would hide the region's missing data
+  assert.equal(overlayEntry(maps, 'slope', 'HAW').image, '/maps/pole_slope.png')
+  assert.equal(overlayEntry(maps, 'sun-visibility', null), undefined)
 })

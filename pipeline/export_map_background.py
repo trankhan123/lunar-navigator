@@ -7,8 +7,11 @@ Input:  pipeline/raw/LDEM_80S_80MPP_ADJ_HILL.TIF (PGDA 90 hillshade, 80 m, value
 Output: web/public/maps/south_pole.png (whole 80°S map), web/public/maps/<CODE>.png (one per region, native 80 m),
         <CODE>_sun.png, <CODE>_earth.png (RGBA, FRACTION_COLORS for 0 → 1, transparent where no data; only regions that
         overlap the PGDA 69 square), <CODE>_psr.png (RGBA, PSR_COLOR on permanent shadow, transparent elsewhere),
+        Whole-pole overlays, id "south_pole" (palette PNGs): south_pole_sun.png / _earth.png (the 85°S PGDA 69 square), south_pole_psr.png,
+        south_pole_slope.png (kind "slope": LDSM 80 m classes < 10°, 10–15°, 15–20°, > 20° hatched, the app's infeasible colour),
         web/public/maps/maps.json = {"maps": [{"id", "kind", "image", "boundsM", "metersPerPixel"}]},
-        kind = "hillshade" | "sun-visibility" | "earth-visibility" | "psr", hillshades listed first.
+        kind = "hillshade" | "sun-visibility" | "earth-visibility" | "psr" | "slope", hillshades listed first.
+        Relief tiles for the web map: export_relief_tiles.py.
         boundsM = [xMin, yMin, xMax, yMax] of the image edges in common.PGDA_CRS. PNG written by rasterio (GDAL PNG driver).
 """
 import json
@@ -21,7 +24,9 @@ from rasterio.enums import Resampling
 from rasterio.errors import NotGeoreferencedWarning
 from rasterio.windows import from_bounds
 
-from common import PROJECT_ROOT, RAW_FOLDER, WEB_DATA_FOLDER, write_json
+from PIL import Image
+
+from common import PROJECT_ROOT, RAW_FOLDER, SLOPE_LIMIT_DEG, WEB_DATA_FOLDER, write_json
 
 HILLSHADE_FILE = RAW_FOLDER / "LDEM_80S_80MPP_ADJ_HILL.TIF"
 OVERLAYS = [("sun-visibility", "sun", RAW_FOLDER / "AVGVISIB_85S_060M_201608.TIF"),  # (kind, image suffix, raster)
@@ -33,6 +38,11 @@ REGION_MARGIN_M = 2000
 SOUTH_POLE_METERS_PER_PIXEL = [400, 500, 640, 800]  # the coarsest is used only if finer ones pass 1 MB
 FRACTION_COLORS = ["#440154", "#3b528b", "#21918c", "#5ec962", "#fde725"]  # viridis 0 → 1, the web map's FRACTION_RAMP
 PSR_COLOR = "#cc79a7"
+SLOPE_FILE = RAW_FOLDER / "LDSM_80S_80MPP_ADJ.TIF"
+# Palette of slope_class_indices: 0 no data, 1 < 10°, 2 10–15°, 3 15–20°, 4 steeper than SLOPE_LIMIT_DEG (the app's infeasible colour), 5 its hatch.
+SLOPE_PALETTE = ["#000000", "#009e73", "#f0e442", "#e69f00", "#334155", "#94a3b8"]
+FRACTION_STEPS = 10
+WHOLE_POLE_SCALES = [1, 1.5, 2, 3]  # pixel-size multiples tried in turn until the PNG is ≤ 1 MB
 
 
 def rgb(color):
@@ -51,6 +61,30 @@ def fraction_to_rgba(fraction):
 def psr_to_rgba(psr):
     """Permanent shadow 0/1 (NaN = no data) → (4, h, w) uint8: PSR_COLOR where ≥ 0.5, transparent elsewhere."""
     return np.array([np.full(psr.shape, channel) for channel in rgb(PSR_COLOR)] + [np.where(psr >= 0.5, 255, 0)]).astype(np.uint8)
+
+
+def fraction_to_palette(fraction):
+    """Fractions 0–1 (NaN = no data) → (indices, palette): index 0 transparent, 1 + round(10 × fraction) a FRACTION_COLORS step
+    (10 % steps: the data is speckled, finer steps push the whole-pole PNG far over 1 MB)."""
+    palette = [[0, 0, 0, 0]] + [[*color, 255] for color in fraction_to_rgba(np.linspace(0, 1, FRACTION_STEPS + 1)[np.newaxis])[:3, 0].T.tolist()]
+    return np.where(np.isnan(fraction), 0, 1 + np.rint(np.nan_to_num(fraction) * FRACTION_STEPS)).astype(np.uint8), palette
+
+
+def slope_class_indices(slope_deg, hatch_period_px=8):
+    """Slope degrees (NaN = no data) → palette indices of SLOPE_PALETTE; steep pixels get diagonal stripes (period hatch_period_px, 0 = none)."""
+    classes = np.where(np.isnan(slope_deg), 0, 1 + (slope_deg >= 10) + (slope_deg >= 15) + (slope_deg > SLOPE_LIMIT_DEG)).astype(np.uint8)
+    if hatch_period_px:
+        rows, columns = np.indices(classes.shape)
+        classes[(classes == 4) & ((rows + columns) % hatch_period_px < hatch_period_px // 3 + 1)] = 5
+    return classes
+
+
+def write_palette_png(path, indices, palette):
+    """Indexed PNG (palette entries are RGBA lists); smaller than RGBA for images with few colours."""
+    image = Image.fromarray(indices, mode="P")
+    image.putpalette([channel for color in palette for channel in color[:3]])
+    image.save(path, transparency=bytes(color[3] if len(color) > 3 else 255 for color in palette), optimize=True)
+    return path.stat().st_size
 
 
 def overlay_bounds(window_bounds, raster_bounds):
@@ -109,6 +143,32 @@ def export_overlay(source, region, kind, suffix):
     return map_entry(region["code"], rasterio.windows.bounds(window, source.transform), source.res[0], kind, image_name)
 
 
+def export_whole_pole_overlays():
+    """Overlays over the whole map, not tied to a region: kinds sun/earth-visibility (PGDA 69 square), psr and slope, all with id south_pole."""
+    jobs = [("sun-visibility", "sun", OVERLAYS[0][2]), ("earth-visibility", "earth", OVERLAYS[1][2]), ("psr", "psr", OVERLAYS[2][2]), ("slope", "slope", SLOPE_FILE)]
+    entries = []
+    for kind, suffix, raster_file in jobs:
+        with rasterio.open(raster_file) as source:
+            width = source.width if kind != "psr" else round(source.width * source.res[0] / 80)  # PSR 20 m → 80 m
+            for scale in WHOLE_POLE_SCALES:
+                size = round(width / scale)
+                values = source.read(1, out_shape=(size, size), masked=True, resampling=Resampling.average if kind == "psr" else Resampling.nearest)
+                values = values.astype(float).filled(np.nan) * source.scales[0]
+                if kind == "slope":
+                    indices, palette = slope_class_indices(values), [rgb(color) + [0 if index == 0 else 255] for index, color in enumerate(SLOPE_PALETTE)]
+                elif kind == "psr":
+                    indices, palette = (values >= 0.5).astype(np.uint8), [[0, 0, 0, 0], rgb(PSR_COLOR) + [255]]
+                else:
+                    indices, palette = fraction_to_palette(values)
+                image_name = f"south_pole_{suffix}.png"
+                if write_palette_png(MAPS_FOLDER / image_name, indices, palette) <= MAX_IMAGE_BYTES:
+                    entries.append(map_entry("south_pole", list(source.bounds), source.width * source.res[0] / size, kind, image_name))
+                    break
+            else:
+                raise SystemExit(f"{image_name} stays over 1 MB at every scale")
+    return entries
+
+
 if __name__ == "__main__":
     regions = json.loads((WEB_DATA_FOLDER / "regions.json").read_text(encoding="utf-8"))["regions"]
     MAPS_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -117,6 +177,7 @@ if __name__ == "__main__":
     for kind, suffix, raster_file in OVERLAYS:
         with rasterio.open(raster_file) as source:
             maps += [entry for region in regions if (entry := export_overlay(source, region, kind, suffix))]
+    maps += export_whole_pole_overlays()
     for entry in maps:
         size_kb = (MAPS_FOLDER / Path(entry["image"]).name).stat().st_size / 1e3
         print(f"{entry['id']:10s} {entry['kind']:16s} {entry['metersPerPixel']:.0f} m/px  {size_kb:.0f} kB")

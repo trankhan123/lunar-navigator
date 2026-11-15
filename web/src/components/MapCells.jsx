@@ -1,3 +1,4 @@
+import { CELL_FILL_OPACITY } from '../core/mapLayers.js'
 import { memo } from 'react'
 
 const CELL_DRAW_SIZE_M = 940 // a 1 km square with a 60 m gap
@@ -29,7 +30,7 @@ function MapCells({ cells, symbols, onSelectCell, onHoverCell, showLabels = fals
         const y = -cell.yM - CELL_DRAW_SIZE_M / 2
         return (
           <g key={cell.id}>
-            <rect x={x} y={y} width={CELL_DRAW_SIZE_M} height={CELL_DRAW_SIZE_M} fillOpacity={0.8} data-cell-index={index}>
+            <rect x={x} y={y} width={CELL_DRAW_SIZE_M} height={CELL_DRAW_SIZE_M} fillOpacity={CELL_FILL_OPACITY} data-cell-index={index}>
               <title>{cell.feasible ? cell.id : `${cell.id} (not feasible: ${cell.infeasibleReason})`}</title>
             </rect>
             {!cell.feasible && (
