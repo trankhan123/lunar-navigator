@@ -201,6 +201,10 @@ export const TRANSLATIONS = {
     'about.pgdaReading': 'The pattern agrees closely (r = {sunR} for the Sun, {earthR} for Earth). Overall our Sun mean is {sunDiff} points from NASA\'s and our Earth mean {earthDiff} points. A small bias is expected: PGDA 69 averages 18.6 years with its own disk and height assumptions, while ours covers 2027–2028 only. Counting any part of the disk instead of half gives {sunAny}% for the Sun and {earthAny}% for Earth.',
     'about.libration': 'Earth\'s position comes hour by hour from JPL Horizons, so the libration wobble of Earth in the lunar sky (roughly ±7°) is included.',
     'about.pgdaUnavailable': 'The PGDA 69 comparison could not be loaded.',
+    'scenario.requireDsn': 'Also require a DSN station (Goldstone, Madrid, Canberra) to see the Moon, 10° mask',
+    'scenario.dsnActiveNote': 'DSN check on: Earth counts as visible only while a Deep Space Network station also sees the Moon above 10°.',
+    'about.limitationDsn': '"Earth visible" means line of sight from the site only. The optional DSN check (Expert mode) also needs a Deep Space Network station to see the Moon above 10°; it does not model station schedules or antenna limits.',
+    'about.sourceDsn': 'Optional DSN check: Moon elevation at Goldstone DSS-14, Madrid DSS-63 and Canberra DSS-43 from JPL Horizons; 10° mask and station positions after NASA/JPL DSN handbook 810-005, module 301 (Rev. K).',
     'about.limitationQuickmap': 'We have not compared against NASA QuickMap. PGDA 69 covers only 85–90°S, so CAB has no check and NR2 and MMP only in their covered part.',
   },
 
@@ -392,6 +396,10 @@ export const TRANSLATIONS = {
     'about.pgdaReading': 'Quy luật khớp chặt (r = {sunR} với Mặt Trời, {earthR} với Trái Đất). Trung bình Mặt Trời của ta lệch {sunDiff} điểm so với NASA, Trái Đất lệch {earthDiff} điểm. Có chút chênh lệch là bình thường: PGDA 69 lấy trung bình 18,6 năm với giả định riêng về đĩa và độ cao, còn ta chỉ tính 2027–2028. Nếu tính bất kỳ phần nào của đĩa thay vì một nửa, ta được {sunAny}% với Mặt Trời và {earthAny}% với Trái Đất.',
     'about.libration': 'Vị trí Trái Đất lấy từng giờ từ JPL Horizons, nên dao động libration của Trái Đất trên bầu trời Mặt Trăng (khoảng ±7°) đã được tính.',
     'about.pgdaUnavailable': 'Không tải được so sánh với PGDA 69.',
+    'scenario.requireDsn': 'Đồng thời yêu cầu một trạm DSN (Goldstone, Madrid, Canberra) thấy Mặt Trăng, ngưỡng 10°',
+    'scenario.dsnActiveNote': 'Đang bật kiểm tra DSN: Trái Đất chỉ tính là thấy khi một trạm Deep Space Network cũng thấy Mặt Trăng trên 10°.',
+    'about.limitationDsn': '"Thấy Trái Đất" chỉ là đường nhìn thẳng từ điểm hạ cánh. Kiểm tra DSN tuỳ chọn (chế độ Expert) còn cần một trạm Deep Space Network thấy Mặt Trăng trên 10°; không mô hình hoá lịch trạm hay giới hạn ăng-ten.',
+    'about.sourceDsn': 'Kiểm tra DSN tuỳ chọn: góc cao Mặt Trăng tại Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43 từ JPL Horizons; ngưỡng 10° và vị trí trạm theo sổ tay DSN 810-005 của NASA/JPL, module 301 (Rev. K).',
     'about.limitationQuickmap': 'Chưa so sánh với NASA QuickMap. PGDA 69 chỉ phủ 85–90°S nên CAB không có phép kiểm, NR2 và MMP chỉ ở phần được phủ.',
   },
 

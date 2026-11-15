@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { hourIndexOf, resolveCurrentCell, timeAtHour, toPolarXY } from './data.js'
+import { attachDsn, hourIndexOf, resolveCurrentCell, timeAtHour, toPolarXY } from './data.js'
 import { assertNear } from './testHelpers.js'
 
 const ephemeris = { startTime: '2028-01-01T00:00Z', hours: 48 }
@@ -47,4 +47,17 @@ test('resolveCurrentCell: CAP cell id, and a point on the cap takes the horizon 
   assert.equal(resolveCurrentCell({ type: 'coordinates', lat: -89.97, lon: 45 }, { MAL: [lgrsCell] }, [], [capCell]).horizon, null)
   const site = { id: 's', name: 'S', lat: -89.97, lon: 45, horizon: [1] }
   assert.deepEqual(resolveCurrentCell({ type: 'site', siteId: 's' }, {}, [site], [capCell]).horizon, [1]) // a site's own horizon stays
+})
+
+test('attachDsn: attached only when startTime and hours match, else null with a warning', (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const ephemeris = { startTime: '2027-01-01T00:00Z', hours: 10 }
+  const dsn = { startTime: '2027-01-01T00:00Z', hours: 10 }
+  assert.equal(attachDsn(ephemeris, dsn).dsn, dsn)
+  assert.equal(warn.mock.callCount(), 0)
+  assert.equal(attachDsn(ephemeris, { ...dsn, hours: 9 }).dsn, null)
+  assert.equal(attachDsn(ephemeris, { ...dsn, startTime: '2027-01-02T00:00Z' }).dsn, null)
+  assert.equal(warn.mock.callCount(), 2)
+  assert.equal(attachDsn(ephemeris, null).dsn, null)
+  assert.equal(warn.mock.callCount(), 2)
 })

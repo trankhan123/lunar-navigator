@@ -317,7 +317,7 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
   for (let c = 0; c < cellCount; c++) {
     const cell = cells[c]
     const sunTrack = computeSunTrack(cell, ephemeris, firstHour, hourCount, scenario.panelMode)
-    const earthTrack = computeEarthTrack(cell, ephemeris, firstHour, hourCount)
+    const earthTrack = computeEarthTrack(cell, ephemeris, firstHour, hourCount, scenario.requireDsn)
 
     for (let k = 0; k < landingCount; k++) {
       const startIndex = LANDING_STEP_HOURS * k

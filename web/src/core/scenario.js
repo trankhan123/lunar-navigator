@@ -20,6 +20,7 @@ export const DEFAULT_SCENARIO = {
   panelMode: 'auto',
   searchScope: 'region',
   searchRadiusKm: 10,
+  requireDsn: false, // opt-in: Earth also needs a DSN station that sees the Moon (README C2)
 }
 
 // Simple mode fills these fields from a preset and asks only point, dates and stay length.
@@ -126,6 +127,9 @@ export function validateScenario(scenario, ephemeris) {
   }
   if (!PANEL_MODES.includes(scenario.panelMode)) {
     fail('panelMode', 'Choose auto, vertical or horizontal.')
+  }
+  if (typeof scenario.requireDsn !== 'boolean') {
+    fail('requireDsn', 'DSN requirement must be on or off.')
   }
   if (!SEARCH_SCOPES.includes(scenario.searchScope)) {
     fail('searchScope', 'Choose region, radius or all.')

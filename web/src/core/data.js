@@ -40,7 +40,19 @@ async function loadJson(path) {
   return response.json()
 }
 
-export const loadEphemeris = (useMock) => loadJson(`${dataFolder(useMock)}/ephemeris.json`)
+/** Attaches DSN data only when it covers exactly the same hours; otherwise null with a warning. */
+export function attachDsn(ephemeris, dsn) {
+  const aligned = dsn && dsn.startTime === ephemeris.startTime && dsn.hours === ephemeris.hours
+  if (dsn && !aligned) console.warn('dsn.json does not match ephemeris.json (startTime/hours); DSN ignored.')
+  return { ...ephemeris, dsn: aligned ? dsn : null }
+}
+
+export async function loadEphemeris(useMock) {
+  const ephemeris = await loadJson(`${dataFolder(useMock)}/ephemeris.json`)
+  const dsn = await loadDsn(useMock).catch(() => null)
+  return attachDsn(ephemeris, dsn)
+}
+export const loadDsn = (useMock) => loadJson(`${dataFolder(useMock)}/dsn.json`)
 export const loadRegions = (useMock) => loadJson(`${dataFolder(useMock)}/regions.json`)
 export const loadCells = (useMock, cellsFile) => loadJson(`${dataFolder(useMock)}/${cellsFile}`)
 export const loadSites = (useMock) => loadJson(`${dataFolder(useMock)}/sites.json`)

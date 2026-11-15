@@ -29,4 +29,5 @@ test('validateScenario', () => {
   assert.deepEqual(fieldsWithErrors({ ...valid, currentPoint: { type: 'coordinates', lat: -200, lon: 0 } }), ['currentPoint'])
   assert.deepEqual(fieldsWithErrors({ ...valid, startDate: '2028-02-30' }), ['startDate'])
   assert.deepEqual(fieldsWithErrors({ ...valid, panelMode: 'sideways' }), ['panelMode'])
+  assert.deepEqual(fieldsWithErrors({ ...valid, requireDsn: 'yes' }), ['requireDsn'])
 })

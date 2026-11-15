@@ -11,6 +11,28 @@ test('computeEarthTrack: sub-Earth point overhead means Earth fully in view', ()
   assertNear(track.diskFraction[0], 1)
 })
 
+test('computeEarthTrack with DSN: only when requireDsn is true, a hidden-station hour counts as comm loss', () => {
+  const ephemeris = constantEphemeris({ hours: 4 })
+  // Unit is 0.1 deg: 100 = 10.0 deg, 99 = 9.9 deg (< 10 deg)
+  ephemeris.dsn = {
+    elevationUnitDeg: 0.1,
+    goldstone: [150, -500, 99, -100],
+    madrid: [-200, 100, 50, -200],
+    canberra: [-100, -100, -50, -300],
+  }
+
+  // Default is the README rule: line of sight only, DSN data is ignored.
+  const lineOfSight = computeEarthTrack(equatorCell, ephemeris, 0, 4)
+  assert.deepEqual([...lineOfSight.diskFraction], [1, 1, 1, 1])
+  assert.deepEqual([...computeEarthTrack(equatorCell, ephemeris, 0, 4, false).diskFraction], [1, 1, 1, 1])
+
+  const withDsn = computeEarthTrack(equatorCell, ephemeris, 0, 4, true)
+  assert.deepEqual([...withDsn.diskFraction], [1, 1, 0, 0]) // h2: best station 9.9 deg; h3: all negative
+
+  // requireDsn without loaded DSN data changes nothing.
+  assert.deepEqual([...computeEarthTrack(equatorCell, constantEphemeris({ hours: 4 }), 0, 4, true).diskFraction], [1, 1, 1, 1])
+})
+
 const earthTrack = { firstHour: 0, diskFraction: [1, 0, 0, 1], azimuthDeg: [0, 0, 0, 0], elevationDeg: [1, -1, -1, 1] }
 
 test('summarizeEarthWindow', () => {

@@ -8,7 +8,6 @@ const LIMITATIONS = [
   'The terrain horizon is computed at the centre of each 1 km cell from 80 m LOLA terrain, so boulders and small ridges are not seen.',
   'Sites outside the terrain model use a smooth-sphere horizon ("terrain not included").',
   'The battery model is simple: constant load, no temperature effects, no panel or battery ageing.',
-  '"Earth visible" does not check whether a ground station on Earth can see the Moon at that time.',
   'This is a hackathon project, not an official NASA tool.',
 ]
 
@@ -105,6 +104,10 @@ export default function AboutView() {
               <dd className="inline">{use}</dd>
             </div>
           ))}
+          <div>
+            <dt className="inline font-medium text-slate-100">NASA DSN handbook 810-005: </dt>
+            <dd className="inline">{t('about.sourceDsn')}</dd>
+          </div>
         </dl>
       </section>
       <section>
@@ -117,6 +120,7 @@ export default function AboutView() {
           {LIMITATIONS.map((limitation) => (
             <li key={limitation}>{limitation}</li>
           ))}
+          <li>{t('about.limitationDsn')}</li>
           <li>{t('about.limitationQuickmap')}</li>
         </ul>
       </section>

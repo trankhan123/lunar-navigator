@@ -125,6 +125,24 @@ def check_cell(file_name, code, cell):
     return cell["xM"], cell["yM"]
 
 
+def check_dsn(data):
+    name = "dsn.json"
+    if not ISO_HOUR.match(str(data.get("startTime"))):
+        problem(name, "startTime must look like 2027-01-01T00:00Z")
+    if data.get("stepHours") != 1:
+        problem(name, "stepHours must be 1")
+    if data.get("elevationUnitDeg") != 0.1:
+        problem(name, "elevationUnitDeg must be 0.1")
+    hours = data.get("hours")
+    for key in ["goldstone", "madrid", "canberra"]:
+        values = data.get(key)
+        if not isinstance(values, list) or len(values) != hours:
+            problem(name, f"{key} must be a list of length hours ({hours})")
+            continue
+        if not all(isinstance(v, int) and -900 <= v <= 900 for v in values):
+            problem(name, f"{key} has values outside -900..900 (0.1° units)")
+
+
 def check_cells(data, file_name, code):
     if data.get("region") != code:
         problem(file_name, f'region must be "{code}"')
@@ -324,6 +342,10 @@ def main():
         data = load(folder, file_name, expect_mock, required)
         if data is not None:
             run_check(file_name, check, data, expect_mock)
+    if (folder / "dsn.json").exists():
+        dsn_data = load(folder, "dsn.json", expect_mock)
+        if dsn_data is not None:
+            run_check("dsn.json", check_dsn, dsn_data)
     regions = load(folder, "regions.json", expect_mock)
     if regions is not None:
         run_check("regions.json", check_regions, regions, folder, expect_mock)

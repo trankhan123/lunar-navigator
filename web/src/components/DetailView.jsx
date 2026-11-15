@@ -170,6 +170,7 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
               {t('detail.downloadCsv')}
             </button>
           </div>
+          {scenario.requireDsn && <p className="mb-2 text-xs text-amber-300">{t('scenario.dsnActiveNote')}</p>}
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
             {metrics.map(([label, value]) => (
               <div key={label} className="contents">
