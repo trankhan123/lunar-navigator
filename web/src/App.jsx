@@ -71,7 +71,7 @@ export default function App() {
   const [screen, setScreen] = useState(SCREENS.some(([id]) => id === initialState.screen) ? initialState.screen : 'map')
   const [mode, setMode] = useState(initialState.mode)
   const [scenario, setScenario] = useState(initialState.scenario)
-  const [chatOpen, setChatOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(true)
   const [chatEnteredFields, setChatEnteredFields] = useState({})
   const [selectedCellId, setSelectedCellId] = useState(initialState.selectedCellId)
   const [landingTime, setLandingTime] = useState(initialState.landingTime)
@@ -416,16 +416,29 @@ export default function App() {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 p-4">
+      <main className={`mx-auto w-full flex-1 p-4 ${screen === 'map' ? 'max-w-[1920px]' : 'max-w-7xl'}`}>
         {loadError && <p role="alert" className="mb-4 text-red-400">Could not load data: {loadError}</p>}
         {!data && !loadError && <p className="text-slate-400">{t('picker.loadingData')}</p>}
 
         <ScreenErrorBoundary key={screen}>
           {data && screen === 'map' && (
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-              <section aria-labelledby="map-title">
+            <div className="space-y-5">
+              <section aria-labelledby="map-title" className="min-w-0">
                 <h2 id="map-title" className="sr-only">South pole landing cells</h2>
-                <SouthPoleMap {...mapProps} hour={shownMapHour} hourRange={mapRange} stayDays={scenario.stayDays} defaultLayerId="sunNow" timeBar={mapTimeBar} toolbarSlot={<>{regionPicker}
+                <SouthPoleMap workspaceLayout rightPanel={import.meta.env.VITE_CHAT_UI === 'true' ? (
+                  <details open={chatOpen} onToggle={(event) => setChatOpen(event.currentTarget.open)} className="rounded-xl border border-sky-500 bg-sky-950">
+                    <summary className="cursor-pointer px-4 py-3 font-semibold text-sky-100">{t('chat.sectionTitle')}</summary>
+                    <MissionChat
+                      value={scenario}
+                      sites={data.sites}
+                      ephemeris={data.ephemeris}
+                      busy={search.status === 'running'}
+                      useMock={data.useMock}
+                      enteredFields={chatEnteredFields}
+                      onApply={(next, enteredFields) => { setScenario(next); setMode('expert'); setChatEnteredFields(enteredFields) }}
+                    />
+                  </details>
+                ) : null} {...mapProps} hour={shownMapHour} hourRange={mapRange} stayDays={scenario.stayDays} defaultLayerId="sunNow" timeBar={mapTimeBar} toolbarSlot={<>{regionPicker}
                   {activeRegion && (
                     <label className="text-sm text-slate-300">
                       {t('picker.cell')}{' '}
@@ -442,8 +455,18 @@ export default function App() {
                   )}
 </>} />
               </section>
-              <aside className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto">
-                {selectedCell && (
+              <div className="grid items-start gap-5 lg:grid-cols-2" data-layout="mission-and-cell">
+                <ScenarioForm
+                  mode={mode}
+                  value={scenario}
+                  errors={errors}
+                  sites={data.sites}
+                  busy={search.status === 'running'}
+                  onChange={setScenario}
+                  onSubmit={runSearch}
+                />
+
+                {selectedCell ? (
                   <CellPopup
                     key={selectedCell.id}
                     cell={selectedCell}
@@ -454,31 +477,13 @@ export default function App() {
                     onOpenDetail={() => openDetail(selectedCell.id)}
                     onClose={() => setSelectedCellId(null)}
                   />
+                ) : (
+                  <section className="min-h-48 rounded-lg border border-dashed border-slate-700 bg-slate-900 p-5" aria-labelledby="landing-cell-title">
+                    <h2 id="landing-cell-title" className="font-medium">{t('layout.landingCell')}</h2>
+                    <p className="mt-2 text-sm text-slate-400">{t('layout.selectCell')}</p>
+                  </section>
                 )}
-                <ScenarioForm
-                  mode={mode}
-                  value={scenario}
-                  errors={errors}
-                  sites={data.sites}
-                  busy={search.status === 'running'}
-                  onChange={setScenario}
-                  onSubmit={runSearch}
-                />
-                {import.meta.env.VITE_CHAT_UI === 'true' && (
-                  <details open={chatOpen} onToggle={(event) => setChatOpen(event.currentTarget.open)} className="rounded-xl border border-sky-500 bg-sky-950">
-                    <summary className="cursor-pointer px-4 py-3 font-semibold text-sky-100">{t('chat.sectionTitle')}</summary>
-                    <MissionChat
-                  value={scenario}
-                  sites={data.sites}
-                  ephemeris={data.ephemeris}
-                  busy={search.status === 'running'}
-                  useMock={data.useMock}
-                  enteredFields={chatEnteredFields}
-                  onApply={(next, enteredFields) => { setScenario(next); setMode('expert'); setChatEnteredFields(enteredFields) }}
-                />
-                  </details>
-                )}
-              </aside>
+              </div>
             </div>
           )}
 

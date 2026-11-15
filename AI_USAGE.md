@@ -32,3 +32,5 @@ Tool: Claude Code (Anthropic).
 
 - 2026-11-15 — Codex implemented guided mission-chat entry after team UX feedback: plain-language hints, explicit units, grey defaults, green entered values, red invalid values, persistent field-source tracking, and a header shortcut. Integrated with current main and its translation/UI flags; verified with 197 Node tests, lint/build and Chromium regressions using synthetic API responses; retained teammates' DSN additions on WF2.
 - 2026-11-15 — Merged WF2 (DSN stations, mission chat) with Claude Code: DSN check made opt-in (`requireDsn`, Expert checkbox), DSN/ephemeris alignment check, mission chat hidden unless `VITE_CHAT_UI=true`, DSN sources checked against handbook 810-005 module 301.
+
+- 2026-11-15 — Codex rearranged Map & scenario to match the team sketch: Layers left, larger map centre, AI chat right, Mission scenario and selected landing-cell details below. Kept header, map controls, existing callbacks and scientific logic; checked desktop/mobile layout and existing interactions in Chromium.
