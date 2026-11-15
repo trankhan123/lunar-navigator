@@ -4,7 +4,7 @@ Ngày lấy dữ liệu: 2026-11-14. Khi thêm nguồn mới: thêm một dòng 
 
 ## 1. File tải về (`pipeline/download_data.py` đọc bảng này)
 
-Chạy: `source ~/python/math_env/bin/activate && python pipeline/download_data.py`. File đã có thì bỏ qua.
+Chạy: `pip install -r pipeline/requirements.txt && python pipeline/download_data.py`. File đã có thì bỏ qua.
 Link `https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/` (thư mục) trả 404, nhưng link tới từng file vẫn tải được.
 
 | File | URL | Lưu vào | Dung lượng | Dùng để |
@@ -70,9 +70,8 @@ NASA chỉ công bố tên và bản đồ của 9 vùng Artemis III, không cô
 | d3-zoom, d3-selection (every d3 package, globe.gl's included, pinned with `overrides` in web/package.json to its release before 2026-11-03) | 3.0.0 | web (components/SouthPoleMap.jsx) |
 | echarts | 6.1.0 | web |
 | echarts-for-react | 3.0.6 | web |
-| astronomy-engine | 2.1.19 | web (`src/astronomy.js`) |
 | three | 0.187.0 (ghim chính xác; globe.gl dùng cùng bản) | web (`components/TerrainView3D.jsx`) |
-| Pillow | chưa ghi trong `pipeline/requirements.txt` | pipeline (`export_map_background.py`, `export_relief_tiles.py`: JPEG và PNG) |
+| Pillow | 12.3.0 | pipeline (`export_map_background.py`, `export_relief_tiles.py`: JPEG và PNG) |
 
 ## 5. Dữ liệu dẫn xuất và ảnh (không tải; không có nguồn mới)
 
@@ -85,6 +84,7 @@ Các file dưới đây được sinh từ dữ liệu ở mục 1 hoặc từ �
 | Lưới CAP 2 km (`cap/index.json`, `cap_<tx>_<ty>.json`) | PGDA 90 `LDSM` 80 m, `LPSR` 20 m, `LDEM` 80 m và 240 m; quy tắc của D3, D4 | web/public/data/cap | Ô 2 km từ 80°S tới cực, ngoài 9 vùng (D9; E8 mở rộng từ 85°S). Ô có khung 2 km vượt ra ngoài raster ±304 km bị bỏ |
 | Địa hình 3D (`<CODE>.bin`, `index.json`) | PGDA 90 `LDEM_80S_80MPP_ADJ` | web/public/terrain | Khối địa hình 9 vùng cho `TerrainView3D.jsx` (D10) |
 | `psrDistanceKm` trong `cells_<CODE>.json` và `cap/*.json` (E7) | PGDA 90 `LPSR_80S_20MPP_ADJ`, hạ xuống ~100 m, chỉ giữ vùng tối vĩnh cửu ≥ 1 km² | pipeline/out, web/public/data | Khoảng cách từ tâm ô tới bẫy lạnh gần nhất (`pipeline/compute_science_access.py`). Giữ 2007 đa giác ≥ 1 km² ở độ phân giải 100 m, so với 1531 PSR trong bảng PGDA 90 (khác do gộp pixel, chưa kiểm độc lập). Ô cách mép 80°S dưới ~20 km có thể bị tính xa hơn thực tế vì mask không có PSR phía bắc 80°S |
+| `og-image.png`, `favicon.svg` | `og-image.png` là ảnh chụp màn hình của chính ứng dụng (nền hillshade PGDA 90); `favicon.svg` do nhóm vẽ | web/public | Ảnh xem trước khi chia sẻ link, biểu tượng tab |
 | `lroc_color_4k.jpg`, `ldem_bump_1440.png` | NASA SVS 4720 (`lroc_color_16bit_srgb_4k.tif`, `ldem_4_uint.tif`). Trang: https://svs.gsfc.nasa.gov/4720. Credit: NASA's Scientific Visualization Studio | web/public/textures | Texture và bump cho quả cầu W6 (4K màu, 1440 px độ cao) |
 
 - NASA/JPL DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and Geometry", Rev. K (2016): DSN station positions (Table 5) and the 10° elevation limit (sec. 2.2.1, 2.2.4), used by the optional DSN check. https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf

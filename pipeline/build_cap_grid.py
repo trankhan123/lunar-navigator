@@ -92,6 +92,8 @@ def horizon_of_cell(cell):
 
 
 def compute_horizons(cells, jobs):
+    if jobs == 1:  # no pool: also works on Windows, where "fork" does not exist
+        return [horizon_of_cell(cell) for cell in cells]
     horizons = []
     with get_context("fork").Pool(jobs) as pool:  # fork (not the 3.14 default) so workers inherit the loaded DEMs
         for count, horizon in enumerate(pool.imap(horizon_of_cell, cells, chunksize=10), start=1):

@@ -89,7 +89,7 @@ def main():
     ]})
     write_json(MOCK_FOLDER / "validation.json", {
         "mock": True,
-        "pgda69": [{"cellId": cells[0]["id"], "pgdaSunFraction": 0.5, "pgdaEarthFraction": 0.6, "ourSunFraction": 0.48, "ourEarthFraction": 0.62}],
+        "pgda69": [],  # no fake comparison rows: the validation badge and chart simply stay hidden in mock mode
         "horizons": {"pointCount": 0, "maxAzimuthErrorDeg": None, "maxElevationErrorDeg": None, "checkedAt": None},
         "quickmap": [],
     })

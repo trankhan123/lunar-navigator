@@ -10,6 +10,7 @@ import { simulateBattery } from './charging.js'
 export const LANDING_STEP_HOURS = 6
 
 // "Same region" for a point outside the 9 regions: the 2 km CAP cells within this distance.
+const PROGRESS_STEP_CELLS = 25 // one progress message per 25 cells keeps the UI responsive on big searches
 export const CAP_REGION_SEARCH_KM = 15
 
 // Minimum battery state-of-charge below which a window is flagged marginal.
@@ -310,7 +311,7 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
       }
     }
 
-    if (onProgress && c + 1 >= reportedDone) {
+    if (onProgress && (c + 1 === cellCount || c + 1 - reportedDone >= PROGRESS_STEP_CELLS)) {
       reportedDone = c + 1
       onProgress(reportedDone, cellCount)
     }

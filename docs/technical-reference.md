@@ -97,7 +97,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | done (PGDA 69 only; QuickMap not done) |
 | D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade, whole-pole Sun, Earth, PSR and slope overlays) |
 | D8b | WF5 | Relief tiles (zoomable shaded relief, contours) | `pipeline/export_relief_tiles.py`, `web/public/maps/relief/` | D8, D5 | M | trankhan123 (Claude Code) | done (152 tiles, 5 levels, finest 74 m/px) |
-| E7 | WF5 | Distance to the nearest cold trap (PSR ≥ 1 km²), field `psrDistanceKm` | `pipeline/compute_science_access.py`, `pipeline/out/science_*.json` | D2, D5, D9 | S | trankhan123 (Claude Code) | in progress |
+| E7 | WF5 | Distance to the nearest cold trap (PSR ≥ 1 km²), field `psrDistanceKm` | `pipeline/compute_science_access.py`, `pipeline/out/science_*.json` | D2, D5, D9 | S | trankhan123 (Claude Code) | done |
 | D9 | WF5 | Whole-cap 2 km grid (CAP cells) | `pipeline/build_cap_grid.py`, `web/public/data/cap/` | D2, D3, D4 | M | trankhan123 (Claude Code) | done (17,336 cells to 85°S; E8 extends to 80°S) |
 | D10 | WF5 | Terrain meshes for the 3D view | `pipeline/export_terrain_mesh.py`, `web/public/terrain/` | LDEM 80 m (raw), D2 | M | trankhan123 (Claude Code) | done (9 regions, each ≤ 205 kB) |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
@@ -114,8 +114,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | done (lit by the real Sun, Sun/Earth rays, SVS 4720 textures) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
 | W8 | WF2 | Optional mission chat | `components/MissionChat.jsx`, `components/MissionGuide.jsx`, `core/missionChat.js`, `core/missionGuide.js`, `web/server/`, `web/api/mission-chat.js` | W3 + owner API resources | S | chubin271-blip (Codex) | done; guided entry and parameter status added; awaiting review |
-| S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
-| X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
+| S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | done |
 
 **Already done:** C0 and D1. The real `web/public/data/ephemeris.json` is in the repo: 2027-01-01 → 2029-01-31, 18,288 h, 0.69 MB. The vector method matches Horizons within 0.015°. Also done: `web/src/core/data.js` (loaders, `hourIndexOf`, `timeAtHour`), `scenario.js` constants and `countDays`, the Web Worker files (`windowSearchWorker.js`, `startWindowSearch.js`), the data checker, the mock data and `pipeline/download_data.py`.
 
@@ -854,12 +853,12 @@ File: `export_terrain_mesh.py` (3D view of an open region, `TerrainView3D.jsx`).
 - **9 Artemis III regions** (`group: artemis-region`, with a region code):
   - NASA published only names and a map, so the coordinates are approximate region centres derived from the USGS data release (McClernan 2024, [doi:10.5066/P1MEQ6UK](https://doi.org/10.5066/P1MEQ6UK)), marked `"verified": false`;
   - each one is cross-checked against a second source, and they agree within 10 km except Slater Plain (see its `note`).
-- **3 Apollo sites:** from NASA NSSDCA, marked `"verified": true`.
-- **13 TODO sites:** for D6. Code must skip them and print a warning; `common.load_sites()` already does this.
+- **15 landed-mission sites** (Apollo, CLPS, Chang'e, Chandrayaan-3, SLIM): from NASA NSSDCA, marked `"verified": true`.
+- **1 TODO site** (im-3): no official coordinates yet, so code skips it and prints a warning (`common.load_sites()`).
 
 ## Team rules
 
-- **Commits:** work on `main` in small commits. Each commit must still pass `cd web && npm run lint && npm run build`.
+- **Commits:** one branch and one pull request per module (`extra/<code>` for the extra modules). Each commit must still pass `cd web && npm run lint && npm run build`.
 - **Never commit** `pipeline/raw/`, `*.tif`, `.env*` or `.vercel/` (already in `.gitignore`). `pipeline/out/` *is* committed.
 - **No made-up science data.**
   - UI mock data goes only in `web/public/data/mock/`, with `"mock": true`, and the UI shows a **MOCK DATA** badge.

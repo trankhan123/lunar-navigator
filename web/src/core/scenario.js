@@ -4,7 +4,7 @@ export const PANEL_MODES = ['auto', 'vertical', 'horizontal']
 export const SEARCH_SCOPES = ['region', 'radius', 'all']
 export const MAX_RANGE_DAYS = 183
 export const MAX_STAY_DAYS = 30
-export const MAX_SEARCH_RADIUS_KM = 50 // keeps a radius search on the 17k-cell cap grid small enough for the worker
+export const MAX_SEARCH_RADIUS_KM = 50 // keeps a radius search on the 2 km cap grid small enough for the worker (cap grid: ~71k cells to 80°S)
 
 // Example values only (window-finder.md §3.2), not the specification of any real lander.
 export const DEFAULT_SCENARIO = {

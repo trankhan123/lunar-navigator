@@ -14,10 +14,9 @@ import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import ValidationBadge from './components/ValidationBadge.jsx'
-import { capTileIdsInBounds } from './core/capGrid.js'
+import { capTileIdsInBounds, capTileIdsInCircle } from './core/capGrid.js'
 import { capTileIdsForSearch, pointRegionCode, regionCodesForSearch, searchAnchor } from './core/capSearch.js'
 import { detailCellFor, hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell, toPolarXY } from './core/data.js'
-import { capTileIdsInCircle } from './core/capGrid.js'
 import { cellDisplayName } from './core/format.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
@@ -54,7 +53,7 @@ async function loadAllData() {
   if (useMock) regionsFile = await loadRegions(true)
   // The real ephemeris (D1) exists already, so even mock cells get real Sun and Earth positions.
   const [ephemeris, sitesFile, maps, capIndex] = await Promise.all([
-    loadEphemeris(false).catch(() => loadEphemeris(true)),
+    useMock ? loadEphemeris(false).catch(() => loadEphemeris(true)) : loadEphemeris(false), // real cells never get mock skies
     loadSites(useMock),
     useMock ? [] : loadMaps(),
     useMock ? null : loadCapIndex(), // docs/technical-reference.md D9; null = no cap grid, everything works as before
