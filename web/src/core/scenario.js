@@ -38,6 +38,13 @@ export const LANDER_PRESETS = [
 ]
 
 /** Days from startDate to endDate, both included ('2028-01-01'..'2028-01-01' → 1). */
+export function isPointComplete(point) {
+  if (!point) return false
+  if (point.type === 'cell') return Boolean(point.cellId)
+  if (point.type === 'site') return Boolean(point.siteId)
+  return Number.isFinite(point.lat) && Number.isFinite(point.lon)
+}
+
 export function countDays(startDate, endDate) {
   return Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86400000) + 1
 }

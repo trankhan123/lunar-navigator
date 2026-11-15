@@ -278,7 +278,7 @@ function SouthPoleMap({
         </nav>
         {toolbarSlot}
         <MapSearch regions={regions} sites={sites} cellsByRegion={cellsByRegion} capCells={capIndex ? capCells : null} onNeedRegionCells={onNeedRegionCells} onNeedCapPoint={(point) => onNeedCapTiles(capTileIdsInCircle(capIndex, point.xM, point.yM, 0))} onPick={pickSearchMatch} />
-        <span className="ml-auto text-xs text-slate-400">{show3d ? 'Drag to rotate, scroll or pinch to zoom' : 'Click the map, then scroll to zoom'}</span>
+        <span className="ml-auto hidden text-xs text-slate-400 min-[1700px]:inline">{show3d ? 'Drag to rotate, scroll or pinch to zoom' : 'Click the map, then scroll to zoom'}</span>
         {activeRegion && (
           <button type="button" aria-pressed={view3d} onClick={() => setView3d(!view3d)} className="h-9 rounded border border-slate-600 px-3 transition-colors hover:bg-slate-800 aria-pressed:bg-slate-700">
             {view3d ? '2D' : '3D'}
@@ -290,7 +290,7 @@ function SouthPoleMap({
       <div className={workspaceLayout ? `map-workspace-grid ${rightPanel ? 'has-chat' : ''}` : 'grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_13rem]'}>
       <div className={workspaceLayout ? 'map-workspace-canvas min-w-0' : undefined}>
       {show3d && (
-        <div className={workspaceLayout ? 'w-full' : 'mx-auto w-full max-w-[max(20rem,calc(100vh-17rem))]'}>
+        <div className={workspaceLayout ? 'mx-auto w-full lg:max-w-[max(20rem,calc(100vh-15rem))]' : 'mx-auto w-full max-w-[max(20rem,calc(100vh-17rem))]'}>
           <Suspense fallback={<p className="p-4 text-sm text-slate-400">Loading 3D view…</p>}>
             <TerrainView3D
               regionCode={regionCode} cells={cells} colors={colors} maps={maps} ephemeris={ephemeris} hour={hour}
@@ -299,7 +299,7 @@ function SouthPoleMap({
           </Suspense>
         </div>
       )}
-      <div className={`relative mx-auto w-full ${workspaceLayout ? '' : 'max-w-[max(20rem,calc(100vh-17rem))]'} ${show3d ? 'hidden' : ''}`}>
+      <div className={`relative mx-auto w-full ${workspaceLayout ? 'lg:max-w-[max(20rem,calc(100vh-15rem))]' : 'max-w-[max(20rem,calc(100vh-17rem))]'} ${show3d ? 'hidden' : ''}`}>
       <svg
         ref={svgRef}
         viewBox={VIEW_BOX}
