@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n/index.jsx'
 import { FRACTION_RAMP, INFEASIBLE_COLOR, MAP_LAYERS, SLOPE_CLASSES, STATUS_SYMBOLS } from '../core/mapLayers.js'
 
 const FRACTION_BODY_WORDS = { sunPercent: 'with the Sun in view', earthPercent: 'with Earth in view' }
@@ -31,6 +32,7 @@ function Swatch({ color, symbol = '', label }) {
 
 // Colour never stands alone: every swatch has its text, search results keep ✕ ! ✓, infeasible cells are hatched.
 export default function MapLegend({ layerId, showsCentreDots = false, dateRangeText = '', enabledOverlayKinds = [], reliefIndex = null }) {
+  const { t } = useI18n()
   const layer = MAP_LAYERS.find((candidate) => candidate.id === layerId)
   const levelSwatches = layer.legend.map((entry, level) => ({ ...entry, symbol: layerId === 'searchResult' ? STATUS_SYMBOLS[level] : '' })).reverse()
   return (
@@ -81,6 +83,7 @@ export default function MapLegend({ layerId, showsCentreDots = false, dateRangeT
       <p>Amber outline: current point · white: selected</p>
       <p>1 square = 1 km · up = towards 0° longitude (Earth-facing side)</p>
       <p>Sources: LOLA LDEM and PGDA 90 (80 m), PGDA 69 (60 m, 85°S+), USGS LGRS, JPL Horizons.</p>
+      <p>{t('map.capSearchHint')}</p>
     </div>
   )
 }

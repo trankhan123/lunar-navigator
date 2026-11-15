@@ -4,6 +4,7 @@ import BestWindowsTable from './components/BestWindowsTable.jsx'
 import CellPopup from './components/CellPopup.jsx'
 import CurrentPointCard from './components/CurrentPointCard.jsx'
 import CurrentPointStrip from './components/CurrentPointStrip.jsx'
+import WiderSearchButton from './components/WiderSearchButton.jsx'
 import LandingTimeSlider from './components/LandingTimeSlider.jsx'
 import LanguageSwitcher from './components/LanguageSwitcher.jsx'
 import MapTimeBar from './components/MapTimeBar.jsx'
@@ -515,6 +516,7 @@ export default function App() {
                   />
                   <LandingTimeSlider landingTimes={results.landingTimes} value={landingIndex} onChange={selectLanding} />
                   <CurrentPointStrip statuses={results.status.subarray(0, results.landingCount)} value={landingIndex} onSelectLanding={selectLanding} />
+                  <WiderSearchButton scenario={search.scenario} results={results} onSearch={(wider) => { setScenario(wider); runSearch(wider) }} />
                   {searchedPoint && !isCellOnPolarMap(searchedPoint) ? (
                     <p className="rounded border border-slate-700 p-3 text-slate-300">
                       {t('currentPoint.searchedOnly')}

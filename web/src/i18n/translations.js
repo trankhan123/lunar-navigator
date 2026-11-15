@@ -184,6 +184,8 @@ export const TRANSLATIONS = {
     'results.rankingReversePrompt': 'Click a heading again to reverse.',
     'results.bestWindowsCaption': 'Best landing window of each cell. “Can slip” is how long the landing can be delayed and still meet every limit; the other columns are for the best landing in the window.',
     'results.noSlack': 'no slack',
+    'results.widerSearch': 'Also search 15 km around this point (includes 2 km cap cells)',
+    'map.capSearchHint': 'Cells outside the 9 regions (2 km cap grid) are searched when you pick one as your point, or with “Also search around this point” on Results.',
 
     // Status Badges & Text
     'status.pass': '✓ Meets all limits',
@@ -449,6 +451,8 @@ export const TRANSLATIONS = {
     'results.rankingReversePrompt': 'Nhấp lại vào tiêu đề cột để đảo ngược thứ tự.',
     'results.bestWindowsCaption': 'Cửa sổ hạ cánh tốt nhất của mỗi ô. “Có thể trượt” là thời gian có thể hoãn hạ cánh mà vẫn đạt mọi giới hạn; các cột còn lại tính cho thời điểm hạ cánh tốt nhất trong cửa sổ.',
     'results.noSlack': 'không có dư địa',
+    'results.widerSearch': 'Tìm thêm trong 15 km quanh điểm này (gồm ô chỏm 2 km)',
+    'map.capSearchHint': 'Các ô ngoài 9 vùng (lưới chỏm 2 km) được tìm khi bạn chọn một ô làm điểm của mình, hoặc bằng “Tìm thêm quanh điểm này” ở màn Kết quả.',
 
     // Status Badges & Text
     'status.pass': '✓ Đạt mọi giới hạn',
