@@ -7,6 +7,7 @@ File này là bối cảnh cố định cho Claude Code. Đọc hết trước k
 - `docs/window-finder.md`: ý tưởng cuối cùng của nhóm.
 - `distribution.md`: phân công 5 người, gồm 5 workflow (WF1–WF5 gom các module D + C liên quan) và WEB, kèm thứ tự làm và việc giao nhận giữa các workflow.
 - `DATA_SOURCES.md`: mọi file dữ liệu, URL và thư viện.
+- `docs/extra-prospect.md`: các module làm thêm E1–E10 sau bản chính (15/11 tối), luật nhánh `extra/<mã>` và mốc dừng merge 22:30.
 
 ## 1. Bối cảnh
 
@@ -188,6 +189,7 @@ Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi 
 | Ngày 2 sáng | W5 chi tiết, D6 site nổi tiếng, W6 globe, W7 chế độ học, D7 kiểm chứng PGDA 69 + QuickMap |
 | Ngày 2 trưa | Đóng băng tính năng, deploy Vercel, quay video demo |
 | Ngày 2 chiều | Sửa lỗi, trang project tiếng Anh, slide, nộp sớm |
+| Ngày 2 tối | Module thêm E1–E7 (`docs/extra-prospect.md`), mỗi module một nhánh `extra/<mã>` và một PR; 22:30 dừng merge |
 
 Yêu cầu bài nộp (đối chiếu Submission Guide 2026):
 

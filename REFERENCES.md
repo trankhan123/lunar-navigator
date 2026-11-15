@@ -11,6 +11,8 @@
 - NASA NTRS 20250011660 — Artemis III candidate landing regions. https://ntrs.nasa.gov/citations/20250011660
 - NASA news release (2024-10-28) — NASA Provides Update on Artemis III Moon Landing Regions. https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/
 - McClernan, M.T., 2024, Down Selected Artemis III Candidate Landing Site Navigational Grids: U.S. Geological Survey data release. https://doi.org/10.5066/P1MEQ6UK
+- U.S. Geological Survey data release — Artemis III candidate landing site navigational grids for the 13 original 2022 regions and Apollo 11–17 (not used yet; planned module E9). https://doi.org/10.5066/P13FD9ZD
+- U.S. Geological Survey data release — global Lunar Grid Reference System grids, LTM/LPS projections (not used yet; planned module E10). https://doi.org/10.5066/P13YPWQD
 - McClernan, M.T., Dennis, M.L., Theriot, I.H., Hare, T.M., Archinal, B.A., Ostrach, L.R., Hunter, M.A., Miller, M.J., Beyer, R.A., Annex, A.M., and Lawrence, S.J., 2025, Lunar grid systems, coordinate systems, and map projections for the Artemis missions and lunar surface navigation: U.S. Geological Survey Techniques and Methods, book 11, chap. E1, 308 p. https://doi.org/10.3133/tm11E1
 - NASA NTRS 20250009323 — Artemis overview for the 2025 International Space Apps Challenge (HLS slope, lighting and communication needs). https://ntrs.nasa.gov/citations/20250009323
 - NASA Space Apps Challenge 2026 — Lunar Landing Site Navigator challenge. https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/
