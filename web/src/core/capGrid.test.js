@@ -41,3 +41,9 @@ test('raster: one pixel per cell, north at the top, transparent where nothing is
   const lookup = capPixelLookup([north, south])
   assert.deepEqual([lookup[76], lookup[(CAP_GRID_SIZE - 1) * CAP_GRID_SIZE], lookup[5]], [0, 1, -1])
 })
+
+test('raster: a pointer exactly on the right or bottom edge stays in the last column or row', () => {
+  assert.equal(capPixelIndex({ xM: 152000, yM: 0 }) % CAP_GRID_SIZE, CAP_GRID_SIZE - 1)
+  assert.equal(Math.floor(capPixelIndex({ xM: 0, yM: -152000 }) / CAP_GRID_SIZE), CAP_GRID_SIZE - 1)
+  assert.equal(capPixelIndex({ xM: -152000, yM: 152000 }), 0)
+})

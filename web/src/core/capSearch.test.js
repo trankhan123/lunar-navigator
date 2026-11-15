@@ -53,3 +53,25 @@ test('selectSearchCells: CAP cells join a radius search; "same region" off the r
   assert.deepEqual(ids('all'), ['CUSTOM', 'AAA-a'])
   assert.deepEqual(selectSearchCells({ searchScope: 'region' }, point, lgrs), [point]) // no CAP loaded: as before
 })
+
+// Synthetic: HAW and MMP grids plus a CAP cell between; "region" must not depend on which regions were loaded before.
+const sameRegionRegions = [{ code: 'HAW', boundsM: [0, 0, 10000, 10000] }, { code: 'MMP', boundsM: [50000, 0, 60000, 10000] }]
+test('regionCodesForSearch: the point decides its region (site with no region, CAP cell beside a region) within 1 km of the bounds', () => {
+  const region = (point, anchor, sites = []) => regionCodesForSearch({ searchScope: 'region', currentPoint: point }, sameRegionRegions, sites, anchor)
+  assert.deepEqual(region({ type: 'site', siteId: 'im' }, { xM: 55000, yM: 5000 }, [{ id: 'im', region: null }]), ['MMP'])
+  assert.deepEqual(region({ type: 'cell', cellId: 'CAP-r076c076' }, { xM: 10600, yM: 5000 }), ['HAW']) // 600 m outside the box
+  assert.deepEqual(region({ type: 'cell', cellId: 'CAP-r076c076' }, { xM: 12000, yM: 5000 }), [])
+})
+
+test('selectSearchCells: "same region" gives the same cells whatever other regions are loaded, and drops duplicate positions', () => {
+  const cell = (id, xM, lat) => ({ id, lat, lon: 0, xM, yM: 0, feasible: true })
+  const point = cell('CAP-p', 0, -87)
+  const haw = [cell('HAW-a', 1, -87.001), cell('HAW-b', 2, -87.01)]
+  const other = [cell('MMP-a', 3, -87.0005), cell('MMO-x', 5, -87.2), cell('NR1-x', 5, -87.2)]
+  const only = selectSearchCells({ searchScope: 'region' }, point, { HAW: haw }, [], 'HAW').map((c) => c.id)
+  const withOthers = selectSearchCells({ searchScope: 'region' }, point, { HAW: haw, MMP: other }, [], 'HAW').map((c) => c.id)
+  assert.deepEqual(withOthers, only)
+  assert.deepEqual(only, ['CAP-p', 'HAW-a', 'HAW-b'])
+  const all = selectSearchCells({ searchScope: 'all' }, point, { MMO: [other[1]], NR1: [other[2]] }).map((c) => c.id)
+  assert.deepEqual(all, ['CAP-p', 'MMO-x']) // same position under two ids: the first stays
+})

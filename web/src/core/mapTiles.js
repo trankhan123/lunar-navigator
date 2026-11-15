@@ -46,6 +46,7 @@ export function visibleReliefTiles(transform, viewportPx, index, devicePixelRati
   const viewBounds = [xMin - margin, yMin - margin, xMax + margin, yMax + margin]
   const chosen = reliefLevelFor(index, VIEW_SIZE_M / transform.k / viewportPx / Math.min(devicePixelRatio, 2))
   const under = index.levels.find((level) => level.z === chosen.z - 1)
-  const underTiles = under ? levelTiles(index, under, viewBounds) : []
-  return [...underTiles, ...levelTiles(index, chosen, viewBounds)].slice(0, MAX_TILES)
+  const chosenTiles = levelTiles(index, chosen, viewBounds).slice(0, MAX_TILES) // the sharp level first; the coarser one fills what is left
+  const underTiles = under ? levelTiles(index, under, viewBounds).slice(0, MAX_TILES - chosenTiles.length) : []
+  return [...underTiles, ...chosenTiles]
 }

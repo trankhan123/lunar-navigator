@@ -157,11 +157,13 @@ export function evaluateWindow(sunTrack, earthTrack, startIndex, scenario) {
   }
 }
 
+const positionKey = (cell) => (Number.isFinite(cell.xM) ? `${cell.xM},${cell.yM}` : cell.id)
+
 /**
  * Filters feasible lunar surface cells within target search boundary,
  * ensuring the nominal landing target resides at index 0.
  */
-export function selectSearchCells(scenario, currentCell, cellsByRegion, capCells = []) {
+export function selectSearchCells(scenario, currentCell, cellsByRegion, capCells = [], regionCode = null) {
   if (!currentCell || currentCell.lat == null || currentCell.lon == null) {
     return []
   }
@@ -175,60 +177,13 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion, capCells
   let candidates = []
 
   if (scope === 'region') {
-    let closestCell = null
-    let minDist = Infinity
-    let closestRegionKey = null
-
-    if (cellsByRegion && !Array.isArray(cellsByRegion)) {
-      for (const [code, rCells] of Object.entries(cellsByRegion)) {
-        for (const c of rCells) {
-          if (c.lat != null && c.lon != null) {
-            const d = distanceKm(currentCell, c)
-            if (d < minDist) {
-              minDist = d
-              closestCell = c
-              closestRegionKey = code
-            }
-          }
-        }
-      }
-    } else {
-      for (const c of allCells) {
-        if (c.lat != null && c.lon != null) {
-          const d = distanceKm(currentCell, c)
-          if (d < minDist) {
-            minDist = d
-            closestCell = c
-          }
-        }
-      }
-    }
-
-    if (!closestCell || minDist > 1) {
-      // Not on any LGRS cell: search the 2 km CAP cells around the point (README D9); none loaded = nothing to search.
-      candidates = withinKm(capCells, CAP_REGION_SEARCH_KM)
-    } else {
-      const targetRegion =
-        closestCell.region ||
-        closestCell.regionId ||
-        closestRegionKey ||
-        (closestCell.id ? closestCell.id.split('-')[0] : null)
-      if (
-        cellsByRegion &&
-        !Array.isArray(cellsByRegion) &&
-        targetRegion &&
-        cellsByRegion[targetRegion]
-      ) {
-        candidates = cellsByRegion[targetRegion]
-      } else {
-        candidates = allCells.filter(
-          (c) =>
-            (c.region && c.region === targetRegion) ||
-            (c.regionId && c.regionId === targetRegion) ||
-            (targetRegion && c.id?.startsWith(targetRegion + '-')),
-        )
-      }
-    }
+    // The caller decides the point's region (pointRegionCode) and loads it; only that region's cells count, whatever else is loaded.
+    const regionOf = (cell) => cell.region || cell.regionId || cell.id?.split('-')[0]
+    const distanceTo = (cell) => (cell.lat == null || cell.lon == null ? Infinity : distanceKm(currentCell, cell))
+    const code = regionCode ?? (allCells.length > 0 ? regionOf(allCells.reduce((best, cell) => (distanceTo(cell) < distanceTo(best) ? cell : best))) : null)
+    const regionCells = allCells.filter((cell) => regionOf(cell) === code)
+    // Not on an LGRS cell (none within 1 km): search the 2 km CAP cells around the point (README D9); none loaded = nothing to search.
+    candidates = regionCells.some((cell) => distanceTo(cell) <= 1) ? regionCells : withinKm(capCells, CAP_REGION_SEARCH_KM)
   } else if (scope === 'radius') {
     const radius = scenario?.searchRadiusKm ?? 10
     candidates = withinKm([...allCells, ...capCells], radius) // CAP leaves out the region interiors: no duplicates
@@ -237,14 +192,12 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion, capCells
   }
 
   const result = [currentCell]
-  const seen = new Set()
-  if (currentCell && currentCell.id) {
-    seen.add(currentCell.id)
-  }
-
+  const seen = new Set([currentCell.id, positionKey(currentCell)])
   for (const cell of candidates) {
-    if (cell.feasible === true && cell.id && !seen.has(cell.id)) {
+    // MMO and NR1 overlap: one place under two ids is kept once (the first, the current point's region first).
+    if (cell.feasible === true && cell.id && !seen.has(cell.id) && !seen.has(positionKey(cell))) {
       seen.add(cell.id)
+      seen.add(positionKey(cell))
       result.push(cell)
     }
   }

@@ -156,3 +156,7 @@ function withCapHorizon(point, cellsByRegion, capCells) {
   const capCell = nearLgrsCell ? null : capCellContaining(capCells, point.xM, point.yM)
   return capCell ? { ...point, horizon: capCell.horizon, horizonSource: 'cap' } : point
 }
+
+/** The cell the Detail screen shows: a grid cell by id, else the point that was searched (never the form's live point). */
+export const detailCellFor = (cellsById, selectedCellId, searchedPoint) =>
+  cellsById.get(selectedCellId) ?? (searchedPoint?.id === selectedCellId ? searchedPoint : null)

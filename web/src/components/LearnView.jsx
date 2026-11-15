@@ -6,7 +6,7 @@ import { useI18n } from '../i18n/index.jsx'
 import HorizonChart from './HorizonChart.jsx'
 
 const cardClass = 'min-w-0 break-words rounded-lg border border-slate-800 bg-slate-900 p-4'
-const toDegrees = (horizon) => horizon.map((tenths) => tenths / 10)
+const toDegrees = (horizon) => horizon?.map((tenths) => tenths / 10) // a point without a horizon draws no line, never throws
 
 // README W7. Before a search only the Moon facts are shown; onStartSearch opens the Map & scenario screen.
 export default function LearnView({ results, cellsById, ephemeris, scenario, landingIndex, onStartSearch }) {

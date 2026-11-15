@@ -155,3 +155,10 @@ test('moonFacts: a Sun below the flat horizon line is described as below, never 
   assert.match(sunFact.text, /1\.4° below the flat horizon line/)
   assert.doesNotMatch(sunFact.text, /-1\.4/)
 })
+
+test('neighborLesson: never pairs a cell that has no horizon (a typed point near the grid)', () => {
+  const typed = { ...lightCell, id: 'CUSTOM', horizon: null }
+  const lesson = neighborLesson(lessonResults(['CUSTOM', 'MAL-dark', 'MAL-light'], [5, 90, 12]), new Map([[typed.id, typed], [darkCell.id, darkCell], [lightCell.id, lightCell]]), 0, context)
+  assert.ok(lesson === null || ![lesson.darkerCell, lesson.lighterCell].some((cell) => !cell.horizon))
+  assert.equal(lesson?.scope, 'elsewhere')
+})

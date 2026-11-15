@@ -113,14 +113,14 @@ export function findMostDifferentNeighbors(results, cellsById, landingIndex, max
   for (let i = 0; i < cellCount; i++) {
     const idA = results.cellIds[i]
     const cellA = getCell(idA)
-    if (!cellA || cellA.lat == null || cellA.lon == null) continue
+    if (!cellA?.horizon || cellA.lat == null || cellA.lon == null) continue
 
     const darkA = results.longestDarkHours[i * landingCount + landingIndex]
 
     for (let j = i + 1; j < cellCount; j++) {
       const idB = results.cellIds[j]
       const cellB = getCell(idB)
-      if (!cellB || cellB.lat == null || cellB.lon == null) continue
+      if (!cellB?.horizon || cellB.lat == null || cellB.lon == null) continue
       if (onlyWithCellId && idA !== onlyWithCellId && idB !== onlyWithCellId) continue
 
       const darkB = results.longestDarkHours[j * landingCount + landingIndex]

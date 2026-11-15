@@ -44,3 +44,11 @@ test('tiles missing from the index are skipped', () => {
 test('never more than MAX_TILES, whatever the viewport', () => {
   assert.ok(visibleReliefTiles({ k: 1, x: 0, y: 0 }, 4000, index).length <= MAX_TILES)
 })
+
+test('HiDPI: the finest level keeps its tiles, the coarser level only fills the leftover slots', () => {
+  const deep = { ...index, levels: [0, 1, 2, 3, 4].map((z) => ({ z, tileSizeM: 608000 / 2 ** z, metersPerPixel: 608000 / 2 ** z / 512, tiles: names(2 ** z) })) }
+  const tiles = visibleReliefTiles({ k: 2, x: 0, y: 0 }, 1200, deep, 2) // level 4 is chosen; level 3 alone has about 30 tiles in view
+  assert.ok(tiles.length <= MAX_TILES)
+  assert.ok(tiles.some((tile) => tile.level === 4))
+  assert.ok(tiles.filter((tile) => tile.level === 4).length > 0)
+})

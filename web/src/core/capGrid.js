@@ -32,8 +32,10 @@ export function capCellContaining(capCells, xM, yM) {
 }
 
 /** Pixel of a cell in the raster: one pixel per cell, north (+y) at the top. */
-export const capPixelIndex = ({ xM, yM }) =>
-  (CAP_GRID_SIZE - 1 - (Math.floor(yM / CAP_CELL_SIZE_M) + CAP_ORIGIN)) * CAP_GRID_SIZE + Math.floor(xM / CAP_CELL_SIZE_M) + CAP_ORIGIN
+export const capPixelIndex = ({ xM, yM }) => {
+  const clampToGrid = (index) => Math.min(CAP_GRID_SIZE - 1, Math.max(0, index)) // a pointer exactly on the far edge stays inside
+  return clampToGrid(CAP_GRID_SIZE - 1 - (Math.floor(yM / CAP_CELL_SIZE_M) + CAP_ORIGIN)) * CAP_GRID_SIZE + clampToGrid(Math.floor(xM / CAP_CELL_SIZE_M) + CAP_ORIGIN)
+}
 
 /** Cell index (into capCells) of every pixel, -1 where no loaded cell: used to find the cell under the pointer. */
 export function capPixelLookup(capCells) {

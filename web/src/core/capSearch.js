@@ -1,5 +1,5 @@
 // Which files a search needs: LGRS regions and CAP tiles (README C5 "Search scope", D9).
-import { capCellCenterFromId, capTileIdsInCircle } from './capGrid.js'
+import { CAP_ID_PATTERN, capCellCenterFromId, capTileIdsInCircle } from './capGrid.js'
 import { toPolarXY } from './data.js'
 import { CAP_REGION_SEARCH_KM } from './optimizer.js'
 
@@ -25,9 +25,17 @@ export function regionCodesForSearch(scenario, regions, sites, anchor) {
   const point = scenario.currentPoint
   if (scenario.searchScope === 'all' || (scenario.searchScope === 'radius' && !anchor)) return regions.map((region) => region.code)
   if (scenario.searchScope === 'radius') return regions.filter((region) => intersectsCircle(region.boundsM, anchor, scenario.searchRadiusKm * 1000)).map((region) => region.code)
-  if (point.type === 'cell') return [point.cellId.split('-')[0]]
-  if (point.type === 'site') return [sites.find((site) => site.id === point.siteId)?.region].filter(Boolean)
-  return regions.filter((region) => anchor && intersectsCircle(region.boundsM, anchor, 0)).map((region) => region.code)
+  return [pointRegionCode(point, regions, sites, anchor)].filter(Boolean)
+}
+
+const REGION_MARGIN_M = 1000 // a point this close to a region's box can still sit on one of its 1 km cells (see selectSearchCells)
+
+/** The region the point belongs to, decided from the point and region bounds only (not from what is loaded); null on the open cap. */
+export function pointRegionCode(point, regions, sites, anchor) {
+  if (point.type === 'cell' && !CAP_ID_PATTERN.test(point.cellId)) return point.cellId.split('-')[0]
+  const siteRegion = point.type === 'site' ? sites.find((site) => site.id === point.siteId)?.region : null
+  if (siteRegion) return siteRegion
+  return (anchor && regions.find((region) => intersectsCircle(region.boundsM, anchor, REGION_MARGIN_M))?.code) ?? null
 }
 
 /**

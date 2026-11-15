@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { attachDsn, hourIndexOf, resolveCurrentCell, timeAtHour, toPolarXY } from './data.js'
+import { attachDsn, detailCellFor, hourIndexOf, resolveCurrentCell, timeAtHour, toPolarXY } from './data.js'
 import { assertNear } from './testHelpers.js'
 
 const ephemeris = { startTime: '2028-01-01T00:00Z', hours: 48 }
@@ -60,4 +60,13 @@ test('attachDsn: attached only when startTime and hours match, else null with a 
   assert.equal(warn.mock.callCount(), 2)
   assert.equal(attachDsn(ephemeris, null).dsn, null)
   assert.equal(warn.mock.callCount(), 2)
+})
+
+test('detailCellFor: the searched point is found by its id, the form point is never used', () => {
+  const grid = new Map([['MAL-a', { id: 'MAL-a' }]])
+  const searched = { id: 'SITE-x' }
+  assert.equal(detailCellFor(grid, 'MAL-a', searched).id, 'MAL-a')
+  assert.equal(detailCellFor(grid, 'SITE-x', searched), searched)
+  assert.equal(detailCellFor(grid, 'CUSTOM', searched), null)
+  assert.equal(detailCellFor(grid, 'SITE-x', null), null)
 })

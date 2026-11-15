@@ -130,9 +130,9 @@ test('explainDifference: increases dark period when ridge is higher', () => {
 
 test('findMostDifferentNeighbors: finds the pair with largest dark hours difference within radius', () => {
   // Cells at equator for simple distance: 1 deg lon = ~30.3 km, 0.03 deg lon = ~0.91 km
-  const cellA = { id: 'TEST-A', lat: 0, lon: 0 }
-  const cellB = { id: 'TEST-B', lat: 0, lon: 0.03 } // ~0.91 km from A
-  const cellC = { id: 'TEST-C', lat: 0, lon: 0.2 } // ~6.06 km from A and B
+  const cellA = { id: 'TEST-A', lat: 0, lon: 0, horizon: [0] }
+  const cellB = { id: 'TEST-B', lat: 0, lon: 0.03, horizon: [0] } // ~0.91 km from A
+  const cellC = { id: 'TEST-C', lat: 0, lon: 0.2, horizon: [0] } // ~6.06 km from A and B
 
   const cellsById = {
     'TEST-A': cellA,

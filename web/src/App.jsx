@@ -13,8 +13,8 @@ import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
 import { capTileIdsInBounds } from './core/capGrid.js'
-import { capTileIdsForSearch, regionCodesForSearch, searchAnchor } from './core/capSearch.js'
-import { hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell } from './core/data.js'
+import { capTileIdsForSearch, pointRegionCode, regionCodesForSearch, searchAnchor } from './core/capSearch.js'
+import { detailCellFor, hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell } from './core/data.js'
 import { cellDisplayName } from './core/format.js'
 import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
@@ -110,7 +110,7 @@ export default function App() {
 
   const capCells = useMemo(() => Object.values(capTiles).flat(), [capTiles])
   // Loads CAP tiles not requested yet; resolves with the cells of all the asked tiles.
-  const needCapTiles = useCallback(async (tileIds) => {
+  const needCapTiles = useCallback(async (tileIds, { failLoudly = false } = {}) => {
     const fresh = tileIds.filter((tileId) => !requestedCapTiles.current.has(tileId))
     fresh.forEach((tileId) => requestedCapTiles.current.add(tileId))
     try {
@@ -119,6 +119,7 @@ export default function App() {
       return lists.flat()
     } catch (error) {
       fresh.forEach((tileId) => requestedCapTiles.current.delete(tileId)) // allow a retry
+      if (failLoudly) throw error // a search must not run on a partial cap
       setLoadError(error.message)
       return []
     }
@@ -185,20 +186,25 @@ export default function App() {
       const pointRegion = point.type === 'cell' ? data.regions.find((region) => region.code === point.cellId.split('-')[0]) : null
       const pointLoaded = pointRegion ? { [pointRegion.code]: await loadRegionCells(pointRegion) } : {}
       const anchor = searchAnchor(point, data.sites, { ...cellsByRegion, ...pointLoaded })
+      // The point's own region, from the point and region bounds: loaded before anything is resolved, so loading order never changes a search.
+      const ownRegionCode = pointRegionCode(point, data.regions, data.sites, anchor)
       const codes = regionCodesForSearch(searchScenario, data.regions, data.sites, anchor)
       const neededRegions = data.regions.filter((region) => codes.includes(region.code))
-      const [loadedLists, searchCapCells] = await Promise.all([
-        Promise.all(neededRegions.map(async (region) => [region.code, await loadRegionCells(region)])),
-        needCapTiles(capTileIdsForSearch(searchScenario, data.capIndex, anchor, neededRegions.length > 0)),
-      ])
+      const loadedLists = await Promise.all(neededRegions.map(async (region) => [region.code, await loadRegionCells(region)]))
+      const ownRegionCells = Object.fromEntries(loadedLists)[ownRegionCode] ?? pointLoaded[ownRegionCode] ?? []
+      const isOnRegionCell = !!anchor && ownRegionCells.some((cell) => Math.hypot(cell.xM - anchor.xM, cell.yM - anchor.yM) <= 1000)
+      const searchCapCells = await needCapTiles(
+        [...new Set([...capTileIdsForSearch(searchScenario, data.capIndex, anchor, isOnRegionCell), ...(anchor && data.capIndex ? capTileIdsInBounds(data.capIndex, [anchor.xM, anchor.yM, anchor.xM, anchor.yM]) : [])])],
+        { failLoudly: true },
+      )
       if (!isLatest()) return
       const loaded = { ...cellsByRegion, ...pointLoaded, ...Object.fromEntries(loadedLists) }
+      const ordered = { ...(ownRegionCode && { [ownRegionCode]: loaded[ownRegionCode] }), ...loaded } // the point's region first: it wins duplicate positions
       const currentCell = resolveCurrentCell(point, loaded, data.sites, searchCapCells)
-      const cells = selectSearchCells(searchScenario, currentCell, loaded, searchCapCells)
+      const cells = selectSearchCells(searchScenario, currentCell, ordered, searchCapCells, ownRegionCode)
       // Open the searched region so the Results map shows its ✓ ! ✕ colours: the current point's own region, else the region of the
       // nearest searched grid cell (a site with no region, coordinates outside every frame); otherwise keep the open one.
-      const ownRegion = regionCodesForSearch({ ...searchScenario, searchScope: 'region' }, data.regions, data.sites, anchor).find((code) => data.regions.some((region) => region.code === code))
-      const searchedRegion = ownRegion ?? nearestRegionCode(currentCell, cells, data.regions)
+      const searchedRegion = ownRegionCode ?? nearestRegionCode(currentCell, cells, data.regions)
       if (searchedRegion) {
         setRegionCode(searchedRegion)
         setMapFocus(null)
@@ -320,7 +326,7 @@ export default function App() {
 
   const cells = activeRegion ? (cellsByRegion[activeRegion.code] ?? null) : null
   const selectedCell = cells?.find((cell) => cell.id === selectedCellId) ?? (selectedCellId?.startsWith('CAP-') ? (cellsById.get(selectedCellId) ?? null) : null)
-  const detailCell = cellsById.get(selectedCellId) ?? (currentCell?.id === selectedCellId ? currentCell : null)
+  const detailCell = detailCellFor(cellsById, selectedCellId, searchedPoint)
   const detailScenario = search.status === 'done' ? search.scenario : scenario
   const detailLandingTime = landingTime ?? `${detailScenario.startDate}T00:00Z`
   const currentCellId = scenario.currentPoint?.type === 'cell' ? scenario.currentPoint.cellId : null
@@ -531,7 +537,7 @@ export default function App() {
               <DetailView
                 key={`${detailCell.id}|${detailLandingTime}`}
                 cell={detailCell}
-                currentCell={currentCell}
+                currentCell={search.status === 'done' ? searchedPoint : currentCell}
                 ephemeris={data.ephemeris}
                 scenario={detailScenario}
                 landingTime={detailLandingTime}
