@@ -18,7 +18,7 @@ export const MARGINAL_BATTERY_FRACTION = 0.2
 export const STATUS = { fail: 0, marginal: 1, pass: 2 }
 export const FAIL_REASON_BITS = { dark: 1, commLoss: 2, battery: 4 }
 
-const SMALLER_IS_BETTER_KEYS = new Set(['distanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours'])
+const SMALLER_IS_BETTER_KEYS = new Set(['distanceKm', 'psrDistanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours'])
 
 /**
  * Flat typed-array slot comparator for high-throughput candidate selection.
@@ -215,6 +215,7 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
     return {
       cellIds: [],
       distanceKm: new Float32Array(0),
+      psrDistanceKm: new Float32Array(0),
       landingTimes: [],
       cellCount: 0,
       landingCount: 0,
@@ -242,6 +243,7 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
 
   const cellIds = cells.map((c) => c.id)
   const distanceKmArr = new Float32Array(cellCount)
+  const psrDistanceKmArr = Float32Array.from(cells, (cell) => cell.psrDistanceKm ?? NaN) // NaN = unknown
   const currentCell = cells[0]
   for (let c = 0; c < cellCount; c++) {
     distanceKmArr[c] = distanceKm(currentCell, cells[c])
@@ -317,6 +319,7 @@ export function runWindowSearch(cells, ephemeris, scenario, onProgress) {
   return {
     cellIds,
     distanceKm: distanceKmArr,
+    psrDistanceKm: psrDistanceKmArr,
     landingTimes,
     cellCount,
     landingCount,
@@ -351,6 +354,7 @@ export function metricsAt(results, cellIndex, landingIndex) {
   const cellId = results.cellIds[cellIndex]
   const landingTime = results.landingTimes[landingIndex]
   const dist = results.distanceKm[cellIndex]
+  const psrDistanceKm = Number.isNaN(results.psrDistanceKm?.[cellIndex] ?? NaN) ? null : results.psrDistanceKm[cellIndex]
 
   const statusCode = results.status[idx]
   const status = statusCode === STATUS.pass ? 'pass' : (statusCode === STATUS.marginal ? 'marginal' : 'fail')
@@ -399,6 +403,7 @@ export function metricsAt(results, cellIndex, landingIndex) {
     landingIndex,
     landingTime,
     distanceKm: dist,
+    psrDistanceKm,
   }
 }
 

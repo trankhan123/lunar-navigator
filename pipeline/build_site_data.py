@@ -1,7 +1,7 @@
 """D5 — Build web data: merge grid + feasibility + horizon into the files the browser loads.
 
 Contract: README "Data files". Run: python pipeline/build_site_data.py && python pipeline/check_web_data.py
-Input:  pipeline/out/grid_<CODE>.json, feasibility_<CODE>.json, horizon_<CODE>.json, horizon_sites.json, pipeline/sites.json
+Input:  pipeline/out/grid_<CODE>.json, feasibility_<CODE>.json, horizon_<CODE>.json, science_<CODE>.json (E7), horizon_sites.json, pipeline/sites.json
 Output: web/public/data/regions.json, web/public/data/cells_<CODE>.json, web/public/data/sites.json (each < 2 MB)
 Rules:  feasible = slopeDeg ≤ SLOPE_LIMIT_DEG and psrFraction ≤ PSR_LIMIT_FRACTION, on the rounded values D3 wrote;
         infeasibleReason = "slope" first, then "psr", else null.
@@ -40,20 +40,21 @@ def keep_nearest_cells(cells, region_site, count):
     return [cell for cell in cells if cell["id"] in kept_ids]
 
 
-def build_cell(grid_cell, feasibility, horizon):
+def build_cell(grid_cell, feasibility, horizon, psr_distance_km=None):
     reason = "slope" if feasibility["slopeDeg"] > SLOPE_LIMIT_DEG else "psr" if feasibility["psrFraction"] > PSR_LIMIT_FRACTION else None
-    return {**grid_cell, **feasibility, "feasible": reason is None, "infeasibleReason": reason, "horizon": horizon}
+    return {**grid_cell, **feasibility, "psrDistanceKm": psr_distance_km, "feasible": reason is None, "infeasibleReason": reason, "horizon": horizon}
 
 
 def build_region(region_site):
     """(regions.json entry, cells_<CODE>.json content), or None when an input file is missing."""
     code = region_site["region"]
     inputs = {kind: read_out(f"{kind}_{code}.json") for kind in ("grid", "feasibility", "horizon")}
+    science = read_out(f"science_{code}.json") or {}  # E7, optional
     missing = [f"{kind}_{code}.json" for kind, data in inputs.items() if data is None]
     if missing:
         print(f"warning: skip {code}, missing {', '.join(missing)}")
         return None
-    cells = [build_cell(cell, inputs["feasibility"][cell["id"]], inputs["horizon"][cell["id"]]) for cell in inputs["grid"]]
+    cells = [build_cell(cell, inputs["feasibility"][cell["id"]], inputs["horizon"][cell["id"]], science.get(cell["id"])) for cell in inputs["grid"]]
     if json_bytes(cells) > MAX_FILE_BYTES:
         print(f"note: {code} has {len(cells)} cells ({json_bytes(cells) / 1e6:.1f} MB), keeping the {KEPT_CELL_COUNT} nearest its centre")
         cells = keep_nearest_cells(cells, region_site, KEPT_CELL_COUNT)

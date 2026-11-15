@@ -29,3 +29,9 @@ def test_build_cell_applies_the_rule_slope_first():
     steep_and_dark = build_cell({"id": "x"}, {"slopeDeg": 20.1, "psrFraction": 0.9}, horizon)
     assert (steep_and_dark["feasible"], steep_and_dark["infeasibleReason"]) == (False, "slope")
     assert build_cell({"id": "x"}, {"slopeDeg": 5.0, "psrFraction": 0.501}, horizon)["infeasibleReason"] == "psr"
+
+
+def test_build_cell_carries_psr_distance_and_defaults_to_null():
+    horizon = [0] * 360
+    assert build_cell({"id": "x"}, {"slopeDeg": 5.0, "psrFraction": 0.0}, horizon, 3.4)["psrDistanceKm"] == 3.4
+    assert build_cell({"id": "x"}, {"slopeDeg": 5.0, "psrFraction": 0.0}, horizon)["psrDistanceKm"] is None

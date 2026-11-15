@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear, constantEphemeris, equatorCell } from './testHelpers.js'
-import { STATUS, evaluateWindow, rankBestWindows, rankCells, runWindowSearch, selectSearchCells, summarizeCurrentPoint } from './optimizer.js'
+import { STATUS, evaluateWindow, metricsAt, rankBestWindows, rankCells, runWindowSearch, selectSearchCells, summarizeCurrentPoint } from './optimizer.js'
 import { DEFAULT_SCENARIO } from './scenario.js'
 
 const fill = (value, length = 24) => new Float32Array(length).fill(value)
@@ -29,8 +29,10 @@ test('evaluateWindow pass / fail / marginal', () => {
 
 test('runWindowSearch: shape of WindowResults', () => {
   const scenario = { ...DEFAULT_SCENARIO, startDate: '2028-01-01', endDate: '2028-01-01', stayDays: 1 }
-  const cells = [equatorCell, { ...equatorCell, id: 'TEST-b', lon: 1 }]
+  const cells = [{ ...equatorCell, psrDistanceKm: 3.5 }, { ...equatorCell, id: 'TEST-b', lon: 1 }] // synthetic PSR distance
   const results = runWindowSearch(cells, constantEphemeris({ hours: 48 }), scenario)
+  assert.equal(results.psrDistanceKm[0], 3.5)
+  assert.ok(Number.isNaN(results.psrDistanceKm[1]))
   assert.deepEqual(results.cellIds, ['TEST-a', 'TEST-b'])
   assert.equal(results.cellCount, 2)
   assert.equal(results.landingCount, 4)
@@ -59,6 +61,7 @@ function makeResults({ status, minBatteryFraction, distanceKm, landingCount }) {
   return {
     cellIds: distanceKm.map((_, index) => `TEST-${index}`),
     distanceKm: Float32Array.from(distanceKm),
+    psrDistanceKm: Float32Array.from(distanceKm, (km, index) => (index === 1 ? NaN : 10 - km)), // synthetic; NaN = unknown
     landingTimes: Array.from({ length: landingCount }, (_, index) => `2028-01-01T${String(index * 6).padStart(2, '0')}:00Z`),
     cellCount: distanceKm.length,
     landingCount,
@@ -147,4 +150,12 @@ test('rankBestWindows: limit 10 over 12 cells gives 10 rows with distinct cellId
   const rows = rankBestWindows(results, { limit: 10 })
   assert.equal(rows.length, 10)
   assert.equal(new Set(rows.map((row) => row.cellId)).size, 10)
+})
+
+test('rankCells sorts by psrDistanceKm smaller first, unknown last, and metricsAt exposes it', () => {
+  // synthetic: cell 0 = 10 km, cell 1 = unknown (null), cell 2 = 5 km
+  const results = makeResults({ status: [2, 2, 2], minBatteryFraction: [0.5, 0.5, 0.5], distanceKm: [0, 2, 5], landingCount: 1 })
+  assert.deepEqual(rankCells(results, 0, { sortBy: 'psrDistanceKm' }).map((row) => row.cellId), ['TEST-2', 'TEST-0', 'TEST-1'])
+  assert.equal(metricsAt(results, 1, 0).psrDistanceKm, null)
+  assert.equal(metricsAt(results, 2, 0).psrDistanceKm, 5)
 })

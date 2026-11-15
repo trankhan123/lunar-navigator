@@ -163,6 +163,7 @@ function SouthPoleMap({
       (cells ?? []).map((cell, index) =>
         cellColor(layerId, {
           feasible: cell.feasible,
+          psrDistanceKm: cell.psrDistanceKm,
           status: statusByCellId?.get(cell.id),
           ...skySample(sky, index),
           fractionSun: fractions?.fractionSun[index],

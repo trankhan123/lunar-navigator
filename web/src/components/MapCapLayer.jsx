@@ -61,6 +61,7 @@ function MapCapLayer({ capCells, capIndex, layerId, ephemeris, hour, hourRange, 
     const colors = capCells.map((cell, index) =>
       cellColor(layerId, {
         feasible: cell.feasible,
+        psrDistanceKm: cell.psrDistanceKm,
         status: statusByCellId?.get(cell.id),
         sunDiskFraction: sky?.sunDiskFraction[index],
         earthDiskFraction: sky?.earthDiskFraction[index],

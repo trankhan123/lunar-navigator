@@ -17,6 +17,7 @@ export default function RankingTable({ rows, sortBy, direction, onSort, onSelect
     { key: 'minBatteryFraction', label: t('columns.minBattery'), show: (row) => percent(row.minBatteryFraction) },
     { key: 'longestDarkHours', label: t('columns.longestDark'), show: (row) => row.longestDarkHours },
     { key: 'longestCommLossHours', label: t('columns.longestCommLoss'), show: (row) => row.longestCommLossHours },
+    { key: 'psrDistanceKm', label: t('columns.psrDistance'), show: (row) => row.psrDistanceKm?.toFixed(1) ?? '—', expert: true },
     { key: 'fractionSun', label: t('columns.fractionSun'), show: (row) => percent(row.fractionSun), expert: true },
     { key: 'fractionEarth', label: t('columns.fractionEarth'), show: (row) => percent(row.fractionEarth), expert: true },
     { key: 'meanSunElevationDeg', label: t('columns.meanSunElevation'), show: (row) => row.meanSunElevationDeg?.toFixed(2) ?? '—', expert: true },

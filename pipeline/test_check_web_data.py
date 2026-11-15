@@ -50,7 +50,7 @@ def write_cap_folder(folder, cell_overrides=None, region_bounds=(5e5, 5e5, 6e5, 
     """Synthetic cap folder: one tile with one cell at 85°S, 0°E, and one region box."""
     x, y = checker.TO_POLAR_XY.transform(0.0, -85.0)
     cell = {"id": "CAP-r000c000", "label": "r000c000", "lat": -85.0, "lon": 0.0, "xM": round(x, 1), "yM": round(y, 1),
-            "heightM": 1.0, "slopeDeg": 5.0, "psrFraction": 0.0, "feasible": True, "infeasibleReason": None,
+            "heightM": 1.0, "slopeDeg": 5.0, "psrFraction": 0.0, "psrDistanceKm": 3.4, "feasible": True, "infeasibleReason": None,
             "horizon": [0] * 360, **(cell_overrides or {})}
     (folder / "cap").mkdir()
     (folder / "regions.json").write_text(json.dumps({"regions": [{"boundsM": list(region_bounds)}]}))

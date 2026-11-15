@@ -6,6 +6,8 @@ export const INFEASIBLE_COLOR = '#334155'
 export const NOT_SEARCHED_COLOR = '#64748b'
 export const STATUS_SYMBOLS = ['✕', '!', '✓'] // index = STATUS code (fail, marginal, pass)
 
+// Same viridis stops as FRACTION_RAMP below (declared first because MAP_LAYERS needs it)
+const FRACTION_RAMP_COLORS = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']
 const entries = (pairs) => pairs.map(([color, label]) => ({ color, label }))
 
 /** Map layers in panel order; legend[level] is the swatch of that level. needs: what the layer waits for. */
@@ -20,6 +22,10 @@ export const MAP_LAYERS = [
     legend: entries([['#ef4444', 'Fails a limit'], ['#f59e0b', 'Meets limits, battery below 20 %'], ['#10b981', 'Meets all limits']]),
     extraLegend: entries([[NOT_SEARCHED_COLOR, 'Not in this search']]),
   },
+  {
+    id: 'psrDistance', label: 'Distance to permanent shadow', needs: null,
+    legend: entries([[FRACTION_RAMP_COLORS[0], '10 km or more'], [FRACTION_RAMP_COLORS[1], '5–10 km'], [FRACTION_RAMP_COLORS[2], '2–5 km'], [FRACTION_RAMP_COLORS[3], 'Under 2 km'], [FRACTION_RAMP_COLORS[4], 'Inside a permanent shadow']]),
+  },
   { id: 'feasibility', label: 'Feasibility', needs: null, legend: entries([[INFEASIBLE_COLOR, 'Too steep or in permanent shadow'], ['#0ea5e9', 'Feasible cell']]) },
 ]
 export const CELL_FILL_OPACITY = 0.65 // lets the relief (craters, ridges) show through while the colours stay readable
@@ -32,6 +38,9 @@ export const earthLevel = (diskFraction) => (diskFraction >= VISIBLE_THRESHOLD ?
 export const sunEarthLevel = (sunDiskFraction, earthDiskFraction) =>
   (sunDiskFraction >= VISIBLE_THRESHOLD ? 2 : 0) + (earthDiskFraction >= VISIBLE_THRESHOLD ? 1 : 0)
 
+/** 0 = 10 km or more … 4 = inside a permanent shadow (nearest PSR >= 1 km²). */
+export const psrDistanceLevel = (distanceKm) => (distanceKm <= 0 ? 4 : distanceKm < 2 ? 3 : distanceKm < 5 ? 2 : distanceKm < 10 ? 1 : 0)
+
 /**
  * Level of a cell on a layer, or null when the value is missing.
  * @param {string} layerId
@@ -43,12 +52,13 @@ export function cellLevel(layerId, sample) {
   if (layerId === 'earthNow') return Number.isFinite(earth) ? earthLevel(earth) : null
   if (layerId === 'sunEarthNow') return Number.isFinite(sun) && Number.isFinite(earth) ? sunEarthLevel(sun, earth) : null
   if (layerId === 'searchResult') return sample.feasible && sample.status !== undefined ? sample.status : null
+  if (layerId === 'psrDistance') return Number.isFinite(sample.psrDistanceKm) ? psrDistanceLevel(sample.psrDistanceKm) : null
   if (layerId === 'feasibility') return sample.feasible ? 1 : 0
   return null
 }
 
 /** Viridis, 0 → 1: the % layers here and D8's NASA images (pipeline FRACTION_COLORS) share it. */
-export const FRACTION_RAMP = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']
+export const FRACTION_RAMP = FRACTION_RAMP_COLORS
 const RAMP_RGB = FRACTION_RAMP.map((color) => [1, 3, 5].map((start) => parseInt(color.slice(start, start + 2), 16)))
 
 /** Linear RGB interpolation between equally spaced ramp stops, clamped to 0…1; null for a non-finite fraction. */

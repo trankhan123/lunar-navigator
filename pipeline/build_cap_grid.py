@@ -2,6 +2,7 @@
 
 Contract: README "D9". Run: python pipeline/build_cap_grid.py [--limit N] [--jobs N]
 Input:  pipeline/raw DEMs, slope and PSR rasters (same as D3/D4), web/public/data/regions.json (boundsM to exclude)
+        --rebuild-tiles skips all computing and rewrites the tiles from the committed pipeline/out/*_CAP.json (use after E7).
 Output: pipeline/out/grid_CAP.json, feasibility_CAP.json, horizon_CAP.json (same shapes as the region files),
         web/public/data/cap/index.json and cap_<tx>_<ty>.json (40 km tiles of finished cells).
 Feasibility is D3 (compute_feasibility) on the 2 km square, horizon is D4 (compute_horizon) with its defaults, the cell
@@ -96,12 +97,28 @@ def compute_horizons(cells, jobs):
     return horizons
 
 
+def write_tiles(cells, feasibility, horizon_by_id):
+    science = json.loads((OUT_FOLDER / "science_CAP.json").read_text()) if (OUT_FOLDER / "science_CAP.json").exists() else {}
+    finished = [build_cell(cell, feasibility[cell["id"]], horizon_by_id[cell["id"]], science.get(cell["id"])) for cell in cells]
+    tiles = split_into_tiles(finished)
+    for (tile_x, tile_y), tile_cells in tiles.items():
+        tile_id = f"cap_{tile_x}_{tile_y}"
+        write_json(CAP_FOLDER / f"{tile_id}.json", {"tileId": tile_id, "cells": tile_cells})
+    write_json(CAP_FOLDER / "index.json", build_index(tiles, REGION_CODES))
+
+
 def main():
     global NEAR_DEM, FAR_DEM
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--limit", type=int, help="only N cells spread over the cap (timing test, nothing is written)")
     parser.add_argument("--jobs", type=int, default=os.cpu_count())
+    parser.add_argument("--rebuild-tiles", action="store_true", help="rewrite web tiles from pipeline/out/*_CAP.json, no DEM needed")
     args = parser.parse_args()
+
+    if args.rebuild_tiles:
+        cells, feasibility, horizon_by_id = (json.loads((OUT_FOLDER / f"{kind}_CAP.json").read_text()) for kind in ("grid", "feasibility", "horizon"))
+        write_tiles(cells, feasibility, horizon_by_id)
+        return
 
     bounds = [region["boundsM"] for region in json.loads((WEB_DATA_FOLDER / "regions.json").read_text())["regions"]]
     radius_m = math.hypot(*TO_PGDA.transform(0, SOUTH_OF_LAT_DEG))
@@ -125,12 +142,7 @@ def main():
     write_json(OUT_FOLDER / "grid_CAP.json", cells)
     write_json(OUT_FOLDER / "feasibility_CAP.json", feasibility)
     write_json(OUT_FOLDER / "horizon_CAP.json", horizon_by_id)
-    finished = [build_cell(cell, feasibility[cell["id"]], horizon_by_id[cell["id"]]) for cell in cells]
-    tiles = split_into_tiles(finished)
-    for (tile_x, tile_y), tile_cells in tiles.items():
-        tile_id = f"cap_{tile_x}_{tile_y}"
-        write_json(CAP_FOLDER / f"{tile_id}.json", {"tileId": tile_id, "cells": tile_cells})
-    write_json(CAP_FOLDER / "index.json", build_index(tiles, REGION_CODES))
+    write_tiles(cells, feasibility, horizon_by_id)
 
 
 if __name__ == "__main__":
