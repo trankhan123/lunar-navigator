@@ -189,7 +189,7 @@ Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi 
 | Ngày 2 sáng | W5 chi tiết, D6 site nổi tiếng, W6 globe, W7 chế độ học, D7 kiểm chứng PGDA 69 + QuickMap |
 | Ngày 2 trưa | Đóng băng tính năng, deploy Vercel, quay video demo |
 | Ngày 2 chiều | Sửa lỗi, trang project tiếng Anh, slide, nộp sớm |
-| Ngày 2 tối | Module thêm E1–E7 (`docs/extra-prospect.md`), mỗi module một nhánh `extra/<mã>` và một PR; 22:30 dừng merge |
+| Ngày 2 tối | Module thêm E1–E8 (`docs/extra-prospect.md`; E9, E10 chờ người tải dữ liệu LGRS), mỗi module một nhánh `extra/<mã>` và một PR; 22:30 dừng merge |
 
 Yêu cầu bài nộp (đối chiếu Submission Guide 2026):
 
