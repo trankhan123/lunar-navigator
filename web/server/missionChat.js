@@ -121,7 +121,7 @@ Canonical numeric fields/units: ${JSON.stringify(Object.fromEntries(Object.entri
   const monthMentioned = /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b|tháng\s*\d{1,2}\b|\b(?:in|during|for)\s+may\b|\bmay\s+\d/i.test(userText) || /^\s*may\s*[?.!]?\s*$/i.test(body.message)
   const dateProposed = ['startDate', 'endDate'].some((field) =>
     typeof reply.patch?.[field] === 'string' && reply.patch[field] !== body.scenario[field])
-  const dateText = userText.replace(/\b\d{4}\s*(?:kWh|Wh|kW|W|watts?|watt.hours?|km|m|h|hours?|days?|min(?:utes?)?)\b/gi, '')
+  const dateText = userText.replace(/\b\d{4}(?:[.,]\d+)?\s*(?:kWh|Wh|kW|W|watts?|watt.hours?|km|m|h|hours?|days?|min(?:utes?)?)\b/gi, '')
   if (dateProposed && monthMentioned && !/\b(?:19|20|21)\d{2}\b/.test(dateText)) {
     delete reply.patch.startDate
     delete reply.patch.endDate

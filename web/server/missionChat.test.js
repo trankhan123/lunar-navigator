@@ -136,7 +136,11 @@ test('mission quantities cannot become coordinates and latitude signs cannot fli
 })
 
 test('a month without an explicit year asks for clarification even if the model guesses', async (t) => {
-  for (const message of ['At Test site in January, staying 6 days.', 'Ở Test site vào tháng 1, ở lại 6 ngày.', 'At Test site in January, panel power 2000 W.']) {
+  for (const message of [
+    'At Test site in January, staying 6 days.', 'Ở Test site vào tháng 1, ở lại 6 ngày.',
+    'At Test site in January, panel power 2000 W.', 'At Test site in January, panel power 2000.5 W.',
+    'Ở Test site vào tháng 1, tấm pin 2000,5 W.',
+  ]) {
     let calls = 0
     const call = await fixture(t, async () => ++calls === 1 ? json({ result: 1 }) : json({ candidates: [{
       finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ ...goodReply, patch: {

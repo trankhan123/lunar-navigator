@@ -130,10 +130,14 @@ assistant does not disable the mission form.
 
 ## Validation recorded during implementation
 
-Unit/API tests use synthetic responses; browser checks use intercepted AI replies.
-Actual Redis Lua was checked with 20 concurrent requests against a cap of 3:
-3 accepted, 17 denied, duplicate requests denied and TTLs present. Live Gemini,
-Upstash REST and Vercel deployment need the owner's configured resources.
+131 Node tests pass, including actual Redis Lua with 20 concurrent requests
+against a cap of 3: 3 accepted, 17 denied, duplicate requests denied and TTLs
+present. Synthetic-response browser tests cover stale drafts and unavailable
+service. Live tests through the owner's Preview sharing link confirmed Gemini
+English/Vietnamese extraction, clarification and Apply followed by the existing
+worker search. Upstash-backed duplicate and minute limits returned 409/429.
+See [recorded cases](mission-chat-evaluation.md). Keep sharing credentials out
+of Git and PR descriptions; revoke test access when no longer needed.
 
 References: [Vercel collaboration](https://vercel.com/docs/deployments/troubleshoot-project-collaboration),
 [Vite functions](https://vercel.com/docs/frameworks/frontend/vite),

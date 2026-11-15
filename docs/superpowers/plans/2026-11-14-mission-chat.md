@@ -47,14 +47,16 @@ the public endpoint, while existing browser code computes scientific results.
 Execution: the user's instruction to start setup authorizes implementation;
 continue in this session without reopening the already discussed design.
 WF2 was fast-forwarded to origin/main because the completed form is required.
-Live provider verification remains pending; do not imply it passed from stub tests or a successful deployment alone.
+Live provider verification completed through an owner-provided Preview share link; the share credential is kept outside the repository.
 
 ## Verification and delivery status
 
 - Integrated origin/main `b948f7c` into WF2.
-- 128 tests pass (including the actual Redis Lua concurrency check), lint and production build pass.
+- 131 tests pass (including the actual Redis Lua concurrency check), lint and production build pass.
 - Chromium smoke tests pass on desktop and 390px mobile with stubbed AI replies.
 - Reviewer coordinate-provenance findings fixed with regression tests.
 - WF2 pushed and draft PR #11 opened; no merge or Production deployment.
 - Initial Vercel builds failed with `vite: command not found`; deployment metadata confirmed Root Directory was unset. The owner set it to `web`, and redeployment reached Ready.
-- The Preview URL is https://lunar-navigator-git-wf2-hackathon-400c.vercel.app. It redirects unauthenticated requests to Vercel login; live Gemini/Upstash verification remains pending Preview access.
+- The Preview URL is https://lunar-navigator-git-wf2-hackathon-400c.vercel.app. The owner supplied a scoped sharing link for live checks; no account password or model key was needed.
+- Real Gemini/Upstash checks passed: English/Vietnamese extraction, preserved custom values, missing location and follow-up, year clarification, invalid date, unknown location and scope restriction. Full UI Apply → worker search returned 287 cells × 28 landing times. Duplicate requests returned 409, the fourth minute request returned 429, and invalid payloads returned 400.
+- Live feedback led to complete nullable extraction fields plus date-range examples and code checks for guessed years. Detailed cases: `docs/mission-chat-evaluation.md`.
