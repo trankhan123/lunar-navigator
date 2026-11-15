@@ -136,7 +136,7 @@ test('mission quantities cannot become coordinates and latitude signs cannot fli
 })
 
 test('a month without an explicit year asks for clarification even if the model guesses', async (t) => {
-  for (const message of ['At Test site in January, staying 6 days.', 'Ở Test site vào tháng 1, ở lại 6 ngày.']) {
+  for (const message of ['At Test site in January, staying 6 days.', 'Ở Test site vào tháng 1, ở lại 6 ngày.', 'At Test site in January, panel power 2000 W.']) {
     let calls = 0
     const call = await fixture(t, async () => ++calls === 1 ? json({ result: 1 }) : json({ candidates: [{
       finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ ...goodReply, patch: {
@@ -150,5 +150,29 @@ test('a month without an explicit year asks for clarification even if the model 
     assert.ok(draft.questions.some((question) => /year/i.test(question)))
     assert.equal(draft.patch.startDate, undefined)
     assert.equal(draft.patch.endDate, undefined)
+  }
+})
+
+test('a canceled date request or old month in history does not block a load-only update', async (t) => {
+  for (const [message, copiedDates] of [
+    ['Ignore January. Keep my current dates and just change load to 150 W.', false],
+    ['Change load to 150 W; keep the dates from my form.', true],
+  ]) {
+    let calls = 0
+    const call = await fixture(t, async () => ++calls === 1 ? json({ result: 1 }) : json({ candidates: [{
+      finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ message: 'Review the load.', questions: [], patch: {
+        loadW: { value: 150, unit: 'W' },
+        startDate: copiedDates ? DEFAULT_SCENARIO.startDate : null,
+        endDate: copiedDates ? DEFAULT_SCENARIO.endDate : null,
+      } }) }] },
+    }] }))
+    const response = await call({ ...payload(), message,
+      history: [{ role: 'user', content: 'At Test site in January.' }],
+      scenario: { ...DEFAULT_SCENARIO, currentPoint: { type: 'site', siteId: 'test-site' } },
+    })
+    const draft = await response.json()
+    assert.equal(draft.canApply, true)
+    assert.deepEqual(draft.questions, [])
+    assert.equal(draft.scenario.loadW, 150)
   }
 })

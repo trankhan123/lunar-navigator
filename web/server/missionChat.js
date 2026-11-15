@@ -119,9 +119,13 @@ Canonical numeric fields/units: ${JSON.stringify(Object.fromEntries(Object.entri
   const userMessages = [...body.history.filter(({ role }) => role === 'user').map(({ content }) => content), body.message]
   const userText = userMessages.join(' ')
   const monthMentioned = /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b|tháng\s*\d{1,2}\b|\b(?:in|during|for)\s+may\b|\bmay\s+\d/i.test(userText) || /^\s*may\s*[?.!]?\s*$/i.test(body.message)
-  if (monthMentioned && !/\b(?:19|20|21)\d{2}\b/.test(userText)) {
+  const dateProposed = ['startDate', 'endDate'].some((field) =>
+    typeof reply.patch?.[field] === 'string' && reply.patch[field] !== body.scenario[field])
+  const dateText = userText.replace(/\b\d{4}\s*(?:kWh|Wh|kW|W|watts?|watt.hours?|km|m|h|hours?|days?|min(?:utes?)?)\b/gi, '')
+  if (dateProposed && monthMentioned && !/\b(?:19|20|21)\d{2}\b/.test(dateText)) {
     delete reply.patch.startDate
     delete reply.patch.endDate
+    reply.message = 'Please confirm the landing year. Your current dates are kept until you answer.'
     reply.questions = ['What year should I use for the landing dates?', ...(Array.isArray(reply.questions) ? reply.questions.filter((question) => !/year/i.test(question)) : [])].slice(0, 2)
   }
   const point = reply.patch?.currentPoint
