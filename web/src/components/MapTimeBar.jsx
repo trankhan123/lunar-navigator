@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
 import { timeAtHour } from '../core/data.js'
 import { formatUtc } from '../core/format.js'
 import { nextPlayHour } from '../core/mapSky.js'
@@ -9,6 +10,7 @@ const stepButton = 'rounded px-2 py-1 text-xs transition-colors aria-pressed:bg-
 
 // range: {firstHour, lastHour} ephemeris hours of the scenario dates; the step only changes Play, not dragging.
 export default function MapTimeBar({ ephemeris, range, hour, onChange }) {
+  const { t } = useI18n()
   const [playing, setPlaying] = useState(false)
   const [stepHours, setStepHours] = useState(1)
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function MapTimeBar({ ephemeris, range, hour, onChange }) {
           className="block w-full accent-amber-400"
         />
       </label>
-      <div role="group" aria-label="Play step" className="flex gap-1 rounded border border-slate-700 p-0.5">
+      <div role="group" aria-label={t('map.playStep')} className="flex gap-1 rounded border border-slate-700 p-0.5">
         {STEP_OPTIONS.map((step) => (
           <button key={step} type="button" aria-pressed={stepHours === step} onClick={() => setStepHours(step)} className={stepButton}>
             {step} h

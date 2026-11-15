@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
 import {
   AmbientLight, ArrowHelper, CanvasTexture, Color, DirectionalLight, Mesh, MeshStandardMaterial, PCFShadowMap,
   PerspectiveCamera, PlaneGeometry, Scene, SRGBColorSpace, Vector3, WebGLRenderer,
@@ -49,6 +50,7 @@ function disposeScene(scene) {
 
 /** docs/technical-reference.md W2 3D view of an open region: LOLA terrain lit by the real Sun at the map hour. */
 export default function TerrainView3D({ regionCode, cells, colors, maps, ephemeris, hour, directions, lonDeg, focusCell }) {
+  const { t } = useI18n()
   const containerRef = useRef(null)
   const stage = useRef(null) // everything three.js made; touched only by the effects below
   const baseCanvas = useRef(null)
@@ -232,10 +234,10 @@ export default function TerrainView3D({ regionCode, cells, colors, maps, ephemer
   return (
     <div>
       <div ref={containerRef} className="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-900">
-        {!terrain && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-slate-400">{error ?? 'Loading 3D terrain…'}</p>}
+        {!terrain && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-slate-400">{error ?? t('terrain.loading')}</p>}
       </div>
       <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
-        Height exaggeration
+        {t('terrain.exaggeration')}
         <input type="range" min={1} max={4} step={0.5} value={exaggeration} onChange={(event) => setExaggeration(Number(event.target.value))} className="max-w-48 flex-1" />
         ×{exaggeration}
       </label>
