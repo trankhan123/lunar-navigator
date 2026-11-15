@@ -73,10 +73,11 @@ export function describeChatScenario(scenario, sites) {
     ? sites.find((site) => site.id === point.siteId)?.name ?? point.siteId
     : point.type === 'cell' ? point.cellId : `${point.lat}° N, ${point.lon}° E`
   return [
-    ['Landing point', location],
-    ['Landing dates (UTC)', `${scenario.startDate} to ${scenario.endDate}`],
+    ['Landing point', location, 'currentPoint'],
+    ['Earliest landing (UTC)', scenario.startDate, 'startDate'],
+    ['Latest landing (UTC)', scenario.endDate, 'endDate'],
     ...Object.entries(CHAT_FIELDS).filter(([field]) => field !== 'searchRadiusKm' || scenario.searchScope === 'radius')
-      .map(([field, { label, unit }]) => [label, `${scenario[field] ?? '—'} ${unit}`]),
-    ['Panel mode', scenario.panelMode], ['Search scope', scenario.searchScope],
+      .map(([field, { label, unit }]) => [label, `${scenario[field] ?? '—'} ${unit}`, field]),
+    ['Panel mode', scenario.panelMode, 'panelMode'], ['Search scope', scenario.searchScope, 'searchScope'],
   ]
 }

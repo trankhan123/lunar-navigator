@@ -130,7 +130,7 @@ assistant does not disable the mission form.
 
 ## Validation recorded during implementation
 
-132 Node tests pass, including actual Redis Lua with 20 concurrent requests
+137 Node tests pass, including actual Redis Lua with 20 concurrent requests
 against a cap of 3: 3 accepted, 17 denied, duplicate requests denied and TTLs
 present. Synthetic-response browser tests cover stale drafts and unavailable
 service. Live tests through the owner's Preview sharing link confirmed Gemini

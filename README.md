@@ -112,7 +112,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
 | W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | doing (texture done; Sun/Earth arrows left) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
-| W8 | WF2 | Optional mission chat | `components/MissionChat.jsx`, `core/missionChat.js`, `web/server/`, `web/api/mission-chat.js` | W3 + owner API resources | S | chubin271-blip (Codex) | done; live Preview verified; awaiting review |
+| W8 | WF2 | Optional mission chat | `components/MissionChat.jsx`, `components/MissionGuide.jsx`, `core/missionChat.js`, `core/missionGuide.js`, `web/server/`, `web/api/mission-chat.js` | W3 + owner API resources | S | chubin271-blip (Codex) | done; guided entry and parameter status added; awaiting review |
 | S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
 | X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
 

@@ -26,7 +26,7 @@ mission scenarios, not specifications of real spacecraft.
 
 ## Local checks and corrections
 
-- All 132 Node tests, lint and production build pass. A clean build with
+- All 137 Node tests, lint and production build pass. A clean build with
   `NODE_ENV=production` and `npm ci --include=dev` also passed.
 - Actual Redis Lua concurrency test: 20 simultaneous reservations at a cap of 3
   accepted exactly 3; replay denial and expiry were checked.
@@ -54,6 +54,24 @@ mission scenarios, not specifications of real spacecraft.
   `PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs CHROMIUM_PATH=/path/to/chromium CHAT_TEST_URL=http://localhost:5173/?screen=map node tests/mission-chat.browser.mjs`
   from `web`. Playwright is external tooling, not an app dependency. These cases
   use synthetic API replies and do not spend Gemini quota.
+
+## Guided mission entry
+
+The assistant now provides a guided request builder with site/date choices,
+plain-language quantity hints and explicit unit selectors. Blank fields keep
+the displayed current values; only supplied details go into the generated
+message. Preparing the message makes no API call. The user sends it explicitly.
+The review labels illustrative defaults in grey, supplied values that pass form
+validation in green, invalid values in red, missing values in amber and existing
+custom form values as “From form”. Source tracking survives screen changes during
+the session and does not label later manual edits as chat input. “Valid” means
+form validation, not physical mission feasibility.
+
+Local Node tests cover conversion, invalid inputs, date constraints and source
+tracking. Chromium regressions cover guide-to-chat-to-Apply, untouched defaults,
+invalid guide and draft values, source persistence, no call when generating a
+message, the header shortcut and a 390 px viewport. No new service or dependency
+is required. These new UI checks use synthetic API responses.
 
 ## Practical limits
 
