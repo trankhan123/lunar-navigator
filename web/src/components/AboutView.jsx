@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { loadValidation } from '../core/data.js'
 import { useI18n } from '../i18n/index.jsx'
+
+// Lazy: the scatter pulls in ECharts, which must stay out of the main bundle.
+const ValidationScatter = lazy(() => import('./ValidationScatter.jsx'))
 
 const LIMITATIONS = [
   'Ephemeris and simulation run in 1-hour steps; countdowns interpolate between hours, so they can be off by minutes up to about an hour.',
@@ -32,6 +35,9 @@ function ValidationDetails({ validation, t }) {
       <p>{t('about.horizonsCheck', { azimuth: horizons.maxAzimuthErrorDeg, elevation: horizons.maxElevationErrorDeg, count: horizons.pointCount })}</p>
       {overall && (
         <>
+          <Suspense fallback={null}>
+            <ValidationScatter validation={validation} />
+          </Suspense>
           <p>{t('about.pgdaMethod', { cells: overall.sun.halfDisk.n })}</p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[34rem] border-collapse text-xs tabular-nums">

@@ -7,6 +7,7 @@ import BatteryChart from './BatteryChart.jsx'
 import CompareView from './CompareView.jsx'
 import CountdownCard from './CountdownCard.jsx'
 import HorizonChart from './HorizonChart.jsx'
+import ValidationBadge from './ValidationBadge.jsx'
 
 const PLAY_STEP_MS = 250
 const horizonDegrees = (horizon) => (horizon ? horizon.map((tenths) => tenths / 10) : Array(360).fill(0))
@@ -20,7 +21,7 @@ function downloadCsv(text, fileName) {
 }
 
 // App renders this with key = cell id + landing time, so the hour cursor starts at 0 for every new detail.
-export default function DetailView({ cell, currentCell, ephemeris, scenario, landingTime, mode, onLandingTimeChange, onBack }) {
+export default function DetailView({ cell, currentCell, ephemeris, scenario, landingTime, mode, onLandingTimeChange, onBack, onOpenAbout }) {
   const { t } = useI18n()
   const [cursor, setCursor] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -103,6 +104,7 @@ export default function DetailView({ cell, currentCell, ephemeris, scenario, lan
 
   return (
     <section className="space-y-4">
+      {onOpenAbout && <ValidationBadge onOpenAbout={onOpenAbout} />}
       {header}
       <p className="text-base text-slate-100">{sentence}</p>
       {detail.stayHours < scenario.stayDays * 24 && (
