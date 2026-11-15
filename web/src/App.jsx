@@ -12,6 +12,7 @@ import RankingTable from './components/RankingTable.jsx'
 import ScenarioForm from './components/ScenarioForm.jsx'
 import ScreenErrorBoundary from './components/ScreenErrorBoundary.jsx'
 import SouthPoleMap from './components/SouthPoleMap.jsx'
+import ValidationBadge from './components/ValidationBadge.jsx'
 import { capTileIdsInBounds } from './core/capGrid.js'
 import { capTileIdsForSearch, pointRegionCode, regionCodesForSearch, searchAnchor } from './core/capSearch.js'
 import { detailCellFor, hourIndexOf, loadCapIndex, loadCapTiles, loadCells, loadEphemeris, loadMaps, loadRegions, loadSites, resolveCurrentCell } from './core/data.js'
@@ -493,6 +494,7 @@ export default function App() {
               <h2 id="results-title" ref={resultsHeading} tabIndex={-1} className="text-base font-medium focus:outline-none">
                 {t('results.title')}
               </h2>
+              <ValidationBadge onOpenAbout={() => setScreen('about')} />
               {search.status === 'idle' && <p className="text-slate-400">{t('results.idlePrompt')}</p>}
               {search.status === 'running' && (
                 <label className="block max-w-md tabular-nums">
@@ -564,6 +566,7 @@ export default function App() {
                 mode={mode}
                 onLandingTimeChange={setLandingTime}
                 onBack={() => setScreen(results ? 'results' : 'map')}
+                onOpenAbout={() => setScreen('about')}
               />
               </Suspense>
             ) : (
