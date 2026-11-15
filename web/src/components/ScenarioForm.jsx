@@ -2,7 +2,7 @@ import { cloneElement } from 'react'
 import { isPointComplete, LANDER_PRESETS, MAX_SEARCH_RADIUS_KM, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
 import { useI18n } from '../i18n/index.jsx'
 
-const PRESET_FIELDS = ['maxDarkHours', 'maxCommLossHours', 'panelMaxW', 'batteryCapacityWh', 'loadW', 'panelMode']
+const PRESET_FIELDS = ['maxDarkHours', 'maxCommLossHours', 'panelMaxW', 'batteryCapacityWh', 'loadW', 'panelMode', 'stayDays']
 const SIMPLE_MODE_FIELDS = new Set(['currentPoint', 'startDate', 'endDate', 'stayDays'])
 const inputClass = 'w-full rounded border border-slate-500 bg-slate-950 px-2 py-1.5 tabular-nums aria-invalid:border-red-400'
 
@@ -214,7 +214,18 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
         </div>
       )}
 
-      <p className="text-xs text-slate-400">{t('scenario.exampleNote')}</p>
+      {mode === 'simple' && matchingPreset?.sourceUrl ? (
+        <p className="text-xs text-slate-400">
+          <a href={matchingPreset.sourceUrl} target="_blank" rel="noreferrer" className="underline">{matchingPreset.source}</a>
+          {' · '}
+          {[['published', 'scenario.published'], ['estimate', 'scenario.estimated']]
+            .map(([basis, label]) => `${t(label)}: ${Object.keys(matchingPreset.basis).filter((name) => matchingPreset.basis[name] === basis).map((name) => fieldLabels[name]).join(', ')}`)
+            .join('; ')}
+          {'. '}{matchingPreset.note} {t('scenario.presetDisclaimer')}
+        </p>
+      ) : (
+        <p className="text-xs text-slate-400">{t('scenario.exampleNote')}</p>
+      )}
       {mode === 'simple' && errors.some((error) => !SIMPLE_MODE_FIELDS.has(error.field)) && (
         <ul className="space-y-0.5 text-xs text-red-400">
           {errors

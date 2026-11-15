@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { DEFAULT_SCENARIO, MAX_SEARCH_RADIUS_KM, countDays, validateScenario } from './scenario.js'
+import { DEFAULT_SCENARIO, LANDER_PRESETS, MAX_SEARCH_RADIUS_KM, countDays, validateScenario } from './scenario.js'
 
 const ephemeris = { startTime: '2027-01-01T00:00Z', stepHours: 1, hours: 762 * 24 }
 const valid = { ...DEFAULT_SCENARIO, currentPoint: { type: 'cell', cellId: 'MAL-r1c1' } }
@@ -30,4 +30,13 @@ test('validateScenario', () => {
   assert.deepEqual(fieldsWithErrors({ ...valid, startDate: '2028-02-30' }), ['startDate'])
   assert.deepEqual(fieldsWithErrors({ ...valid, panelMode: 'sideways' }), ['panelMode'])
   assert.deepEqual(fieldsWithErrors({ ...valid, requireDsn: 'yes' }), ['requireDsn'])
+})
+
+test('every lander preset is a valid scenario and real presets cite sources', () => {
+  for (const { id, source, sourceUrl, basis, note, ...fields } of LANDER_PRESETS) {
+    assert.deepEqual(fieldsWithErrors({ ...valid, ...fields }), [], id)
+    if (id === 'example-lander') continue
+    assert.ok(sourceUrl.startsWith('https://') && source && note, id)
+    for (const name of ['panelMaxW', 'batteryCapacityWh', 'loadW']) assert.match(basis[name], /^(published|estimate)$/, `${id} ${name}`)
+  }
 })
