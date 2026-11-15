@@ -1,6 +1,6 @@
 # AI Usage
 
-- 2026-11-15 — OpenAI Codex implemented the optional mission chat UI and Gemini extraction endpoint, deterministic quantity/location validation, Redis usage reservations, tests and owner deployment instructions on WF2. Synthetic API/browser tests and local Redis verification completed; live Gemini and Vercel deployment pending owner resources.
+- 2026-11-15 — OpenAI Codex implemented the optional mission chat UI and Gemini extraction endpoint, deterministic quantity/location validation, Redis usage reservations, tests and owner deployment instructions on WF2. All 128 tests, lint and production build passed; Chromium checks used synthetic AI replies. The owner corrected Vercel Root Directory to `web` and Preview deployed successfully. Live Gemini/Upstash verification awaits access through Preview's Vercel Authentication.
 
 Tool: Claude Code (Anthropic).
 

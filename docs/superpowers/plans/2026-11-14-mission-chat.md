@@ -47,7 +47,7 @@ the public endpoint, while existing browser code computes scientific results.
 Execution: the user's instruction to start setup authorizes implementation;
 continue in this session without reopening the already discussed design.
 WF2 was fast-forwarded to origin/main because the completed form is required.
-Live credentials and deployment remain pending; do not imply live verification.
+Live provider verification remains pending; do not imply it passed from stub tests or a successful deployment alone.
 
 ## Verification and delivery status
 
@@ -56,4 +56,5 @@ Live credentials and deployment remain pending; do not imply live verification.
 - Chromium smoke tests pass on desktop and 390px mobile with stubbed AI replies.
 - Reviewer coordinate-provenance findings fixed with regression tests.
 - WF2 pushed and draft PR #11 opened; no merge or Production deployment.
-- Vercel received the branch but Preview build failed. Build Logs require the owner's Vercel access; requested the error excerpt. Live Gemini/Upstash verification remains pending.
+- Initial Vercel builds failed with `vite: command not found`; deployment metadata confirmed Root Directory was unset. The owner set it to `web`, and redeployment reached Ready.
+- The Preview URL is https://lunar-navigator-git-wf2-hackathon-400c.vercel.app. It redirects unauthenticated requests to Vercel login; live Gemini/Upstash verification remains pending Preview access.
