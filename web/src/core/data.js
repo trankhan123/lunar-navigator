@@ -25,6 +25,7 @@ import { capCellContaining } from './capGrid.js'
  * @property {number} heightM
  * @property {number|null} slopeDeg
  * @property {number|null} psrFraction
+ * @property {number|null} [psrDistanceKm]  km to the nearest permanent shadow of at least 1 km² (E7)
  * @property {boolean|null} feasible  null = unknown (custom point)
  * @property {null|'slope'|'psr'} infeasibleReason
  * @property {number[]|null} horizon  360 integers, 0.1° units; null = smooth sphere

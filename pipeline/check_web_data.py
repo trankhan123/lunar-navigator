@@ -27,7 +27,7 @@ ISO_HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00Z$")
 EPHEMERIS_START_TIME = f"{EPHEMERIS_START}T00:00Z"
 EPHEMERIS_HOURS = ((date.fromisoformat(EPHEMERIS_STOP) - date.fromisoformat(EPHEMERIS_START)).days + 1) * 24
 EPHEMERIS_ARRAYS = ["sunSubLonDeg", "sunSubLatDeg", "sunDistanceAu", "earthSubLonDeg", "earthSubLatDeg", "earthDistanceKm"]
-CELL_KEYS = ["id", "label", "lat", "lon", "xM", "yM", "heightM", "slopeDeg", "psrFraction", "feasible", "infeasibleReason", "horizon"]
+CELL_KEYS = ["id", "label", "lat", "lon", "xM", "yM", "heightM", "slopeDeg", "psrFraction", "psrDistanceKm", "feasible", "infeasibleReason", "horizon"]
 SITE_GROUPS = {"artemis-region", "apollo", "clps", "international"}
 TO_POLAR_XY = Transformer.from_crs(MOON_LONLAT_CRS, PGDA_CRS, always_xy=True)
 problems = []
@@ -114,6 +114,8 @@ def check_cell(file_name, code, cell):
     if not (in_range(cell["slopeDeg"], 0, 90) and in_range(cell["psrFraction"], 0, 1) and is_number(cell["heightM"])):
         problem(file_name, f"{cell_id}: heightM must be a number, slopeDeg 0..90, psrFraction 0..1")
         return None
+    if cell["psrDistanceKm"] is not None and not in_range(cell["psrDistanceKm"], 0, 1e4):
+        problem(file_name, f"{cell_id}: psrDistanceKm must be null or a number >= 0")
     # Rule applied to the rounded values written in the file (README "cells_<CODE>.json").
     expected = cell["slopeDeg"] <= SLOPE_LIMIT_DEG and cell["psrFraction"] <= PSR_LIMIT_FRACTION
     reason = None if expected else ("slope" if cell["slopeDeg"] > SLOPE_LIMIT_DEG else "psr")

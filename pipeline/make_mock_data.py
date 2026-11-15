@@ -57,6 +57,7 @@ def mock_cells(region_site):
                 "id": f"{REGION_CODE}-{label}", "label": label,
                 "lat": round(lat, 5), "lon": round(lon, 5), "xM": round(x), "yM": round(y),
                 "heightM": round(float(random.uniform(4500, 5500)), 1), "slopeDeg": slope, "psrFraction": psr,
+                "psrDistanceKm": round(0.5 * ((row - 2) ** 2 + (column - 3) ** 2) ** 0.5, 1),  # synthetic, no RNG so other mock values stay put
                 "feasible": feasible, "infeasibleReason": None if feasible else ("slope" if slope > SLOPE_LIMIT_DEG else "psr"),
                 "horizon": np.round(horizon * 10).astype(int).tolist(),
             })

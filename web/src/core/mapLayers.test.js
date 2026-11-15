@@ -31,7 +31,7 @@ test('cellLevel and cellColor per layer', () => {
 })
 
 test('every layer has a label, every legend colour has text', () => {
-  assert.deepEqual(MAP_LAYERS.map((layer) => layer.id), ['sunNow', 'earthNow', 'sunEarthNow', 'sunPercent', 'earthPercent', 'searchResult', 'feasibility'])
+  assert.deepEqual(MAP_LAYERS.map((layer) => layer.id), ['sunNow', 'earthNow', 'sunEarthNow', 'sunPercent', 'earthPercent', 'searchResult', 'psrDistance', 'feasibility'])
   for (const layer of MAP_LAYERS) {
     assert.ok(layer.label, layer.id)
     for (const entry of layer.legend) assert.ok(entry.label && /^#[0-9a-f]{6}$/.test(entry.color), layer.id)
@@ -71,4 +71,10 @@ test('overlayEntry: a region uses its own image, the overview and slope use the 
   assert.equal(overlayEntry(maps, 'psr', 'HAW'), undefined) // not the pole image: it would hide the region's missing data
   assert.equal(overlayEntry(maps, 'slope', 'HAW').image, '/maps/pole_slope.png')
   assert.equal(overlayEntry(maps, 'sun-visibility', null), undefined)
+})
+
+test('psrDistance layer: bands by km (synthetic values), no value gets the neutral colour', () => {
+  assert.deepEqual([0, 1.9, 2, 7, 12].map((km) => cellLevel('psrDistance', { psrDistanceKm: km })), [4, 3, 2, 1, 0])
+  assert.equal(cellLevel('psrDistance', {}), null)
+  assert.equal(cellColor('psrDistance', { psrDistanceKm: null }), NO_VALUE_COLOR)
 })

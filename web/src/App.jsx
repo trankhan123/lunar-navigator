@@ -42,7 +42,7 @@ const forceMock = new URLSearchParams(window.location.search).get('mock') === '1
 const initialState = decodeShareQuery(window.location.search.slice(1))
 const initialCellId = initialState.selectedCellId ?? initialState.scenario.currentPoint?.cellId ?? null
 const selectClass = 'rounded border border-slate-500 bg-slate-950 px-2 py-1'
-const SMALLER_IS_BETTER = new Set(['distanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours']) // README C5 rule
+const SMALLER_IS_BETTER = new Set(['distanceKm', 'psrDistanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours']) // README C5 rule
 
 async function loadAllData() {
   // Real data is used once module D5 publishes regions.json; until then cells and sites come from the mock folder.

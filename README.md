@@ -100,6 +100,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | D7 | WF2 | Validation (PGDA 69, Horizons, QuickMap) | `pipeline/validate.py` | D1, D5, C1, C2 | M | chubin271-blip | done (PGDA 69 only; QuickMap not done) |
 | D8 | WF5 | Map background images | `pipeline/export_map_background.py` | D5 | S | trankhan123 (Claude Code) | done (hillshade, whole-pole Sun, Earth, PSR and slope overlays) |
 | D8b | WF5 | Relief tiles (zoomable shaded relief, contours) | `pipeline/export_relief_tiles.py`, `web/public/maps/relief/` | D8, D5 | M | trankhan123 (Claude Code) | done (152 tiles, 5 levels, finest 74 m/px) |
+| E7 | WF5 | Distance to the nearest cold trap (PSR ≥ 1 km²), field `psrDistanceKm` | `pipeline/compute_science_access.py`, `pipeline/out/science_*.json` | D2, D5, D9 | S | trankhan123 (Claude Code) | in progress |
 | D9 | WF5 | Whole-cap 2 km grid (CAP cells) | `pipeline/build_cap_grid.py`, `web/public/data/cap/` | D2, D3, D4 | M | trankhan123 (Claude Code) | done (17,336 cells, 14,996 feasible, 60 tiles) |
 | D10 | WF5 | Terrain meshes for the 3D view | `pipeline/export_terrain_mesh.py`, `web/public/terrain/` | LDEM 80 m (raw), D2 | M | trankhan123 (Claude Code) | done (9 regions, each ≤ 205 kB) |
 | C0 | done | Shared geometry and time series | `web/src/core/geometry.js`, `timeSeries.js` | — | S | Claude (trankhan123) | done |
@@ -232,7 +233,7 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
   "cells": [{
     "id": "MAL-<label>", "label": "<ACC 1 km label>",
     "lat": -85.93, "lon": -1.2, "xM": 0, "yM": 0,
-    "heightM": 0.0, "slopeDeg": 12.3, "psrFraction": 0.0,
+    "heightM": 0.0, "slopeDeg": 12.3, "psrFraction": 0.0, "psrDistanceKm": 4.2,
     "feasible": true, "infeasibleReason": null,
     "horizon": [0]
   }]
@@ -245,6 +246,7 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
   - `feasible` = `slopeDeg ≤ slopeLimitDeg` and `psrFraction ≤ psrLimitFraction`;
   - `infeasibleReason` is `"slope"` (checked first), `"psr"` or `null`.
   - the rule is applied to the rounded values written in the file.
+- **`psrDistanceKm`** (E7, `compute_science_access.py`): `number | null`, km, ≥ 0. Distance from the cell centre to the nearest permanent shadow of at least 1 km² (0 inside one), rounded to 0.1 km. The mask is `LPSR_80S_20MPP_ADJ` read at 100 m and polygonised (about PGDA 90's table of PSRs ≥ 1 km²). `null` where the raster has no coverage (north of 80°S). PSRs north of 80°S are not in the mask, so values for cells near that edge are upper bounds. Intermediate: `pipeline/out/science_<CODE>.json` (`{"<cellId>": psrDistanceKm}`), merged by D5.
 - **`horizon`:** 360 integers. `horizon[k]` is the terrain horizon elevation at azimuth k° in units of 0.1°. It may be negative because of curvature, and the mast height is already included.
 - **Infeasible cells:** they stay in the file and are drawn grey. Only feasible cells are searched.
 - **Size limit:** if a region has more than about 2,000 cells (the file would pass 2 MB), tell the team before changing the format.
@@ -299,6 +301,7 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 |---|---|---|
 | `grid_<CODE>.json` | D2 | `[{"id", "label", "lat", "lon", "xM", "yM"}]` |
 | `feasibility_<CODE>.json` | D3 | `{"<cellId>": {"heightM", "slopeDeg", "psrFraction"}}` |
+| `science_<CODE>.json` | E7 | `{"<cellId>": psrDistanceKm or null}` (also `science_CAP.json`) |
 | `horizon_<CODE>.json` | D4 | `{"<cellId>": [360 ints, 0.1°]}` |
 | `horizon_sites.json` | D4 | `{"<siteId>": [360 ints, 0.1°]}` |
 | `our_visibility.json` | D7 | `{"<cellId>": {"sunFraction", "earthFraction"}}` over the whole ephemeris |
@@ -823,12 +826,12 @@ File: `build_cap_grid.py` (tests: `test_build_cap_grid.py`; checker: `check_cap`
 - **Grid:** square 2000 m cells in `PGDA_CRS`; centres at `x = (i + 0.5) × 2000`, `y = (j + 0.5) × 2000`. A cell is kept when its centre is at or south of 85°S (projected distance from the pole ≤ that of 85°S, 151.7 km).
 - **Exclusion:** a cell is dropped when its centre lies inside the `boundsM` of any of the 9 regions in `regions.json` (they already have 1 km LGRS cells). `excludedRegionCodes` in `index.json` lists them.
 - **Id:** `CAP-r<row>c<col>`, `row = j − jMin`, `col = i − iMin` (minimum over the kept cells), each zero-padded to 3 digits; `label` is the part after `CAP-`.
-- **Cell:** exactly the `cells_<CODE>.json` cell (`id, label, lat, lon, xM, yM, heightM, slopeDeg, psrFraction, feasible, infeasibleReason, horizon`). Feasibility is D3 on the 2 km square (slope median from `LDSM` 80 m, PSR share from `LPSR` 20 m, same limits and reasons). Horizon is D4 with its defaults (360 rays, 100 m to 150 km, 2 m mast, near DEM 80 m, far DEM 240 m). Cells are assembled by D5's `build_cell`.
+- **Cell:** exactly the `cells_<CODE>.json` cell (`id, label, lat, lon, xM, yM, heightM, slopeDeg, psrFraction, psrDistanceKm, feasible, infeasibleReason, horizon`). Feasibility is D3 on the 2 km square (slope median from `LDSM` 80 m, PSR share from `LPSR` 20 m, same limits and reasons). Horizon is D4 with its defaults (360 rays, 100 m to 150 km, 2 m mast, near DEM 80 m, far DEM 240 m). Cells are assembled by D5's `build_cell`.
 - **Files:**
   - `pipeline/out/grid_CAP.json` (list), `feasibility_CAP.json` and `horizon_CAP.json` (objects keyed by id), same shapes as the region files;
   - `web/public/data/cap/index.json` = `{cellSizeM: 2000, tileSizeM: 40000, southOfLatDeg: -85, excludedRegionCodes, cellCount, feasibleCount, tiles: [{id: "cap_<tx>_<ty>", boundsM: [xMin, yMin, xMax, yMax], cellCount, feasibleCount}]}`;
   - `web/public/data/cap/cap_<tx>_<ty>.json` = `{tileId, cells: [...]}`; tiles are 40 km squares aligned to multiples of 40000 m (`tx = floor(xM / 40000)`, can be negative), only non-empty tiles are written, each < 2 MB.
-- **Re-run:** `python pipeline/build_cap_grid.py` (needs the raw rasters; horizons use all CPU cores, `--jobs N` to limit; `--limit 200` is a dry timing run that writes nothing), then `python pipeline/check_web_data.py`. The checker runs `check_cap` only when `cap/index.json` exists.
+- **Re-run:** `python pipeline/build_cap_grid.py` (needs the raw rasters; horizons use all CPU cores, `--jobs N` to limit; `--limit 200` is a dry timing run that writes nothing), then `python pipeline/check_web_data.py`. The checker runs `check_cap` only when `cap/index.json` exists. `--rebuild-tiles` rewrites the web tiles from the committed `pipeline/out/*_CAP.json` (and `science_CAP.json`) without any raw data; use it after `compute_science_access.py`.
 
 ### D10 Terrain meshes
 

@@ -17,6 +17,10 @@ export default function LearnView({ results, cellsById, ephemeris, scenario, lan
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+      <section aria-labelledby="learn-psr" className={`${cardClass} lg:col-span-2`}>
+        <h2 id="learn-psr" className="mb-1 text-lg font-semibold">{t('learn.psrTitle')}</h2>
+        <p className="text-sm text-slate-300">{t('learn.psrBody')}</p>
+      </section>
       <section aria-labelledby="learn-metrics" className={`${cardClass} lg:row-span-2`}>
         <h2 id="learn-metrics" className="mb-1 text-lg font-semibold">{t('learn.metricsTitle')}</h2>
         {metrics ? (

@@ -211,6 +211,10 @@ export const TRANSLATIONS = {
     'columns.meanSunElevation': 'Mean Sun elevation (°)',
     'columns.recharge': 'Recharge (h)',
     'columns.status': 'Status',
+    'columns.psrDistance': 'To cold trap (km)',
+    'popup.psrDistance': 'Nearest permanent shadow ≥ 1 km²',
+    'learn.psrTitle': 'Why permanent shadows matter',
+    'learn.psrBody': 'Some crater floors near the pole never see the Sun. They are cold traps where water ice may be preserved, so science teams want a landing site close to one, while engineers want sunlight for power. This tool shows both: the number of km to the nearest permanent shadow is in the table and on the map.',
 
     // Current Point Card
     'currentPoint.title': 'Your current point',
@@ -476,6 +480,10 @@ export const TRANSLATIONS = {
     'columns.meanSunElevation': 'Góc cao Mặt Trời TB (°)',
     'columns.recharge': 'Thời gian sạc lại (h)',
     'columns.status': 'Trạng thái',
+    'columns.psrDistance': 'Tới bẫy lạnh (km)',
+    'popup.psrDistance': 'Vùng tối vĩnh cửu gần nhất ≥ 1 km²',
+    'learn.psrTitle': 'Vì sao vùng tối vĩnh cửu quan trọng',
+    'learn.psrBody': 'Một số đáy hố va chạm gần cực không bao giờ có ánh nắng. Chúng đủ lạnh để giữ băng nước, nên các nhóm khoa học muốn hạ cánh gần đó, còn kỹ sư cần ánh nắng để có điện. Công cụ này hiển thị cả hai: số km tới vùng tối vĩnh cửu gần nhất có trong bảng và trên bản đồ.',
 
     // Current Point Card
     'currentPoint.title': 'Điểm hạ cánh hiện tại',

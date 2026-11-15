@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
 import { computeEarthTrack, nextEarthEvent } from '../core/communication.js'
 import { timeAtHour } from '../core/data.js'
 import { INFEASIBLE_REASON_TEXT, formatDuration, formatUtc } from '../core/format.js'
@@ -30,6 +31,7 @@ function skyLine(name, body, lookAheadHours) {
 
 // App renders this with key={cell.id}, so the "Copied" state resets and the popup scrolls into view per cell.
 export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCurrent, onOpenDetail, onClose }) {
+  const { t } = useI18n()
   const sky = useMemo(() => skyAt(cell, ephemeris, hour), [cell, ephemeris, hour])
   const [copyMessage, setCopyMessage] = useState('')
   const sectionRef = useRef(null)
@@ -47,6 +49,7 @@ export default function CellPopup({ cell, ephemeris, hour, isCurrent, onUseAsCur
     ['Height', `${Math.round(cell.heightM)} m`],
     ['Slope', `${cell.slopeDeg.toFixed(1)}°`],
     ['Permanent shadow', `${Math.round(cell.psrFraction * 100)} % of the cell`],
+    ...(cell.psrDistanceKm == null ? [] : [[t('popup.psrDistance'), `${cell.psrDistanceKm.toFixed(1)} km`]]),
   ]
   return (
     <section ref={sectionRef} aria-labelledby="cell-title" className="scroll-mt-4 rounded-lg border border-slate-800 bg-slate-900 p-4 text-sm">
