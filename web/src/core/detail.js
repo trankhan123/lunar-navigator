@@ -36,7 +36,7 @@ export function buildDetail(cell, ephemeris, scenario, landingTime) {
   const stayHours = Math.min(scenario.stayDays * 24, hoursLeft)
   const trackHours = Math.min(stayHours + DETAIL_LOOKAHEAD_HOURS, hoursLeft)
   const sun = computeSunTrack(cell, ephemeris, landingHour, trackHours, scenario.panelMode)
-  const earth = computeEarthTrack(cell, ephemeris, landingHour, trackHours)
+  const earth = computeEarthTrack(cell, ephemeris, landingHour, trackHours, scenario.requireDsn)
   return {
     landingHour,
     stayHours,

@@ -3,6 +3,7 @@
 ## Data
 
 - JPL Horizons API — Sun and Earth azimuth/elevation from lunar surface sites. https://ssd.jpl.nasa.gov/api/horizons.api
+- JPL Horizons API — Apparent Moon elevation from NASA Deep Space Network (DSN) ground stations (DSS-14 Goldstone, DSS-63 Madrid, DSS-43 Canberra). https://ssd.jpl.nasa.gov/api/horizons.api
 - NASA GSFC PGDA 90 — LOLA south polar DEM (80 m and 240 m), hillshade, slope (LDSM_80S_80MPP_ADJ) and permanent shadow (LPSR_80S_20MPP_ADJ). https://pgda.gsfc.nasa.gov/products/90
 - NASA GSFC PGDA 69 — average Sun and Earth visibility, permanent shadow, 85–90°S (AVGVISIB_85S_060M_201608, LPSR). https://pgda.gsfc.nasa.gov/products/69
 - NASA SVS 4720 — CGI Moon Kit textures: lroc_color_2k.jpg (globe), lroc_color_4k.jpg (from lroc_color_16bit_srgb_4k.tif) and ldem_bump_1440.png (from ldem_4_uint.tif). Credit: NASA's Scientific Visualization Studio. https://svs.gsfc.nasa.gov/4720
@@ -20,6 +21,8 @@
 
 ## Libraries
 
+- Optional mission chat: Google Gemini structured output — https://aistudio.google.com/docs/structured-output ; Upstash Redis REST/EVAL usage counters — https://upstash.com/docs/redis/features/restapi . Neither is a scientific data source.
+
 - Vite — build tool. https://vite.dev
 - React — UI. https://react.dev
 - Tailwind CSS — styling. https://tailwindcss.com
@@ -35,3 +38,5 @@
 - GeoPandas — read the USGS LGRS shapefiles. https://geopandas.org
 - Pillow — write the JPEG relief tiles and PNG maps in the pipeline. https://python-pillow.org
 - three.js 0.187.0 (MIT) — 3D terrain view (`TerrainView3D.jsx`), pinned exactly; globe.gl uses the same copy. https://threejs.org
+
+- NASA/JPL, DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and Geometry", Rev. K, 2016. https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf

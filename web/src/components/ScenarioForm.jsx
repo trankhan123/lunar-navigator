@@ -212,6 +212,10 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
             </select>,
           )}
           {value.searchScope === 'radius' && numberField(`${t('scenario.searchRadius')} (${t('scenario.searchRadiusMax', { km: MAX_SEARCH_RADIUS_KM })})`, 'searchRadiusKm', 'km')}
+          <label className="col-span-2 flex items-start gap-2 text-xs text-slate-300">
+            <input type="checkbox" checked={value.requireDsn} onChange={(event) => update({ requireDsn: event.target.checked })} className="mt-0.5 accent-amber-400" />
+            {t('scenario.requireDsn')}
+          </label>
           <p className="col-span-2 text-xs text-slate-400">{t('scenario.scopeTimeNote')} {t('scenario.scopeCapNote')}</p>
         </div>
       )}

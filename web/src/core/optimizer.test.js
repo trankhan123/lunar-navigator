@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertNear, constantEphemeris, equatorCell } from './testHelpers.js'
-import { evaluateWindow, rankBestWindows, rankCells, runWindowSearch, selectSearchCells, summarizeCurrentPoint } from './optimizer.js'
+import { STATUS, evaluateWindow, rankBestWindows, rankCells, runWindowSearch, selectSearchCells, summarizeCurrentPoint } from './optimizer.js'
 import { DEFAULT_SCENARIO } from './scenario.js'
 
 const fill = (value, length = 24) => new Float32Array(length).fill(value)
@@ -37,6 +37,21 @@ test('runWindowSearch: shape of WindowResults', () => {
   assert.deepEqual(results.landingTimes, ['2028-01-01T00:00Z', '2028-01-01T06:00Z', '2028-01-01T12:00Z', '2028-01-01T18:00Z'])
   assert.ok(results.status instanceof Uint8Array && results.status.length === 8)
   assertNear(results.distanceKm[1], (Math.PI / 180) * 1737.4, 1e-3)
+})
+
+test('runWindowSearch: requireDsn off ignores DSN data, on counts a hidden-station hour as comm loss', () => {
+  const scenario = { ...DEFAULT_SCENARIO, startDate: '2028-01-01', endDate: '2028-01-01', stayDays: 1, maxCommLossHours: 0 }
+  const ephemeris = constantEphemeris({ hours: 48 })
+  // Synthetic: no station sees the Moon at hour 3 only (0.1 deg units; 100 = 10 deg).
+  const visible = new Array(48).fill(500)
+  const hidden = visible.map((value, hour) => (hour === 3 ? 0 : value))
+  ephemeris.dsn = { elevationUnitDeg: 0.1, goldstone: hidden, madrid: hidden, canberra: hidden }
+  const off = runWindowSearch([equatorCell], ephemeris, scenario)
+  const on = runWindowSearch([equatorCell], ephemeris, { ...scenario, requireDsn: true })
+  assert.equal(off.longestCommLossHours[0], 0)
+  assert.equal(on.longestCommLossHours[0], 1)
+  assert.equal(off.status[0], STATUS.pass)
+  assert.equal(on.status[0], STATUS.fail)
 })
 
 function makeResults({ status, minBatteryFraction, distanceKm, landingCount }) {

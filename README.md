@@ -115,6 +115,7 @@ Status values: `todo` · `doing` · `done` · `blocked (reason)`. Size: **S** �
 | W5 | WEB | Detail: horizon view, countdown, battery chart, compare | `components/DetailView.jsx`, `HorizonChart.jsx`, `CountdownCard.jsx`, `BatteryChart.jsx`, `CompareView.jsx`, `core/explain.js` | C1–C4 | L | trankhan123 | done |
 | W6 | WEB | 3D globe | `components/MoonGlobe.jsx` | W1 | M | trankhan123 | done (lit by the real Sun, Sun/Earth rays, SVS 4720 textures) |
 | W7 | WEB | Learn mode | `components/LearnView.jsx`, `core/learn.js`, `core/explain.js` (`findMostDifferentNeighbors`) | C5 | S | trankhan123 | done |
+| W8 | WF2 | Optional mission chat | `components/MissionChat.jsx`, `core/missionChat.js`, `web/server/`, `web/api/mission-chat.js` | W3 + owner API resources | S | chubin271-blip (Codex) | done; live Preview verified; awaiting review |
 | S1 | all | Submission: video or slides, project page, references | `docs/`, `REFERENCES.md`, `AI_USAGE.md` | all | M | trankhan123 | todo |
 | X1 | — | *(optional)* astronomy-engine for dates outside the ephemeris | `web/src/astronomy.js` | C0 | S | | later |
 
@@ -172,6 +173,31 @@ All files live in `web/public/data/` (mock copies in `web/public/data/mock/`). `
 - `sun*` are the sub-solar point on the Moon and the Moon-centre → Sun distance.
 - `earth*` are the sub-Earth point (libration is included) and the Moon-centre → Earth-centre distance.
 - The file covers 2027-01-01T00:00Z … 2029-01-31T23:00Z (18,288 h), so any 6-month range in 2027–2028 plus a 30-day stay fits.
+
+### `dsn.json` (Task 11)
+
+```json
+{
+  "source": "JPL Horizons API (DE441): COMMAND=301 CENTER=coord@399 QUANTITIES=4, retrieved 2026-11-15",
+  "startTime": "2027-01-01T00:00Z",
+  "stepHours": 1,
+  "hours": 18288,
+  "elevationUnitDeg": 0.1,
+  "stations": {
+    "goldstone": { "name": "Goldstone (DSS-14)", "code": "DSS-14", "lat": 35.4259, "lon": -116.8895, "heightKm": 1.001 },
+    "madrid": { "name": "Madrid (DSS-63)", "code": "DSS-63", "lat": 40.4314, "lon": -4.248, "heightKm": 0.834 },
+    "canberra": { "name": "Canberra (DSS-43)", "code": "DSS-43", "lat": -35.4014, "lon": 148.9813, "heightKm": 0.689 }
+  },
+  "goldstone": [],
+  "madrid": [],
+  "canberra": []
+}
+```
+
+- Apparent elevation of the Moon from the 3 Deep Space Network (DSN) complexes.
+- Station arrays have length `hours` (18,288 h for real, 5,112 h for mock).
+- Values are integer in units of 0.1° (multiplied by 10 then rounded).
+- With the opt-in DSN check, communication needs Moon elevation $\ge 10^\circ$ at any station (default: not used).
 
 ### `regions.json` (D5)
 
@@ -315,6 +341,7 @@ Core files are pure functions with no React, no DOM and no fetch (`data.js` is t
 | `panelMode` | `'auto'` \| `'vertical'` \| `'horizontal'` | auto | one of the three; auto = vertical when \|lat\| ≥ 60°, else horizontal |
 | `searchScope` | `'region'` \| `'radius'` \| `'all'` | region | one of the three |
 | `searchRadiusKm` | number | 10 | > 0 when scope is `radius` |
+| `requireDsn` | boolean | false | opt-in DSN check, see C2 (Expert mode checkbox) |
 
 `validateScenario(scenario, ephemeris)` returns at most one `{field, message}` per field, or `[]` when the scenario is valid.
 
@@ -380,7 +407,7 @@ File: `communication.js`.
 
 | Function | Returns |
 |---|---|
-| `computeEarthTrack(cell, ephemeris, firstHour, hourCount)` | `EarthTrack` |
+| `computeEarthTrack(cell, ephemeris, firstHour, hourCount, requireDsn = false)` | `EarthTrack` |
 | `summarizeEarthWindow(earthTrack, startIndex, lengthHours)` | `{longestCommLossHours, fractionEarth}` |
 | `nextEarthEvent(earthTrack, atIndex)` | `{event: 'earthset'|'earthrise', hoursFromNow}` or `null` |
 
@@ -388,7 +415,10 @@ Rules:
 
 - Use `EARTH_DISK_RADIUS_DEG`.
 - Always use the cell position, never the Moon centre. Earth is close enough that parallax shifts it by up to 0.26°.
-- **Known limitation:** the model does not check whether a ground station on Earth can see the Moon.
+- **Default (`requireDsn = false`): line of sight only.** Earth is visible when ≥ 50 % of its disk is above the terrain horizon. `ephemeris.dsn` is ignored, so the rankings, comm-loss numbers and the PGDA 69 comparison use this rule.
+- **Optional DSN check (Task 11, `scenario.requireDsn = true`, Expert-mode checkbox):** an hour also counts as comm loss (`diskFraction = 0`) when none of the three Deep Space Network stations (Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43) sees the Moon at ≥ 10° elevation (`dsn.json`, 0.1° units). The flag is passed explicitly to `computeEarthTrack` by the search and the detail view; the map layers and hover cards stay on line of sight. The UI states when the check is on. Without loaded or aligned DSN data the flag has no effect.
+  - `loadEphemeris` attaches `dsn` only when `dsn.startTime` and `dsn.hours` equal the ephemeris's; otherwise `null` and a console warning.
+  - Sources: NASA/JPL DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and Geometry", Rev. K (2016), <https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf>: Table 5 for station positions (the code's numbers agree to 0.001°, except DSS-63 height 0.834 km vs 0.865 km and DSS-43 latitude −35.4014 vs −35.4024), sec. 2.2.1 and 2.2.4 for the 10° lower elevation limit. Per-station horizon masks are not used.
 
 ### C3 Energy need
 
@@ -514,7 +544,7 @@ Files: `App.jsx`, `core/shareLink.js` (`core/data.js` is done).
   - The real `/data/ephemeris.json` (D1) is loaded even in mock mode, so mock cells get real Sun and Earth positions; the mock ephemeris is only a fallback.
 - **State it holds:** `scenario`, `results`, `landingIndex`, `selectedCellId`, `mode` (`'simple'|'expert'`).
 - **Share link query keys:**
-  - `point` (`cell:MAL-r3c4` \| `site:apollo-11` \| `coords:-85.9,-1.2`), `start`, `end`, `stay`, `dark`, `comm`, `panel`, `battery`, `load`, `panelMode`, `scope`, `radius`, `landing`, `cell`, `mode`, `screen`;
+  - `point` (`cell:MAL-r3c4` \| `site:apollo-11` \| `coords:-85.9,-1.2`), `start`, `end`, `stay`, `dark`, `comm`, `panel`, `battery`, `load`, `panelMode`, `scope`, `radius`, `dsn` (`1` = DSN check on; absent = off), `landing`, `cell`, `mode`, `screen`;
   - missing keys take `DEFAULT_SCENARIO` values;
   - a link opened on the Results screen (`screen=results`) with a current point runs the search on open;
   - untrusted values in the link (empty, not a number, unknown option, malformed point) fall back to the defaults.
@@ -843,6 +873,18 @@ Vercel, static site:
 
 - set **Root Directory = `web`**, framework preset Vite (`npm run build`, output `dist`);
 - the final link must open in a private window without login.
+
+Optional mission chat adds a Node Vercel Function at `POST /api/mission-chat`. The chat box is shown only when the build-time flag `VITE_CHAT_UI=true` is set (non-secret, off by default; set it in the Vite or Vercel build environment); the server keys stay disabled unless `AI_CHAT_ENABLED` and the keys are set.
+It prepares a validated partial Scenario draft; review and Apply are required,
+then the existing form submits to the browser worker. Request fields:
+`{requestId, message, history: [{role, content}], scenario}`. Response:
+`{message, questions, patch, scenario, errors, canApply}`. Quantities from the
+model use `{value, unit}` and are converted to the existing Scenario units in code.
+The model examines all fields; `null` means keep the current value. Missing or
+ambiguous details block Apply until clarified. Live verification cases and
+remaining limits are recorded in [mission chat evaluation](docs/mission-chat-evaluation.md).
+No scientific data contract changes. Configuration, privacy, quotas and the
+Hobby owner deployment workflow: [mission chat setup](docs/mission-chat-setup.md).
 
 ## Claude Code (optional)
 

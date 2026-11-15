@@ -23,10 +23,15 @@ Trang gốc: PGDA 90 https://pgda.gsfc.nasa.gov/products/90 · PGDA 69 https://p
 
 ## 2. API
 
+Optional chat only: Google Gemini API (https://aistudio.google.com/docs/structured-output)
+extracts form parameters; Upstash Redis REST (https://upstash.com/docs/redis/features/restapi)
+stores usage counters. Neither supplies scientific results or new lunar data.
+
 | Nguồn | URL | Dùng để |
 |---|---|---|
 | JPL Horizons API (ephemeris) | https://ssd.jpl.nasa.gov/api/horizons.api | Module D1: `COMMAND=301`, `CENTER=500@399`, `QUANTITIES=14,15,19,20`, bước 1h, 2027-01-01 → 2029-01-31, chia theo quý → `web/public/data/ephemeris.json`. Cache vào `pipeline/raw/horizons/` |
 | JPL Horizons API (kiểm chứng) | https://ssd.jpl.nasa.gov/api/horizons.api | Azimuth/elevation Mặt Trời (`COMMAND=10`) và Trái Đất (`COMMAND=399`) tại điểm (`CENTER=coord@301`, `QUANTITIES=4`) → fixture `web/src/core/fixtures/horizons_check.json`. Bước 1h OK, 1 tháng = 745 dòng |
+| JPL Horizons API (trạm DSN - Task 11) | https://ssd.jpl.nasa.gov/api/horizons.api | Góc cao biểu kiến của Mặt Trăng (`COMMAND=301`) nhìn từ 3 trạm DSN trên Trái Đất (`CENTER=coord@399`, `QUANTITIES=4`: Goldstone DSS-14, Madrid DSS-63, Canberra DSS-43), bước 1h, 2027-01-01 → 2029-01-31 (18.288h) → `web/public/data/dsn.json` (đơn vị 0.1°). Cache vào `pipeline/raw/horizons_dsn/` |
 
 ## 3. Toạ độ site (`pipeline/sites.json`, không bịa)
 
@@ -77,3 +82,5 @@ Các file dưới đây được sinh từ dữ liệu ở mục 1 hoặc từ �
 | Lưới CAP 2 km (`cap/index.json`, `cap_<tx>_<ty>.json`) | PGDA 90 `LDSM` 80 m, `LPSR` 20 m, `LDEM` 80 m và 240 m; quy tắc của D3, D4 | web/public/data/cap | Ô 2 km toàn chỏm cực ngoài 9 vùng (D9) |
 | Địa hình 3D (`<CODE>.bin`, `index.json`) | PGDA 90 `LDEM_80S_80MPP_ADJ` | web/public/terrain | Khối địa hình 9 vùng cho `TerrainView3D.jsx` (D10) |
 | `lroc_color_4k.jpg`, `ldem_bump_1440.png` | NASA SVS 4720 (`lroc_color_16bit_srgb_4k.tif`, `ldem_4_uint.tif`). Trang: https://svs.gsfc.nasa.gov/4720. Credit: NASA's Scientific Visualization Studio | web/public/textures | Texture và bump cho quả cầu W6 (4K màu, 1440 px độ cao) |
+
+- NASA/JPL DSN Telecommunications Link Design Handbook 810-005, module 301 "Coverage and Geometry", Rev. K (2016): DSN station positions (Table 5) and the 10° elevation limit (sec. 2.2.1, 2.2.4), used by the optional DSN check. https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301K.pdf

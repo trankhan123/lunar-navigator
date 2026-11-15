@@ -47,6 +47,7 @@ export function encodeShareQuery({ scenario, landingTime, selectedCellId, mode, 
   for (const [key, field] of Object.entries({ ...TEXT_KEYS, ...NUMBER_KEYS })) {
     if (scenario[field] !== null && scenario[field] !== undefined) query.set(key, scenario[field])
   }
+  if (scenario.requireDsn) query.set('dsn', '1')
   if (landingTime) query.set('landing', landingTime)
   if (selectedCellId) query.set('cell', selectedCellId)
   query.set('mode', mode)
@@ -62,6 +63,7 @@ export function decodeShareQuery(queryString) {
   for (const [key, field] of Object.entries(NUMBER_KEYS)) scenario[field] = toFiniteNumber(query.get(key)) ?? scenario[field]
   if (!PANEL_MODES.includes(scenario.panelMode)) scenario.panelMode = DEFAULT_SCENARIO.panelMode
   if (!SEARCH_SCOPES.includes(scenario.searchScope)) scenario.searchScope = DEFAULT_SCENARIO.searchScope
+  scenario.requireDsn = query.get('dsn') === '1'
   if (query.has('point')) scenario.currentPoint = decodePoint(query.get('point'))
   return {
     scenario,
