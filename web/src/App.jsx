@@ -20,7 +20,7 @@ import { nearestRegionCode } from './core/mapSearch.js'
 import { clampHour, mapHourRange } from './core/mapSky.js'
 import { isCellOnPolarMap } from './core/mapView.js'
 import { CAP_REGION_SEARCH_KM, rankBestWindows, rankCells, selectSearchCells, summarizeCurrentPoint } from './core/optimizer.js'
-import { validateScenario } from './core/scenario.js'
+import { isPointComplete, validateScenario } from './core/scenario.js'
 import { decodeShareQuery, encodeShareQuery } from './core/shareLink.js'
 import { startWindowSearch } from './core/startWindowSearch.js'
 import { useI18n } from './i18n/index.jsx'
@@ -427,7 +427,7 @@ export default function App() {
                 <h2 id="map-title" className="sr-only">South pole landing cells</h2>
                 <SouthPoleMap workspaceLayout rightPanel={import.meta.env.VITE_CHAT_UI === 'true' ? (
                   <details open={chatOpen} onToggle={(event) => setChatOpen(event.currentTarget.open)} className="rounded-xl border border-sky-500 bg-sky-950">
-                    <summary className="cursor-pointer px-4 py-3 font-semibold text-sky-100">{t('chat.sectionTitle')}</summary>
+                    <summary className="cursor-pointer px-4 py-3 font-semibold text-sky-100">{t('chat.assistant')}</summary>
                     <MissionChat
                       value={scenario}
                       sites={data.sites}
@@ -439,6 +439,7 @@ export default function App() {
                     />
                   </details>
                 ) : null} {...mapProps} hour={shownMapHour} hourRange={mapRange} stayDays={scenario.stayDays} defaultLayerId="sunNow" timeBar={mapTimeBar} toolbarSlot={<>{regionPicker}
+                  <button type="submit" form="scenario-form" disabled={search.status === 'running' || errors.length > 0 || !isPointComplete(scenario.currentPoint)} className="order-last ml-auto h-9 rounded bg-amber-400 px-3 font-semibold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40">{search.status === 'running' ? t('scenario.searching') : t('scenario.findWindowsShort')}</button>
                   {activeRegion && (
                     <label className="text-sm text-slate-300">
                       {t('picker.cell')}{' '}

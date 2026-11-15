@@ -1,5 +1,5 @@
 import { cloneElement } from 'react'
-import { LANDER_PRESETS, MAX_SEARCH_RADIUS_KM, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
+import { isPointComplete, LANDER_PRESETS, MAX_SEARCH_RADIUS_KM, PANEL_MODES, SEARCH_SCOPES } from '../core/scenario.js'
 import { useI18n } from '../i18n/index.jsx'
 
 const PRESET_FIELDS = ['maxDarkHours', 'maxCommLossHours', 'panelMaxW', 'batteryCapacityWh', 'loadW', 'panelMode']
@@ -8,13 +8,6 @@ const inputClass = 'w-full rounded border border-slate-500 bg-slate-950 px-2 py-
 
 function toNumberOrNull(text) {
   return text === '' ? null : Number(text)
-}
-
-function isPointComplete(point) {
-  if (!point) return false
-  if (point.type === 'cell') return Boolean(point.cellId)
-  if (point.type === 'site') return Boolean(point.siteId)
-  return Number.isFinite(point.lat) && Number.isFinite(point.lon)
 }
 
 export default function ScenarioForm({ mode, value, errors, sites, busy, onChange, onSubmit }) {
@@ -106,6 +99,7 @@ export default function ScenarioForm({ mode, value, errors, sites, busy, onChang
 
   return (
     <form
+      id="scenario-form"
       onSubmit={(event) => {
         event.preventDefault()
         if (canSubmit) onSubmit(value)

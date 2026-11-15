@@ -17,6 +17,7 @@ export const TRANSLATIONS = {
     'layout.landingCell': 'Landing cell details',
     'layout.selectCell': 'Select a cell on the map to see its feasibility, terrain and visibility. You can then use it as your current point.',
     "chat.plan": "Plan with AI",
+    "chat.assistant": "AI assistant",
     "chat.sectionTitle": "Describe your mission (AI assist)",
     "chat.intro": "Start with what you know. Use the guided template or chat in English or Vietnamese — we’ll help with the details.",
     "chat.describe": "1 · Describe",
@@ -167,6 +168,7 @@ export const TRANSLATIONS = {
     'scenario.exampleNote': 'Example values are illustrative, not the specification of any real lander.',
     'scenario.choosePointPrompt': 'Choose a cell, a site or coordinates first.',
     'scenario.findWindows': 'Find landing windows',
+    'scenario.findWindowsShort': 'Find windows',
     'scenario.searching': 'Searching…',
 
     // Results View
@@ -280,6 +282,7 @@ export const TRANSLATIONS = {
     'layout.landingCell': 'Chi tiết ô hạ cánh',
     'layout.selectCell': 'Chọn một ô trên bản đồ để xem khả năng hạ cánh, địa hình và tầm nhìn. Sau đó bạn có thể dùng ô đó làm điểm hiện tại.',
     "chat.plan": "Lập kế hoạch với AI",
+    "chat.assistant": "Trợ lý AI",
     "chat.sectionTitle": "Mô tả sứ mệnh (trợ lý AI)",
     "chat.intro": "Bắt đầu từ những gì bạn biết. Điền mẫu hướng dẫn hoặc trò chuyện bằng tiếng Việt hay tiếng Anh — chúng tôi sẽ hỏi thêm khi cần.",
     "chat.describe": "1 · Mô tả",
@@ -430,6 +433,7 @@ export const TRANSLATIONS = {
     'scenario.exampleNote': 'Các giá trị ví dụ mang tính minh họa, không phải thông số của tàu đổ bộ thực tế.',
     'scenario.choosePointPrompt': 'Vui lòng chọn một ô lưới, địa danh hoặc tọa độ trước.',
     'scenario.findWindows': 'Tìm cửa sổ hạ cánh',
+    'scenario.findWindowsShort': 'Tìm cửa sổ',
     'scenario.searching': 'Đang tính toán…',
 
     // Results View
