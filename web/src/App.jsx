@@ -45,7 +45,7 @@ const forceMock = new URLSearchParams(window.location.search).get('mock') === '1
 const initialState = decodeShareQuery(window.location.search.slice(1))
 const initialCellId = initialState.selectedCellId ?? initialState.scenario.currentPoint?.cellId ?? null
 const selectClass = 'rounded border border-slate-500 bg-slate-950 px-2 py-1'
-const SMALLER_IS_BETTER = new Set(['distanceKm', 'psrDistanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours']) // README C5 rule
+const SMALLER_IS_BETTER = new Set(['distanceKm', 'psrDistanceKm', 'longestDarkHours', 'longestCommLossHours', 'rechargeHours']) // docs/technical-reference.md C5 rule
 
 async function loadAllData() {
   // Real data is used once module D5 publishes regions.json; until then cells and sites come from the mock folder.
@@ -57,7 +57,7 @@ async function loadAllData() {
     loadEphemeris(false).catch(() => loadEphemeris(true)),
     loadSites(useMock),
     useMock ? [] : loadMaps(),
-    useMock ? null : loadCapIndex(), // README D9; null = no cap grid, everything works as before
+    useMock ? null : loadCapIndex(), // docs/technical-reference.md D9; null = no cap grid, everything works as before
   ])
   return { useMock, ephemeris, regions: regionsFile.regions, sites: sitesFile.sites, maps, capIndex }
 }
@@ -69,7 +69,7 @@ export default function App() {
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [cellsByRegion, setCellsByRegion] = useState({})
-  const [capTiles, setCapTiles] = useState({}) // README D9: tile id → cells, filled as tiles load
+  const [capTiles, setCapTiles] = useState({}) // docs/technical-reference.md D9: tile id → cells, filled as tiles load
   const [regionCode, setRegionCode] = useState(initialCellId?.split('-')[0] ?? null)
   const [screen, setScreen] = useState(SCREENS.some(([id]) => id === initialState.screen) ? initialState.screen : 'map')
   const [mode, setMode] = useState(initialState.mode)
@@ -152,7 +152,7 @@ export default function App() {
     if (anchor) needCapTiles(capTileIdsInBounds(data.capIndex, [anchor.xM, anchor.yM, anchor.xM, anchor.yM]))
   }, [data, scenario.currentPoint, needCapTiles])
 
-  // null = the south-pole overview (README W2); a link with a cell opens that cell's region.
+  // null = the south-pole overview (docs/technical-reference.md W2); a link with a cell opens that cell's region.
   const activeRegion = data?.regions.find((region) => region.code === regionCode) ?? null
   useEffect(() => {
     if (activeRegion) loadRegionCells(activeRegion).catch((error) => setLoadError(error.message))
@@ -235,7 +235,7 @@ export default function App() {
     }
   }
 
-  // README W1: a link opened on the Results screen with a valid scenario runs its search once the data is in.
+  // docs/technical-reference.md W1: a link opened on the Results screen with a valid scenario runs its search once the data is in.
   useEffect(() => {
     if (!data || !autoRunPending.current) return
     autoRunPending.current = false
@@ -316,7 +316,7 @@ export default function App() {
     }
   }, [data, scenario.currentPoint, cellsByRegion, capCells])
 
-  // First click sorts a column better-first (README C5 "Sorting by column"), the next click reverses it.
+  // First click sorts a column better-first (docs/technical-reference.md C5 "Sorting by column"), the next click reverses it.
   function sortRanking(key) {
     const betterFirst = SMALLER_IS_BETTER.has(key) ? 'asc' : 'desc'
     const reversed = betterFirst === 'asc' ? 'desc' : 'asc'

@@ -1,4 +1,4 @@
-// W3 — scenario (form output). Contract: README "Scenario".
+// W3 — scenario (form output). Contract: docs/technical-reference.md "Scenario".
 
 export const PANEL_MODES = ['auto', 'vertical', 'horizontal']
 export const SEARCH_SCOPES = ['region', 'radius', 'all']
@@ -20,7 +20,7 @@ export const DEFAULT_SCENARIO = {
   panelMode: 'auto',
   searchScope: 'region',
   searchRadiusKm: 10,
-  requireDsn: false, // opt-in: Earth also needs a DSN station that sees the Moon (README C2)
+  requireDsn: false, // opt-in: Earth also needs a DSN station that sees the Moon (docs/technical-reference.md C2)
 }
 
 // Simple mode fills these fields from a preset and asks only point, dates and stay length.
@@ -126,7 +126,7 @@ function parseDay(text) {
 const isNumber = (value) => typeof value === 'number' && Number.isFinite(value)
 
 /**
- * Rules: README "Scenario". Messages are English UI text.
+ * Rules: docs/technical-reference.md "Scenario". Messages are English UI text.
  * @param {typeof DEFAULT_SCENARIO} scenario
  * @param {import('./data.js').Ephemeris} ephemeris
  * @returns {{field:string, message:string}[]} empty when valid

@@ -1,6 +1,6 @@
 """D1 — Ephemeris: JPL Horizons → web/public/data/ephemeris.json and the vector-check fixture.
 
-Contract: README "D1 Ephemeris" and "ephemeris.json". Run: python pipeline/fetch_horizons.py
+Contract: docs/technical-reference.md "D1 Ephemeris" and "ephemeris.json". Run: python pipeline/fetch_horizons.py
 Input:  Horizons API (raw text cached in pipeline/raw/horizons/, so each range is fetched once)
 Output: web/public/data/ephemeris.json
         web/src/core/fixtures/horizons_check.json (read by web/src/core/geometry.test.js)

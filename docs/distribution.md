@@ -5,7 +5,7 @@ Nhóm có 5 người. Một người lo web: tổng hợp mọi phần lên giao
 - mỗi workflow gom các module D (pipeline Python) và C (lõi JS trong trình duyệt) liên quan đến nhau, nên một người làm từ dữ liệu tới hàm tính;
 - có **5 workflow cho 4 người**, xem cách chia ở mục [Nếu chỉ có 4 bạn](#nếu-chỉ-có-4-bạn).
 
-Hợp đồng chính thức (input/output, đơn vị, định dạng file, chữ ký hàm) vẫn nằm trong [README.md](README.md). File này chỉ nói **ai làm gì, theo thứ tự nào, giao gì cho ai**. Mọi mục trong README như "C1 Sunlight" hay "D4 Terrain horizon" là phần phải đọc trước khi code.
+Hợp đồng chính thức (input/output, đơn vị, định dạng file, chữ ký hàm) vẫn nằm trong [docs/technical-reference.md](technical-reference.md). File này chỉ nói **ai làm gì, theo thứ tự nào, giao gì cho ai**. Mọi mục trong docs/technical-reference.md như "C1 Sunlight" hay "D4 Terrain horizon" là phần phải đọc trước khi code.
 
 ## Bảng chọn
 
@@ -23,7 +23,7 @@ Hợp đồng chính thức (input/output, đơn vị, định dạng file, ch�
 **Cách nhận:**
 
 1. Ghi tên vào cột "Người nhận" ở bảng trên.
-2. Ghi tên vào cột `Owner` trong bảng module của README cho **mọi** module của workflow, và đặt `Status` là `doing`.
+2. Ghi tên vào cột `Owner` trong bảng module của docs/technical-reference.md cho **mọi** module của workflow, và đặt `Status` là `doing`.
 3. Commit và push ngay, để hai người không nhận trùng.
 
 **"Quãng đường" ở WF3** là khoảng cách (km) tới ô đạt gần nhất, cùng với việc xếp hạng ô và thời điểm. Tìm đường đi cho xe tự hành đã bỏ (docs/window-finder.md §3.2).
@@ -84,7 +84,7 @@ WF3 optimizer.js, explain.js ──> WEB (kết quả, chi tiết, chế độ h
 - **CRS chung:** `common.PGDA_CRS`, nodata là `nan`, độ cao tính bằng mét so với mặt cầu 1737,4 km.
 - **`LDEM_80S_80MPP_ADJ.TIF`:** 7600×7600, 80 m/px, phủ ±304 km quanh cực.
 - **`LDEM_60S_240MPP_ADJ.TIF`:** 7760×7760, 240 m/px, phủ ±931 km. Dùng cho phần tia đi ra ngoài ô vuông ±304 km. Peak near Cabeus B cách cực 196 km, nên tia 150 km của nó chắc chắn ra ngoài.
-- **Công thức** (README D4): `angle = atan2(h_mẫu − h_ô − 2 m − d²/(2R), d)`, ghi `round(10 × độ)`.
+- **Công thức** (docs/technical-reference.md D4): `angle = atan2(h_mẫu − h_ô − 2 m − d²/(2R), d)`, ghi `round(10 × độ)`.
 - **Tốc độ:** 225 ô × 360 tia × vài trăm mẫu. Vector hoá bằng numpy, nội suy song tuyến tính, không lặp Python từng mẫu.
 
 **Xong khi:** `sunlight.test.js` qua; có `horizon_<CODE>.json` cho 9 vùng và `horizon_sites.json`; một chân trời đã đối chiếu bằng mắt.
@@ -111,7 +111,7 @@ WF3 optimizer.js, explain.js ──> WEB (kết quả, chi tiết, chế độ h
    - **Không đoán.** Site có lat ≤ −60° (ví dụ Chandrayaan-3) đặt `hasTerrain: true` và báo WF1 tính chân trời.
 3. **D7, khi WF5 có `cells_MAL.json`:**
    - viết `pipeline/visibility_stats.mjs` (node, import `web/src/core/sunlight.js` và `communication.js`): tính `sunFraction` và `earthFraction` của các ô trên toàn bộ ephemeris, ghi `pipeline/out/our_visibility.json`;
-   - `validate.py`: đọc pixel PGDA 69 tại các ô đó (giá trị × 4e-05 = tỉ lệ thời gian; chỉ phủ 85–90°S, nên CAB, MMP, NR2 không có), rồi ghi `validation.json` theo README;
+   - `validate.py`: đọc pixel PGDA 69 tại các ô đó (giá trị × 4e-05 = tỉ lệ thời gian; chỉ phủ 85–90°S, nên CAB, MMP, NR2 không có), rồi ghi `validation.json` theo docs/technical-reference.md;
    - mục `horizons` lấy từ fixture: 30 điểm, sai lệch 0,015° / 0,010°;
    - chụp một ảnh QuickMap "Compute Visibility" cho slide.
 
@@ -163,10 +163,10 @@ WF3 optimizer.js, explain.js ──> WEB (kết quả, chi tiết, chế độ h
    - chạy `node --test src/core/charging.test.js`, rồi push.
 2. **C3:**
    - `findDarkPeriods`;
-   - `summarizeEnergyNeed`: `minimumCapacityWh` là thâm hụt tích luỹ lớn nhất, công thức ở README C3.
-3. **`validateScenario`:** quy tắc ở bảng Scenario trong README; mỗi trường tối đa một lỗi, viết bằng tiếng Anh.
+   - `summarizeEnergyNeed`: `minimumCapacityWh` là thâm hụt tích luỹ lớn nhất, công thức ở docs/technical-reference.md C3.
+3. **`validateScenario`:** quy tắc ở bảng Scenario trong docs/technical-reference.md; mỗi trường tối đa một lỗi, viết bằng tiếng Anh.
    - `LANDER_PRESETS` chỉ là ví dụ minh hoạ, không phải thông số tàu thật. Muốn thêm preset thì ghi rõ "illustrative".
-4. **Nếu còn thời gian:** đối chiếu kết quả C3/C4 với công thức tính tay trên 2–3 ô mock, ghi vào README C3.
+4. **Nếu còn thời gian:** đối chiếu kết quả C3/C4 với công thức tính tay trên 2–3 ô mock, ghi vào docs/technical-reference.md C3.
 
 **Không cần chờ ai:** chỉ dùng dạng `SunTrack` (`powerFactor`, `diskFraction`), test có sẵn dữ liệu giả.
 

@@ -1,4 +1,4 @@
-"""Write FAKE data in the README data contract to web/public/data/mock/ so the web can be built before the pipeline is done.
+"""Write FAKE data in the docs/technical-reference.md data contract to web/public/data/mock/ so the web can be built before the pipeline is done.
 
 Every value here is invented (smooth sine waves, random slopes) except the site and region-centre coordinates copied
 from pipeline/sites.json. Each file carries "mock": true and the UI must show a MOCK DATA badge.

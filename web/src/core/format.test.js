@@ -44,7 +44,7 @@ test('countdownText: durations go through formatDuration (event time, else hours
   }
 })
 
-// Hand-made summaries in the shape summarizeCurrentPoint returns (README C5). Synthetic numbers, not real results.
+// Hand-made summaries in the shape summarizeCurrentPoint returns (docs/technical-reference.md C5). Synthetic numbers, not real results.
 function currentPointSummary({ metrics = {}, nearestPassingLanding = null, nearestPassingCell = null } = {}) {
   return {
     metrics: {

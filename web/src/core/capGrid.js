@@ -1,4 +1,4 @@
-// D9 whole-cap 2 km grid (CAP): pure helpers for tiles, ids and the one-pixel-per-cell raster. Contract: README "D9".
+// D9 whole-cap 2 km grid (CAP): pure helpers for tiles, ids and the one-pixel-per-cell raster. Contract: docs/technical-reference.md "D9".
 export const CAP_CELL_SIZE_M = 2000
 // Cells per side of the shipped grid (index.json `gridSize`; centres run from -301 km to +301 km, built to 80°S). Ids only
 // carry row/col from the corner, so reading an id needs this; the raster functions take the index value as gridSize.

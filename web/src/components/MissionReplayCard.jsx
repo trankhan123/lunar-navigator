@@ -9,7 +9,7 @@ const DetailView = lazy(() => import('./DetailView.jsx'))
 // Illustrative lander numbers (not the real spacecraft); the replay is about the Sun and Earth geometry.
 const REPLAY_SCENARIO = { ...DEFAULT_SCENARIO, stayDays: 14 }
 
-// README E6. One row per real mission: geometry-only sunset prediction next to the actual end of the mission.
+// docs/technical-reference.md E6. One row per real mission: geometry-only sunset prediction next to the actual end of the mission.
 export default function MissionReplayCard() {
   const { t } = useI18n()
   const [state, setState] = useState({ status: 'loading' })

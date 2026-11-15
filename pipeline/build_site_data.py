@@ -1,6 +1,6 @@
 """D5 — Build web data: merge grid + feasibility + horizon into the files the browser loads.
 
-Contract: README "Data files". Run: python pipeline/build_site_data.py && python pipeline/check_web_data.py
+Contract: docs/technical-reference.md "Data files". Run: python pipeline/build_site_data.py && python pipeline/check_web_data.py
 Input:  pipeline/out/grid_<CODE>.json, feasibility_<CODE>.json, horizon_<CODE>.json, science_<CODE>.json (E7), horizon_sites.json, pipeline/sites.json
 Output: web/public/data/regions.json, web/public/data/cells_<CODE>.json, web/public/data/sites.json (each < 2 MB)
 Rules:  feasible = slopeDeg ≤ SLOPE_LIMIT_DEG and psrFraction ≤ PSR_LIMIT_FRACTION, on the rounded values D3 wrote;
@@ -18,7 +18,7 @@ from common import (MAST_HEIGHT_M, MOON_LONLAT_CRS, OUT_FOLDER, PGDA_CRS, PSR_LI
 
 MAX_FILE_BYTES = 2_000_000
 KEPT_CELL_COUNT = 900  # about the size of Haworth, so the browser search stays as fast as there
-CELL_HALF_SIZE_M = 500  # README regions.json: boundsM = cell centres ± 500 m
+CELL_HALF_SIZE_M = 500  # docs/technical-reference.md regions.json: boundsM = cell centres ± 500 m
 SITE_KEYS = ["id", "name", "group", "lat", "lon", "region", "source", "verified"]
 TO_PGDA = Transformer.from_crs(MOON_LONLAT_CRS, PGDA_CRS, always_xy=True)
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         size_bytes = json_bytes(cells_file)
         if size_bytes > MAX_FILE_BYTES:
             print(f"warning: skip {region['code']}, {region['cellCount']} cells make {size_bytes / 1e6:.1f} MB, over the 2 MB limit "
-                  "(README: tell the team before changing the format)")
+                  "(docs/technical-reference.md: tell the team before changing the format)")
             continue
         print(f"{region['code']}: {region['feasibleCount']} of {region['cellCount']} cells feasible")
         write_json(WEB_DATA_FOLDER / region["cellsFile"], cells_file)

@@ -1,4 +1,4 @@
-// C2 — Communication (direct-to-Earth). Contract: README "C2 Communication".
+// C2 — Communication (direct-to-Earth). Contract: docs/technical-reference.md "C2 Communication".
 import {
   EARTH_DISK_RADIUS_DEG,
   VISIBLE_THRESHOLD,
@@ -9,7 +9,7 @@ import {
 import { fractionAtLeast, longestRunBelow, nextCrossing } from './timeSeries.js'
 
 const DSN_STATIONS = ['goldstone', 'madrid', 'canberra']
-const DSN_MIN_ELEVATION_DEG = 10 // elevation mask, see README C2 for the source
+const DSN_MIN_ELEVATION_DEG = 10 // elevation mask, see docs/technical-reference.md C2 for the source
 
 /**
  * @typedef {Object} EarthTrack  one value per hour; index i ↔ ephemeris hour firstHour + i

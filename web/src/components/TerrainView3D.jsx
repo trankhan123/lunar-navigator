@@ -47,7 +47,7 @@ function disposeScene(scene) {
   })
 }
 
-/** README W2 3D view of an open region: LOLA terrain lit by the real Sun at the map hour. */
+/** docs/technical-reference.md W2 3D view of an open region: LOLA terrain lit by the real Sun at the map hour. */
 export default function TerrainView3D({ regionCode, cells, colors, maps, ephemeris, hour, directions, lonDeg, focusCell }) {
   const containerRef = useRef(null)
   const stage = useRef(null) // everything three.js made; touched only by the effects below

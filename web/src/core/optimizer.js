@@ -182,7 +182,7 @@ export function selectSearchCells(scenario, currentCell, cellsByRegion, capCells
     const distanceTo = (cell) => (cell.lat == null || cell.lon == null ? Infinity : distanceKm(currentCell, cell))
     const code = regionCode ?? (allCells.length > 0 ? regionOf(allCells.reduce((best, cell) => (distanceTo(cell) < distanceTo(best) ? cell : best))) : null)
     const regionCells = allCells.filter((cell) => regionOf(cell) === code)
-    // Not on an LGRS cell (none within 1 km): search the 2 km CAP cells around the point (README D9); none loaded = nothing to search.
+    // Not on an LGRS cell (none within 1 km): search the 2 km CAP cells around the point (docs/technical-reference.md D9); none loaded = nothing to search.
     candidates = regionCells.some((cell) => distanceTo(cell) <= 1) ? regionCells : withinKm(capCells, CAP_REGION_SEARCH_KM)
   } else if (scope === 'radius') {
     const radius = scenario?.searchRadiusKm ?? 10

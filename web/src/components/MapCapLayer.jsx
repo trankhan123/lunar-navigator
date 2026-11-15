@@ -18,7 +18,7 @@ function rasterUrl(capCells, colors, gridSize) {
 }
 
 /**
- * README W2: the whole-cap 2 km grid as ONE raster (a pixel per cell, same colours as the region cells on the active layer).
+ * docs/technical-reference.md W2: the whole-cap 2 km grid as ONE raster (a pixel per cell, same colours as the region cells on the active layer).
  * Sky and search colours are computed here from the loaded CAP cells; layerId is the layer SouthPoleMap actually draws.
  */
 function MapCapLayer({ capCells, capIndex, layerId, ephemeris, hour, hourRange, statusByCellId, transform, onSelectCell, onHoverCell, onNeedCapTiles, onStatusChange }) {

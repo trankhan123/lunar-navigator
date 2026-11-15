@@ -1,4 +1,4 @@
-// W5 — data for the detail screen of one cell. Contract: README "W5 Detail".
+// W5 — data for the detail screen of one cell. Contract: docs/technical-reference.md "W5 Detail".
 import { simulateBattery } from './charging.js'
 import { computeEarthTrack, nextEarthEvent, summarizeEarthWindow } from './communication.js'
 import { hourIndexOf, timeAtHour } from './data.js'

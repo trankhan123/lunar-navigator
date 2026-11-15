@@ -1,4 +1,4 @@
-// W1 — data loading and hour ↔ time helpers. Contract: README "Data files" and "W1".
+// W1 — data loading and hour ↔ time helpers. Contract: docs/technical-reference.md "Data files" and "W1".
 import { capCellContaining } from './capGrid.js'
 
 /**
@@ -58,14 +58,14 @@ export const loadRegions = (useMock) => loadJson(`${dataFolder(useMock)}/regions
 export const loadCells = (useMock, cellsFile) => loadJson(`${dataFolder(useMock)}/${cellsFile}`)
 export const loadSites = (useMock) => loadJson(`${dataFolder(useMock)}/sites.json`)
 export const loadValidation = (useMock) => loadJson(`${dataFolder(useMock)}/validation.json`)
-/** README "replay/" files (E6): index of replayed missions, and one short ephemeris per mission. */
+/** docs/technical-reference.md "replay/" files (E6): index of replayed missions, and one short ephemeris per mission. */
 export const loadReplayIndex = () => loadJson('/data/replay/index.json')
 export const loadReplay = (siteId) => loadJson(`/data/replay/${siteId}.json`)
-/** README D9 index of the whole-cap 2 km grid; null when the data set has none (mock data, older deploys). */
+/** docs/technical-reference.md D9 index of the whole-cap 2 km grid; null when the data set has none (mock data, older deploys). */
 export const loadCapIndex = () => loadJson('/data/cap/index.json').catch(() => null)
 
 const capTileRequests = new Map() // tile id → promise, so each file is fetched once
-/** Cells of the given CAP tiles (README D9), loaded in parallel and cached; a failed tile can be retried. */
+/** Cells of the given CAP tiles (docs/technical-reference.md D9), loaded in parallel and cached; a failed tile can be retried. */
 export function loadCapTiles(tileIds) {
   return Promise.all(
     tileIds.map((tileId) => {
@@ -79,14 +79,14 @@ export function loadCapTiles(tileIds) {
     }),
   )
 }
-/** README D8 map backgrounds; the map works without them. */
+/** docs/technical-reference.md D8 map backgrounds; the map works without them. */
 export const loadMaps = () => loadJson('/maps/maps.json').then((file) => file.maps).catch(() => [])
 /** Relief tile pyramid index (pipeline/export_relief_tiles.py); null when the tiles are missing. Fetched once. */
 let reliefIndexPromise
 export const loadReliefIndex = () => (reliefIndexPromise ??= loadJson('/maps/relief/index.json').catch(() => null))
 
 let terrainIndexPromise = null
-/** README D10 terrain height map of one region: {entry, heights} (Int16 metres, row 0 = north); the 3D view only. */
+/** docs/technical-reference.md D10 terrain height map of one region: {entry, heights} (Int16 metres, row 0 = north); the 3D view only. */
 export async function loadTerrain(regionCode) {
   terrainIndexPromise ??= loadJson('/terrain/index.json').catch((error) => {
     terrainIndexPromise = null
@@ -128,7 +128,7 @@ export function toPolarXY(latDeg, lonDeg) {
 }
 
 /**
- * Scenario.currentPoint → Cell: a grid cell, or a pseudo-cell for a famous site / typed coordinates (README "Shared objects").
+ * Scenario.currentPoint → Cell: a grid cell, or a pseudo-cell for a famous site / typed coordinates (docs/technical-reference.md "Shared objects").
  * @param {Object<string, Cell[]>} cellsByRegion  regions loaded so far
  * @returns {Cell}
  */
@@ -151,7 +151,7 @@ export function resolveCurrentCell(currentPoint, cellsByRegion, sites, capCells 
   return withCapHorizon({ id: 'CUSTOM', label: 'Custom point', lat, lon, ...toPolarXY(lat, lon), ...unknownTerrain, horizon: null }, cellsByRegion, capCells)
 }
 
-const LGRS_SNAP_M = 1000 // a point this close to an LGRS cell keeps the 1 km grid (README C5 "region" scope)
+const LGRS_SNAP_M = 1000 // a point this close to an LGRS cell keeps the 1 km grid (docs/technical-reference.md C5 "region" scope)
 
 /** A point with no horizon of its own, outside the 9 regions but on the cap, takes the horizon of the 2 km CAP cell that contains it. */
 function withCapHorizon(point, cellsByRegion, capCells) {

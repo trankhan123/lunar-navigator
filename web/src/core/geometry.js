@@ -1,4 +1,4 @@
-// C0 — shared geometry. Contract: README "C0 Shared geometry and time series".
+// C0 — shared geometry. Contract: docs/technical-reference.md "C0 Shared geometry and time series".
 
 export const MOON_RADIUS_KM = 1737.4
 export const SUN_RADIUS_KM = 696000

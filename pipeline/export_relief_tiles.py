@@ -1,6 +1,6 @@
 """D8b — Relief tile pyramid for the 2D south-pole map: shaded relief + elevation tint + contour lines → 512 px JPEG tiles.
 
-Contract: README "D8 Map background" (relief tiles). Run: python pipeline/export_relief_tiles.py (after build_site_data.py)
+Contract: docs/technical-reference.md "D8 Map background" (relief tiles). Run: python pipeline/export_relief_tiles.py (after build_site_data.py)
 Input:  pipeline/raw/LDEM_80S_80MPP_ADJ.TIF (PGDA 90 DEM, 80 m, ±304 km square), web/public/data/regions.json
 Output: web/public/maps/relief/<z>/<x>_<y>.jpg and web/public/maps/relief/index.json
         Level z has 2^z × 2^z tiles over the whole ±304 km square; tile (x, y): x grows east, y grows south (row 0 = north edge).

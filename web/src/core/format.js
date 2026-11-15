@@ -10,7 +10,7 @@ export const rowCellName = (row, currentCell) => (currentCell && row.cellId === 
 
 export const hasNoTerrain = (cell) => !cell.horizon
 
-/** True when the point's terrain comes from the 2 km whole-cap grid (README D9): a CAP cell, or a point inside one. */
+/** True when the point's terrain comes from the 2 km whole-cap grid (docs/technical-reference.md D9): a CAP cell, or a point inside one. */
 export const usesCapGrid = (cell) => cell.id.startsWith('CAP-') || cell.horizonSource === 'cap'
 
 /** Why a cell is not feasible, in the UI's words (cell popup and map hover card). */

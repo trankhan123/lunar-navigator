@@ -52,7 +52,7 @@ function MapImage({ entry, opacity = 1 }) {
 }
 
 /**
- * README W2: one SVG of the whole south pole in PGDA metres (SVG y = −yM), panned and zoomed by d3-zoom.
+ * docs/technical-reference.md W2: one SVG of the whole south pole in PGDA metres (SVG y = −yM), panned and zoomed by d3-zoom.
  * activeRegion null = the overview; otherwise that region's cells are drawn.
  */
 function SouthPoleMap({

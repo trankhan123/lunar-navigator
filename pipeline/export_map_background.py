@@ -1,6 +1,6 @@
 """D8 — Map images for the 2D south-pole map: hillshade backgrounds and NASA overlays → PNG.
 
-Contract: README "D8 Map background". Run: python pipeline/export_map_background.py (after build_site_data.py)
+Contract: docs/technical-reference.md "D8 Map background". Run: python pipeline/export_map_background.py (after build_site_data.py)
 Input:  pipeline/raw/LDEM_80S_80MPP_ADJ_HILL.TIF (PGDA 90 hillshade, 80 m, values 0–255), web/public/data/regions.json,
         pipeline/raw/AVGVISIB_85S_060M_201608.TIF and …_EARTH.TIF (PGDA 69 Sun / Earth visibility, 60 m, ±151.74 km, × 4e-05),
         pipeline/raw/LPSR_80S_20MPP_ADJ.TIF (PGDA 90 permanent shadow, 20 m, 0/1)

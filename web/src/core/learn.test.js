@@ -1,4 +1,4 @@
-// W7 learn mode logic (README "W7 Learn mode"). Every number here is SYNTHETIC test data, not real lunar data.
+// W7 learn mode logic (docs/technical-reference.md "W7 Learn mode"). Every number here is SYNTHETIC test data, not real lunar data.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { metricSentences, moonFacts, neighborLesson } from './learn.js'

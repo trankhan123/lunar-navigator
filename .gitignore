@@ -29,3 +29,7 @@ pipeline/raw
 .DS_Store
 .claude/settings.local.proposed.json
 .claude/worktrees/
+
+# Internal working notes and third-party AI-tool skills (kept locally, not part of the public project)
+.claude/skills/
+docs/superpowers/

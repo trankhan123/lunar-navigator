@@ -1,4 +1,4 @@
-// C0 — hourly series helpers. Contract: README "C0 Shared geometry and time series".
+// C0 — hourly series helpers. Contract: docs/technical-reference.md "C0 Shared geometry and time series".
 // Every window function reads values[start] … values[start + length - 1]; one value = one hour.
 
 function checkWindow(values, start, length) {

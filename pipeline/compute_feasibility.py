@@ -1,6 +1,6 @@
 """D3 — Landing feasibility per cell: height, median slope, permanent-shadow share.
 
-Contract: README "D3 Feasibility". Run: python pipeline/compute_feasibility.py [--region MAL]
+Contract: docs/technical-reference.md "D3 Feasibility". Run: python pipeline/compute_feasibility.py [--region MAL]
 Input:  pipeline/out/grid_<CODE>.json
         pipeline/raw/LDSM_80S_80MPP_ADJ.TIF (slope, degrees), pipeline/raw/LPSR_80S_20MPP_ADJ.TIF (permanent shadow, 0/1),
         pipeline/raw/LDEM_80S_80MPP_ADJ.TIF (height, metres). All three are in common.PGDA_CRS.

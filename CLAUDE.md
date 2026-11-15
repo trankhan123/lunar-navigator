@@ -3,11 +3,12 @@
 File này là bối cảnh cố định cho Claude Code. Đọc hết trước khi làm bất kỳ việc gì.
 Đọc thêm ba file:
 
-- `README.md`: **hợp đồng module**, bản chính thức gồm input/output, đơn vị, định dạng file và bảng chia việc.
+- `README.md`: giới thiệu dự án cho người xem công khai (tiếng Anh).
+- `docs/technical-reference.md`: **hợp đồng module**, bản chính thức gồm input/output, đơn vị, định dạng file và bảng chia việc (README cũ trong hackathon).
 - `docs/window-finder.md`: ý tưởng cuối cùng của nhóm.
-- `distribution.md`: phân công 5 người, gồm 5 workflow (WF1–WF5 gom các module D + C liên quan) và WEB, kèm thứ tự làm và việc giao nhận giữa các workflow.
+- `docs/distribution.md`: phân công 5 người, gồm 5 workflow (WF1–WF5 gom các module D + C liên quan) và WEB, kèm thứ tự làm và việc giao nhận giữa các workflow.
 - `DATA_SOURCES.md`: mọi file dữ liệu, URL và thư viện.
-- `docs/extra-prospect.md`: các module làm thêm E1–E10 sau bản chính (15/11 tối), luật nhánh `extra/<mã>` và mốc dừng merge 22:30.
+- `docs/extra-prospect.md`: các module làm thêm sau bản chính (15/11 tối): E1–E8 đã merge, E9–E10 không làm, luật nhánh `extra/<mã>` và mốc dừng merge 22:30.
 
 ## 1. Bối cảnh
 
@@ -43,7 +44,6 @@ Câu định vị: *"Tell us your landing spot and your mission's limits. We fin
 
 - Không thêm thư viện ngoài danh sách nếu chưa hỏi.
 - Không dùng React Router; chuyển màn hình bằng state.
-- `astronomy-engine` đã cài nhưng chỉ còn là module tuỳ chọn X1: dùng cho ngày nằm ngoài ephemeris.
 
 ## 3. Kiến trúc: tính trước, phục vụ tĩnh
 
@@ -65,17 +65,17 @@ Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay 
   UI W1–W7: bản đồ, form, kết quả, chi tiết, globe, chế độ học
 ```
 
-- **Vị trí Mặt Trời/Trái Đất** tại bất kỳ ô hay toạ độ nào đều tính từ điểm dưới thiên thể bằng một công thức vector (README mục C0). Nhờ vậy toạ độ tuỳ ý cũng chạy được, không cần gọi Horizons cho từng ô.
+- **Vị trí Mặt Trời/Trái Đất** tại bất kỳ ô hay toạ độ nào đều tính từ điểm dưới thiên thể bằng một công thức vector (`docs/technical-reference.md` mục C0). Nhờ vậy toạ độ tuỳ ý cũng chạy được, không cần gọi Horizons cho từng ô.
 - **Chân trời địa hình** chỉ có cho ô lưới và cho site có lat ≤ −60°. Điểm khác dùng chân trời mặt cầu (0°), và giao diện ghi "terrain not included".
 - **Thư mục:**
-  - `pipeline/`: D1–D10 (kể cả D8b), `common.py`, `check_web_data.py`, `make_mock_data.py`, `out/` (file trung gian, có commit), `raw/` (gitignore);
+  - `pipeline/`: D1–D10 (kể cả D8b), `common.py`, `check_web_data.py`, `make_mock_data.py`, `validate.py`, `fetch_dsn.py`, `fetch_replay.py` (E6), `compute_science_access.py` (E7), `out/` (file trung gian, có commit), `raw/` (gitignore);
   - `web/src/core/`: module JS thuần kèm `*.test.js`;
   - `web/src/components/`: mỗi component một file;
   - `web/public/data/` (`mock/` là dữ liệu giả, `cap/` là lưới 2 km toàn cực), `web/public/terrain/` (khối địa hình 3D), `web/public/maps/relief/` (ảnh địa hình nhiều mức).
 
 ## 4. Data contract và hợp đồng module
 
-**Bản chính thức nằm ở `README.md`.** Ở đây chỉ tóm tắt. Muốn đổi hợp đồng thì đổi cùng lúc README, test `web/src/core/*.test.js` và `pipeline/check_web_data.py`, sau đó báo nhóm.
+**Bản chính thức nằm ở `docs/technical-reference.md`.** Ở đây chỉ tóm tắt. Muốn đổi hợp đồng thì đổi cùng lúc file đó, test `web/src/core/*.test.js` và `pipeline/check_web_data.py`, sau đó báo nhóm.
 
 - **Quy ước:**
   - độ ở mọi nơi; azimuth tính theo chiều kim đồng hồ từ Bắc (0–360); kinh độ Đông −180…180, hệ ME;
@@ -106,7 +106,7 @@ Xem `docs/mission-chat-setup.md`. Không cần MCP server, model cục bộ hay 
 - **Texture Mặt Trăng:** NASA SVS 4720.
 - **KHÔNG tự bịa toạ độ.** Site chưa có nguồn thì để `lat/lon: null` và `"source": "TODO"`; code bỏ qua và in cảnh báo (`common.load_sites()`). NASA không công bố toạ độ số của 9 vùng: toạ độ tâm vùng lấy từ ô vuông USGS và gắn `verified: false` (xem `DATA_SOURCES.md` mục 3).
 
-## 6. Thuật toán lõi (chi tiết: `docs/window-finder.md` §4–5 và README)
+## 6. Thuật toán lõi (chi tiết: `docs/window-finder.md` §4–5 và `docs/technical-reference.md`)
 
 - **Chân trời:**
   - 360 tia, lấy mẫu từ 100 m tới 150 km;
@@ -170,7 +170,7 @@ Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi 
 - Không bịa dữ liệu khoa học. Giá trị trong test là dữ liệu tổng hợp và phải ghi rõ như vậy.
 - Mỗi khi thêm thư viện, nguồn dữ liệu, ảnh: thêm một dòng vào `REFERENCES.md` và `DATA_SOURCES.md`.
 - Ghi vào `AI_USAGE.md` một dòng cho mỗi phần việc lớn do Claude Code làm (luật cuộc thi yêu cầu khai báo AI).
-- Nhận module: ghi tên vào bảng module trong README. Chỉ sửa file của module mình.
+- Nhận module: ghi tên vào bảng module trong `docs/technical-reference.md`. Chỉ sửa file của module mình.
 - Chữ mới trên giao diện dùng khoá `t()` và có cả khối `en` lẫn `vi` trong `web/src/i18n/translations.js`. Khoá thiếu thì rơi về tiếng Anh.
 
 ## 10. Deploy Vercel
@@ -181,7 +181,7 @@ Nếu trễ, bỏ theo thứ tự: quả cầu 3D, chế độ học, phạm vi 
 - Đường dẫn fetch tuyệt đối, đi qua `web/src/core/data.js`.
 - Link cuối phải công khai, mở được bằng tab ẩn danh, không cần đăng nhập.
 
-## 11. Kế hoạch (chi tiết: `docs/window-finder.md` §8, bảng module trong README)
+## 11. Kế hoạch (chi tiết: `docs/window-finder.md` §8, bảng module trong `docs/technical-reference.md`)
 
 | Thời gian | Việc |
 |---|---|

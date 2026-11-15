@@ -1,6 +1,6 @@
 """D2 — LGRS grid: USGS 1 km ACC shapefiles of the 9 Artemis III regions → cell centres.
 
-Contract: README "D2 LGRS grid". Run: python pipeline/build_grid.py [--region MAL]
+Contract: docs/technical-reference.md "D2 LGRS grid". Run: python pipeline/build_grid.py [--region MAL]
 Input:  pipeline/raw/lgrs/<Region_Name>.zip, as downloaded by hand in a browser from https://doi.org/10.5066/P1MEQ6UK
         (ScienceBase blocks scripts). Only the 1 km file inside each zip is read; no need to unzip.
         Grid design: USGS Techniques and Methods 11-E1 (2025), https://doi.org/10.3133/tm11E1
@@ -30,7 +30,7 @@ def shapefile_path(region_code):
 
 
 def read_region_grid(region_code):
-    """Centre of each 1 km square of the region, in the README grid format."""
+    """Centre of each 1 km square of the region, in the docs/technical-reference.md grid format."""
     zip_path, member = shapefile_path(region_code)
     squares = gpd.read_file(f"zip://{zip_path}!{member}")
     centres = squares.geometry.centroid

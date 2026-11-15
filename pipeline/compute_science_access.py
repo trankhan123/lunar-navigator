@@ -1,6 +1,6 @@
 """E7 — Distance from every cell to the nearest permanent shadow (cold trap) of at least 1 km².
 
-Contract: README "Data files" (cell field psrDistanceKm).
+Contract: docs/technical-reference.md "Data files" (cell field psrDistanceKm).
 Run: python pipeline/compute_science_access.py [path/to/LPSR_80S_20MPP_ADJ.TIF] [--limit N]
 Input:  LPSR_80S_20MPP_ADJ.TIF (PGDA 90, 20 m, 80-90°S), pipeline/out/grid_<CODE>.json and grid_CAP.json
 Output: pipeline/out/science_<CODE>.json and science_CAP.json: {cell id: psrDistanceKm} (0 inside a PSR, null outside the raster)

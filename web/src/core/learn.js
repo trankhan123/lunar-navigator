@@ -1,4 +1,4 @@
-// W7 learn mode (README "W7 Learn mode"): plain-English explanations for teachers and the public.
+// W7 learn mode (docs/technical-reference.md "W7 Learn mode"): plain-English explanations for teachers and the public.
 import { hourIndexOf } from './data.js'
 import { differenceReason, explainDifference, findMostDifferentNeighbors } from './explain.js'
 import { cellDisplayName, formatDuration } from './format.js'
